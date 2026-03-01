@@ -1,0 +1,8 @@
+# Paper PDFs (too large for git)
+*.pdf
+
+# Page images from PDF conversion
+papers/*/pngs/
+
+# Temporary conversion files
+papers/temp-page-*.png
