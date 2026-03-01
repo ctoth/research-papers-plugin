@@ -151,16 +151,24 @@ Also try direct read - Claude will error if >20MB:
 
 ## Step 2B: Image Conversion (Medium Papers 26-100 pages)
 
-1. **Convert PDF to images**:
+1. **Convert page 0 only** to extract metadata for directory naming:
    ```bash
-   magick -density 150 "$ARGUMENTS" -quality 90 "./papers/temp-page-%03d.png"
+   magick -density 150 "$ARGUMENTS[0]" -quality 90 "./papers/temp-metadata-page0.png"
    ```
 
-2. **Read each page image** sequentially using Read tool
+2. **Read the temp page image** to extract author, year, title. Determine directory name (`Author_Year_ShortTitle`).
 
-3. **Keep PNGs** in place (don't delete - user may want them)
+3. **Create output directory** and convert all pages directly there:
+   ```bash
+   mkdir -p "./papers/Author_Year_ShortTitle/pngs"
+   mv "$ARGUMENTS" "./papers/Author_Year_ShortTitle/paper.pdf"
+   magick -density 150 "./papers/Author_Year_ShortTitle/paper.pdf" -quality 90 "./papers/Author_Year_ShortTitle/pngs/page-%03d.png"
+   rm -f ./papers/temp-metadata-page0.png
+   ```
 
-4. Continue to Step 3
+4. **Read each page image** sequentially using Read tool from the paper's `pngs/` directory
+
+5. Continue to Step 4 (Write Notes) — **skip Steps 3 and 3.5** (directory already created, no temp images to copy)
 
 ---
 
@@ -173,10 +181,10 @@ For papers >100 pages, switch to **foreman mode**: coordinate parallel subagents
 Read the first page to extract author, year, title for directory naming:
 
 ```bash
-magick -density 150 "$ARGUMENTS[0]" -quality 90 "./papers/temp-page-000.png"
+magick -density 150 "$ARGUMENTS[0]" -quality 90 "./papers/temp-metadata-page0.png"
 ```
 
-Read `./papers/temp-page-000.png` to get paper metadata, then determine directory name (`Author_Year_ShortTitle`).
+Read `./papers/temp-metadata-page0.png` to get paper metadata, then determine directory name (`Author_Year_ShortTitle`). Clean up: `rm -f ./papers/temp-metadata-page0.png`
 
 ### 2C.2: Create Output Directory Structure
 
@@ -299,22 +307,13 @@ mv "$ARGUMENTS" "./papers/FirstAuthor_Year_ShortTitle/"
 
 ---
 
-## Step 3.5: Copy Page Images (Medium Papers only)
+## Step 3.5: Copy Page Images (SKIP for Medium Papers)
 
-For Step 2B (medium papers), copy temp images into the paper directory:
+**Medium papers (Step 2B):** Images are already in `./papers/Author_Year_ShortTitle/pngs/` — no copying or cleanup needed. Skip this step entirely.
 
-```bash
-mkdir -p "./papers/FirstAuthor_Year_ShortTitle/pngs"
-cp ./papers/temp-page-*.png "./papers/FirstAuthor_Year_ShortTitle/pngs/"
-```
+**Large papers (Step 2C):** Images are written directly to the output directory — no copying needed. Skip this step entirely.
 
-**Note:** For large papers (Step 2C), images are written directly to the output directory - no copying needed.
-
-### Cleanup Temp Images
-
-```bash
-rm -f ./papers/temp-page-*.png
-```
+**This step only applies if a PDF was placed in papers/ root and manually converted there.** In normal flow, all image conversion targets the paper's own `pngs/` subdirectory.
 
 ---
 
