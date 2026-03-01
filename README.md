@@ -31,19 +31,20 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 
 ## Installation
 
+### From GitHub (recommended)
+
+Add this repo as a marketplace, then install the plugin:
+
+```bash
+claude plugin marketplace add ctoth/research-papers-plugin
+claude plugin install research-papers@research-papers-marketplace
+```
+
 ### From local path (development)
 
 ```bash
-claude --plugin-dir /path/to/research-papers-plugin
-```
-
-### As a marketplace
-
-Add this repo as a marketplace source, then install:
-
-```bash
-claude plugin marketplace add https://github.com/Q/research-papers-plugin
-claude plugin install research-papers
+claude plugin marketplace add /path/to/research-papers-plugin
+claude plugin install research-papers@research-papers-marketplace
 ```
 
 ### Project setup

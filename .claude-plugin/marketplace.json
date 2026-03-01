@@ -1,0 +1,16 @@
+{
+  "name": "research-papers-marketplace",
+  "owner": {
+    "name": "Q"
+  },
+  "metadata": {
+    "description": "Research paper collection management plugins"
+  },
+  "plugins": [
+    {
+      "name": "research-papers",
+      "source": "./plugins/research-papers",
+      "description": "Annotated research paper collection management — retrieve, read, extract, cross-reference scientific papers"
+    }
+  ]
+}
