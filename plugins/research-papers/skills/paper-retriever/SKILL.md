@@ -42,12 +42,15 @@ If the output contains "PDF document" -> success. Continue to Step 3.
 If not -> the download failed or returned HTML. Try adding `.pdf` to the URL.
 
 **IMPORTANT - Metadata extraction for arxiv papers:**
-The Read tool CANNOT parse most arxiv PDFs (reports "password-protected" falsely).
-Instead, fetch metadata from the arxiv abstract page using WebFetch:
+Most arxiv PDFs can't be parsed directly (often report "password-protected" falsely).
+Instead, fetch metadata from the arxiv abstract page:
 
-```
-WebFetch(url: "https://arxiv.org/abs/XXXX.XXXXX", prompt: "Extract: 1) Full paper title, 2) All author names, 3) Year of publication, 4) Venue/conference if mentioned, 5) Abstract text")
-```
+Fetch `https://arxiv.org/abs/XXXX.XXXXX` and extract:
+1. Full paper title
+2. All author names
+3. Year of publication
+4. Venue/conference if mentioned
+5. Abstract text
 
 This reliably gives you title, authors, year without needing to parse the PDF.
 
@@ -59,45 +62,47 @@ ACL Anthology PDFs are freely available:
 curl -L -o "./papers/temp_IDENTIFIER.pdf" "https://aclanthology.org/XXXX.pdf" 2>&1
 ```
 
-Fetch metadata from the abstract page with WebFetch too.
+Fetch metadata from the abstract page too.
 
 ### Case C: Other URL or DOI (paywalled)
-Use Chrome to navigate to sci-hub:
 
-1. Navigate to sci-hub:
-```
-mcp__claude-in-chrome__navigate -> https://sci-hub.st/
-```
+Use browser automation to navigate to sci-hub and download the PDF.
 
-2. Enter the URL or DOI in the search box:
-```
-mcp__claude-in-chrome__form_input -> enter the URL/DOI in the input field
-```
+**Try browser tools in this order:**
 
-3. Click the submit button:
-```
-mcp__claude-in-chrome__computer -> click the submit/open button
-```
+#### Option 1: Playwright MCP (preferred — works on all platforms)
 
-4. Wait for the page to load. The PDF should be embedded. Look for:
-   - An iframe with a PDF src URL
-   - A direct download link
+If Playwright MCP tools are available (`browser_navigate`, `browser_click`, etc.):
 
-5. Extract the PDF URL from the page:
-```
-mcp__claude-in-chrome__javascript_tool ->
-  const iframe = document.querySelector('#pdf');
-  if (iframe) return iframe.src;
-  const embed = document.querySelector('embed[type="application/pdf"]');
-  if (embed) return embed.src;
-  const links = [...document.querySelectorAll('a')].filter(a => a.href.includes('.pdf'));
-  return links.map(a => a.href);
-```
+1. `browser_navigate` to `https://sci-hub.st/`
+2. `browser_snapshot` to find the input field
+3. `browser_type` to enter the URL/DOI in the search field
+4. `browser_click` the submit/open button
+5. `browser_snapshot` to look for an iframe or embed with a PDF URL
+6. If needed, `browser_evaluate` to extract the PDF URL:
+   ```js
+   const iframe = document.querySelector('#pdf');
+   if (iframe) return iframe.src;
+   const embed = document.querySelector('embed[type="application/pdf"]');
+   if (embed) return embed.src;
+   const links = [...document.querySelectorAll('a')].filter(a => a.href.includes('.pdf'));
+   return links.map(a => a.href);
+   ```
+7. Download: `curl -L -o "./papers/temp_IDENTIFIER.pdf" "EXTRACTED_URL" 2>&1`
 
-6. Download the extracted PDF URL:
-```bash
-curl -L -o "./papers/temp_IDENTIFIER.pdf" "EXTRACTED_URL" 2>&1
-```
+#### Option 2: Claude-in-Chrome (Claude Code fallback)
+
+If Playwright is not available but `mcp__claude-in-chrome__navigate` is:
+
+1. `mcp__claude-in-chrome__navigate` to `https://sci-hub.st/`
+2. `mcp__claude-in-chrome__form_input` to enter the URL/DOI
+3. `mcp__claude-in-chrome__computer` to click submit
+4. `mcp__claude-in-chrome__javascript_tool` to extract PDF URL (same JS as above)
+5. Download: `curl -L -o "./papers/temp_IDENTIFIER.pdf" "EXTRACTED_URL" 2>&1`
+
+#### Option 3: No browser automation
+
+Report the DOI/URL and ask the user to download the PDF manually to `./papers/`.
 
 ### Case D: Paper Title (no URL)
 Search arxiv first:
@@ -156,10 +161,10 @@ Size: [file size]
 ## CRITICAL: File Modified Error Workaround
 
 If Edit/Write fails with "file unexpectedly modified":
-1. Read the file again with Read tool
-2. Retry the Edit
+1. Read the file again
+2. Retry the edit
 3. Try path formats: `./relative`, `C:/forward/slashes`, `C:\back\slashes`
-4. NEVER use cat, sed, echo - always Read/Edit/Write
+4. Prefer your file editing tools over shell text manipulation (cat, sed, echo)
 5. If all formats fail, STOP and report
 
 ## CRITICAL: Parallel Swarm Awareness
