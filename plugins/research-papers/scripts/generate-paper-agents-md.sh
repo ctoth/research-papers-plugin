@@ -1,6 +1,6 @@
 #!/bin/bash
-# Generate papers/CLAUDE.md from all description.md files
-# Run from project root: bash scripts/generate-paper-claude-md.sh
+# Generate papers/AGENTS.md from all description.md files
+# Run from project root: bash scripts/generate-paper-agents-md.sh
 
 {
   echo "# Paper References"
@@ -30,6 +30,6 @@
       echo ""
     fi
   done
-} > papers/CLAUDE.md
+} > papers/AGENTS.md
 
-echo "Generated papers/CLAUDE.md with $(grep -c '^## ' papers/CLAUDE.md) paper entries"
+echo "Generated papers/AGENTS.md with $(grep -c '^## ' papers/AGENTS.md) paper entries"
