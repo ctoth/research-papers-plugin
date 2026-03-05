@@ -29,7 +29,18 @@ Skill(skill: "research-papers:paper-reader", args: "papers/Author_Year_ShortTitl
 
 Follow all instructions the skill provides through to completion (notes.md, description.md, abstract.md, citations.md, CLAUDE.md update).
 
-## Step 3: Report
+## Step 3: Clean Up Source PDF
+
+If the original argument was a local file path (e.g., `papers/somefile.pdf` in the root of `papers/`), and the paper directory now contains `paper.pdf`, **delete the original root-level PDF**:
+
+```bash
+# Only if the source was a local file and the paper dir copy exists
+rm "./papers/somefile.pdf"
+```
+
+This keeps the `papers/` root clean — any PDF still in the root is unprocessed. Do NOT delete if the source was a URL (nothing to clean up) or if the paper directory doesn't have `paper.pdf` yet (something went wrong).
+
+## Step 4: Report
 
 When both skills have completed, write a summary to `./reports/paper-$SAFE_NAME.md` where $SAFE_NAME is derived from the paper directory name. Include:
 

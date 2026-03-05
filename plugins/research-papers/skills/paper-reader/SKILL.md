@@ -550,45 +550,19 @@ CRITICAL: Extract ALL citations from the references section, not just ones menti
 
 ## Step 7.5: Cross-Reference Collection
 
-After citations.md is written, check which cited papers already exist in the collection and which are new leads.
+After citations.md is written, invoke the **reconcile** skill to handle all cross-referencing:
 
-### How to Cross-Reference
-
-1. **Extract author-year keys** from the Key Citations for Follow-up in citations.md
-2. **Grep papers/CLAUDE.md** for each cited author's last name:
-
-```bash
-# For each key citation author, check if already in collection
-grep -c "AuthorName" ./papers/CLAUDE.md
+```
+/research-papers:reconcile papers/FirstAuthor_Year_ShortTitle
 ```
 
-3. **Append a connections section** to notes.md:
+This handles:
+- Forward cross-referencing (which cited papers are already in the collection)
+- Reverse citation search (which collection papers cite this one)
+- Reconciliation of citing papers (updating leads, correcting descriptions, documenting tensions)
+- Backward annotations (see-also notes on superseded/extended papers)
 
-```markdown
-## Collection Cross-References
-
-### Already in Collection
-- **AuthorA_Year_ShortTitle** - cited for [reason] (our notes cover this)
-
-### New Leads (Not Yet in Collection)
-- AuthorB (Year) - "Paper title" - relevant for [reason]
-
-### Supersedes or Recontextualizes
-- [If this paper resolves, corrects, or extends a paper we already have, note it here]
-```
-
-### Backward Annotation
-
-If the "Supersedes or Recontextualizes" section is non-empty, **append a see-also note** to the affected paper's notes.md:
-
-```bash
-echo "" >> ./papers/AffectedPaper_Dir/notes.md
-echo "---" >> ./papers/AffectedPaper_Dir/notes.md
-echo "" >> ./papers/AffectedPaper_Dir/notes.md
-echo "**See also:** NewPaper_Dir - [relationship description]" >> ./papers/AffectedPaper_Dir/notes.md
-```
-
-Only annotate backward when there's a genuine supersedes/extends/corrects relationship - not for every citation.
+Wait for reconcile to complete before proceeding to Step 8.
 
 ---
 
@@ -640,10 +614,9 @@ Write to ./papers/Author_Year_ShortTitle/citations.md
 - [ ] description.md written (3 sentences, single paragraph)
 - [ ] abstract.md written (verbatim + interpretation)
 - [ ] citations.md written (full reference list + key citations)
-- [ ] Cross-references checked (which cited papers are already in collection vs new leads)
+- [ ] Reconcile skill invoked (forward + reverse cross-references, reconciliation)
 - [ ] papers/CLAUDE.md updated (description concatenated)
 - [ ] Temp images cleaned up (if medium paper path)
-- [ ] Backward annotations written (if supersedes/recontextualizes existing papers)
 
 ---
 
@@ -659,8 +632,7 @@ When done:
 ```
 Done - created papers/[dirname]/
   - CLAUDE.md updated
-  - Cross-refs: N papers already in collection, M new leads
-  - Backward annotations: [list any existing papers annotated, or "none"]
+  - Reconciliation: [summary from reconcile skill output]
 ```
 
 Then provide a brief **usefulness assessment** to the user:
@@ -690,5 +662,5 @@ Do NOT:
 - Delete chunk reports (preserve for reference)
 - Output findings to conversation
 - Skip the CLAUDE.md update (Step 8) - this is what makes the system work
-- Skip cross-referencing (Step 7.5) - this is what turns papers into a conversation
+- Skip the reconcile skill invocation (Step 7.5) - this is what turns papers into a conversation
 - Leave temp images behind in papers/ root (clean up after Step 3.5)
