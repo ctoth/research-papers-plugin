@@ -11,23 +11,19 @@ Download a scientific paper and extract structured notes in one shot.
 
 ## Step 1: Retrieve the Paper
 
-Use the Skill tool to invoke the paper-retriever skill:
+Invoke the **paper-retriever** skill with: `$ARGUMENTS`
 
-```
-Skill(skill: "research-papers:paper-retriever", args: "$ARGUMENTS")
-```
+If skill invocation is available (e.g., `/research-papers:paper-retriever`), use it. Otherwise, follow the paper-retriever SKILL.md instructions directly.
 
-Follow all instructions the skill provides. When it completes, note the output path (e.g., `papers/Author_Year_ShortTitle/paper.pdf`).
+When retrieval completes, note the output path (e.g., `papers/Author_Year_ShortTitle/paper.pdf`).
 
 ## Step 2: Read and Extract Notes
 
-Use the Skill tool to invoke the paper-reader skill with the path from Step 1:
+Invoke the **paper-reader** skill with the path from Step 1.
 
-```
-Skill(skill: "research-papers:paper-reader", args: "papers/Author_Year_ShortTitle/paper.pdf")
-```
+If skill invocation is available (e.g., `/research-papers:paper-reader`), use it. Otherwise, follow the paper-reader SKILL.md instructions directly.
 
-Follow all instructions the skill provides through to completion (notes.md, description.md, abstract.md, citations.md, CLAUDE.md update).
+Follow all instructions through to completion (notes.md, description.md, abstract.md, citations.md, CLAUDE.md update).
 
 ## Step 3: Clean Up Source PDF
 
