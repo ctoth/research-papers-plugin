@@ -23,7 +23,7 @@ Extract from `$ARGUMENTS`:
 ls $PATHS 2>/dev/null || echo "No matches"
 ```
 
-Read all matching prompt files using the Read tool.
+Read all matching prompt files.
 
 ## Step 3: Analyze Patterns
 
@@ -113,10 +113,10 @@ Create the SKILL.md with:
 ## CRITICAL: File Modified Error Workaround
 
 If Edit/Write fails with "file unexpectedly modified":
-1. Read the file again with Read tool
-2. Retry the Edit
+1. Read the file again
+2. Retry the edit
 3. Try path formats: `./relative`, `C:/forward/slashes`, `C:\back\slashes`
-4. NEVER use cat, sed, echo - always Read/Edit/Write
+4. Prefer your file editing tools over shell text manipulation (cat, sed, echo)
 5. If all formats fail, STOP and report
 
 ## CRITICAL: Parallel Swarm Awareness
@@ -194,10 +194,10 @@ Wait for user confirmation before finalizing. If user says no or requests change
 ## CRITICAL: File Modified Error Workaround
 
 If Edit/Write fails with "file unexpectedly modified":
-1. Read the file again with Read tool
-2. Retry the Edit
+1. Read the file again
+2. Retry the edit
 3. Try path formats: `./relative`, `C:/forward/slashes`, `C:\back\slashes`
-4. NEVER use cat, sed, echo - always Read/Edit/Write
+4. Prefer your file editing tools over shell text manipulation (cat, sed, echo)
 5. If all formats fail, STOP and report
 
 ## CRITICAL: Parallel Swarm Awareness
