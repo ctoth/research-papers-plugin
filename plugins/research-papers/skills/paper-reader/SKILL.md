@@ -101,7 +101,7 @@ Check if PDF can be read directly:
 pdfinfo "$ARGUMENTS" 2>/dev/null | grep Pages || echo "pdfinfo not available"
 ```
 
-Also try direct read - Claude will error if >20MB:
+Also try direct read - most agents will error on files >20MB:
 
 **Decision tree:**
 - **<=25 pages AND <20MB**: Direct PDF read (Step 2A)
