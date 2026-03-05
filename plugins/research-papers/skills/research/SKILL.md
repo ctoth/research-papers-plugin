@@ -21,13 +21,13 @@ Conduct web-based research on **$ARGUMENTS** to answer:
 
 ## Research Methods
 
-Use WebSearch to find:
+Search the web to find:
 - Academic papers and key authors
 - Documentation and specifications
 - Open-source implementations
 - Comparison studies
 
-Use WebFetch to:
+Fetch and read these pages to:
 - Read paper abstracts/summaries
 - Extract key information from documentation
 - Check implementation details
@@ -83,7 +83,7 @@ Write findings to `./reports/research-$ARGUMENTS.md`:
 ## CRITICAL: File Modified Error Workaround
 
 If Edit/Write fails with "file unexpectedly modified":
-1. Read the file again with Read tool
+1. Read the file again
 2. Retry the Edit
 3. Try path formats: `./relative`, `C:/forward/slashes`, `C:\back\slashes`
 4. NEVER use cat, sed, echo - always Read/Edit/Write
