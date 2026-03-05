@@ -56,13 +56,13 @@ Read `citations.md` — focus on both the full Reference List and the Key Citati
 
 ### 2.2: Search Collection Index
 
-For each key citation, grep `papers/CLAUDE.md` for the author's last name:
+For each key citation, grep `papers/AGENTS.md` for the author's last name:
 
 ```bash
-grep -c "AuthorName" ./papers/CLAUDE.md
+grep -c "AuthorName" ./papers/AGENTS.md
 ```
 
-If found, identify the exact directory name from the CLAUDE.md heading.
+If found, identify the exact directory name from the AGENTS.md heading.
 
 ### 2.3: Write/Update Forward Cross-References
 
@@ -332,7 +332,7 @@ Before every write operation, check if the content already exists:
 ---
 
 ## Do NOT:
-- Create or modify `papers/CLAUDE.md` entries (that's paper-reader's job)
+- Create or modify `papers/AGENTS.md` entries (that's paper-reader's job)
 - Delete or overwrite existing notes content (only append/update cross-reference sections)
 - Modify the paper's core notes sections (Summary, Parameters, Equations, etc.)
 - Output full notes content to conversation (just the reconciliation summary)
