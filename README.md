@@ -1,6 +1,6 @@
 # research-papers
 
-A Claude Code plugin for managing annotated research paper collections.
+A plugin for managing annotated research paper collections. Works with Claude Code, Codex CLI, and Gemini CLI.
 
 ## What it does
 
@@ -10,7 +10,7 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 - **description.md** — Three-sentence summary
 - **abstract.md** — Verbatim abstract + interpretation
 - **citations.md** — Full reference list + key citations for follow-up
-- **papers/CLAUDE.md** — Auto-generated index so Claude knows what's in the collection
+- **papers/AGENTS.md** — Auto-generated index so any agent knows what's in the collection
 
 ## Skills
 
@@ -19,6 +19,7 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 | `paper-retriever` | Download a paper PDF from arxiv, DOI, ACL Anthology, or sci-hub |
 | `paper-reader` | Read a paper and extract structured notes (handles small/medium/large papers) |
 | `paper-process` | Combined retrieve + read in one step |
+| `reconcile` | Cross-reference a paper against the collection bidirectionally |
 | `research` | Web research on a topic, structured findings report |
 | `make-skill` | Create new skills from prompt files |
 
@@ -26,7 +27,7 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 
 | Script | Description |
 |--------|-------------|
-| `generate-paper-claude-md.sh` | Rebuild papers/CLAUDE.md index from all description.md files |
+| `generate-paper-agents-md.sh` | Rebuild papers/AGENTS.md index from all description.md files |
 | `cross-reference-papers.py` | Find cross-references between papers in the collection |
 
 ## Installation
@@ -47,6 +48,24 @@ claude plugin marketplace add /path/to/research-papers-plugin
 claude plugin install research-papers@research-papers-marketplace
 ```
 
+### For Codex CLI
+
+Create symlinks so Codex discovers the skills:
+
+```bash
+mkdir -p .agents/skills
+ln -s ../../plugins/research-papers/skills/* .agents/skills/
+```
+
+### For Gemini CLI
+
+Create symlinks so Gemini discovers the skills:
+
+```bash
+mkdir -p .gemini/skills
+ln -s ../../plugins/research-papers/skills/* .gemini/skills/
+```
+
 ### Project setup
 
 Your project needs this structure:
@@ -54,7 +73,9 @@ Your project needs this structure:
 ```
 your-project/
 ├── papers/
-│   └── CLAUDE.md    # Paper index (auto-generated)
+│   ├── AGENTS.md    # Paper index (auto-generated, canonical)
+│   ├── CLAUDE.md    # Contains: @AGENTS.md
+│   └── GEMINI.md    # Contains: @AGENTS.md
 ├── reports/          # Research output
 └── prompts/          # Prompt templates for large papers
 ```
@@ -71,8 +92,11 @@ Copy `templates/papers-gitignore` content into your `.gitignore` to exclude PDFs
 
 ## Requirements
 
-- Claude Code 1.0.33+
+- An agent CLI: Claude Code 1.0.33+, Codex CLI, or Gemini CLI
 - `curl` for downloading papers
 - ImageMagick (`magick`) for large paper PDF-to-image conversion
 - Python 3 for cross-reference script
-- Chrome + claude-in-chrome MCP server for paywalled papers (optional)
+- Playwright MCP server for paywalled papers (optional, works on all platforms):
+  - Claude Code: `claude mcp add playwright -- npx @playwright/mcp@latest`
+  - Codex CLI: add `[mcp_servers.playwright]` to `~/.codex/config.toml`
+  - Gemini CLI: add to `~/.gemini/settings.json` mcpServers
