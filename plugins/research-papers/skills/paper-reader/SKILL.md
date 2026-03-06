@@ -122,7 +122,7 @@ Also try direct read - most agents will error on files >20MB:
 
 1. **Convert page 0 only** to extract metadata for directory naming:
    ```bash
-   magick -density 150 "$ARGUMENTS[0]" -quality 90 "./papers/temp-metadata-page0.png"
+   magick -density 150 "$ARGUMENTS[0]" -quality 90 -resize '1960x1960>' "./papers/temp-metadata-page0.png"
    ```
 
 2. **Read the temp page image** to extract author, year, title. Determine directory name (`Author_Year_ShortTitle`).
@@ -131,7 +131,7 @@ Also try direct read - most agents will error on files >20MB:
    ```bash
    mkdir -p "./papers/Author_Year_ShortTitle/pngs"
    mv "$ARGUMENTS" "./papers/Author_Year_ShortTitle/paper.pdf"
-   magick -density 150 "./papers/Author_Year_ShortTitle/paper.pdf" -quality 90 "./papers/Author_Year_ShortTitle/pngs/page-%03d.png"
+   magick -density 150 "./papers/Author_Year_ShortTitle/paper.pdf" -quality 90 -resize '1960x1960>' "./papers/Author_Year_ShortTitle/pngs/page-%03d.png"
    rm -f ./papers/temp-metadata-page0.png
    ```
 
@@ -150,7 +150,7 @@ For papers >100 pages, split into chunks and process each one. If you can dispat
 Read the first page to extract author, year, title for directory naming:
 
 ```bash
-magick -density 150 "$ARGUMENTS[0]" -quality 90 "./papers/temp-metadata-page0.png"
+magick -density 150 "$ARGUMENTS[0]" -quality 90 -resize '1960x1960>' "./papers/temp-metadata-page0.png"
 ```
 
 Read `./papers/temp-metadata-page0.png` to get paper metadata, then determine directory name (`Author_Year_ShortTitle`). Clean up: `rm -f ./papers/temp-metadata-page0.png`
@@ -168,7 +168,7 @@ mv "$ARGUMENTS" "./papers/Author_Year_ShortTitle/"
 ### 2C.3: Convert PDF to Images (directly into output directory)
 
 ```bash
-magick -density 150 "./papers/Author_Year_ShortTitle/paper.pdf" -quality 90 "./papers/Author_Year_ShortTitle/pngs/page-%03d.png"
+magick -density 150 "./papers/Author_Year_ShortTitle/paper.pdf" -quality 90 -resize '1960x1960>' "./papers/Author_Year_ShortTitle/pngs/page-%03d.png"
 ```
 
 ### 2C.4: Count Pages and Calculate Chunks
