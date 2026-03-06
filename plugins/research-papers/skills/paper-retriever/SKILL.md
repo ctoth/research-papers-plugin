@@ -1,7 +1,7 @@
 ---
 name: paper-retriever
 description: Retrieve a scientific paper PDF given an arxiv URL, DOI, or paper title. Downloads to papers/ directory. Uses direct download for arxiv, Chrome + sci-hub for paywalled papers.
-argument-hint: <arxiv-url-or-doi> [optional-output-name]
+argument-hint: "<arxiv-url-or-doi> [optional-output-name]"
 disable-model-invocation: false
 ---
 

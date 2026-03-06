@@ -1,7 +1,7 @@
 ---
 name: research
 description: Research a topic using web search and create structured findings. Use when you need to investigate approaches, find papers, compare implementations, or gather knowledge on a topic. Creates structured notes in reports/ directory.
-argument-hint: [topic]
+argument-hint: "[topic]"
 context: fork
 agent: general-purpose
 ---

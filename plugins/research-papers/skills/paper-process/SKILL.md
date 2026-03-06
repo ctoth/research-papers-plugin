@@ -1,7 +1,7 @@
 ---
 name: paper-process
 description: Retrieve a paper and extract implementation-focused notes. Combines paper-retriever and paper-reader into one step. Give it a URL, DOI, or title.
-argument-hint: <url-or-doi-or-title>
+argument-hint: "<url-or-doi-or-title>"
 disable-model-invocation: false
 ---
 

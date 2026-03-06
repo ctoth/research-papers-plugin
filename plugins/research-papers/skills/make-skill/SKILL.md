@@ -1,7 +1,7 @@
 ---
 name: make-skill
 description: Create new skills from existing prompts or workflow patterns. Analyzes prompt files to extract reusable structure, determines appropriate frontmatter settings, and generates properly formatted SKILL.md files.
-argument-hint: [prompt-path(s)] [--name name] [--global]
+argument-hint: "[prompt-path(s)] [--name name] [--global]"
 allowed-tools: Read, Write, Bash(mkdir:*), Bash(ls:*), Glob
 ---
 

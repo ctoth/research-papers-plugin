@@ -1,7 +1,7 @@
 ---
 name: reconcile
 description: Cross-reference a paper against the collection. Finds which cited papers are already collected, which are new leads, which collection papers cite this one, and reconciles all cross-references bidirectionally. Run on a single paper directory or use --all for the entire collection.
-argument-hint: <papers/Author_Year_Title> or --all
+argument-hint: "<papers/Author_Year_Title> or --all"
 disable-model-invocation: false
 ---
 

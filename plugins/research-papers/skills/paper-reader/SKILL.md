@@ -1,7 +1,7 @@
 ---
 name: paper-reader
 description: Read scientific papers and extract implementation-focused notes. Use when you have a PDF that needs systematic extraction of equations, parameters, algorithms. Handles small papers (direct read), medium papers (image conversion), and large papers (parallel chunk readers via foreman protocol). Creates structured notes in papers/ directory.
-argument-hint: [path/to/paper.pdf]
+argument-hint: "[path/to/paper.pdf]"
 disable-model-invocation: false
 ---
 
