@@ -2,7 +2,7 @@
 name: lint-paper
 description: Check paper directories for completeness, format compliance, and index consistency. Run on a single paper or --all for the entire collection.
 argument-hint: "<papers/Author_Year_Title> or --all"
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 # Lint Paper: $ARGUMENTS
