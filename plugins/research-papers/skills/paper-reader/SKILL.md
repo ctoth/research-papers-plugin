@@ -476,15 +476,17 @@ Wait for reconcile to complete before proceeding to Step 8.
 
 ---
 
-## Step 8: Update papers/AGENTS.md
+## Step 8: Update papers/index.md
 
-This is the step that makes the collection work across sessions. Concatenate the description into the paper index.
+This is the step that makes the collection work across sessions. Add the paper to the index.
 
 ```bash
-echo "" >> ./papers/AGENTS.md
-echo "## FirstAuthor_Year_ShortTitle" >> ./papers/AGENTS.md
-cat ./papers/FirstAuthor_Year_ShortTitle/description.md >> ./papers/AGENTS.md
-echo "" >> ./papers/AGENTS.md
+echo "- FirstAuthor_Year_ShortTitle" >> ./papers/index.md
+```
+
+If `papers/index.md` doesn't exist yet, create it:
+```bash
+echo "- FirstAuthor_Year_ShortTitle" > ./papers/index.md
 ```
 
 **This step is NOT optional.** Without it, future sessions won't know this paper exists.
@@ -515,7 +517,7 @@ If you can dispatch subagents (use a fast/cheap model if available), launch thes
 - [ ] abstract.md written (verbatim + interpretation)
 - [ ] citations.md written (full reference list + key citations)
 - [ ] Reconcile skill invoked (forward + reverse cross-references, reconciliation)
-- [ ] papers/AGENTS.md updated (description concatenated)
+- [ ] papers/index.md updated (dirname appended)
 - [ ] Temp images cleaned up (if medium paper path)
 
 ---
@@ -526,12 +528,12 @@ If you can dispatch subagents (use a fast/cheap model if available), launch thes
 **Medium papers (26-100 pages)**: `papers/Author_Year_Title/notes.md` + `description.md` + `abstract.md` + `citations.md` + `pngs/`
 **Large papers (>100 pages)**: `papers/Author_Year_Title/notes.md` + `description.md` + `abstract.md` + `citations.md` + `pngs/` + `chunks/`
 
-**All sizes also produce**: Updated `papers/AGENTS.md` entry + cross-reference annotations in notes.md
+**All sizes also produce**: Updated `papers/index.md` entry + cross-reference annotations in notes.md
 
 When done:
 ```
 Done - created papers/[dirname]/
-  - AGENTS.md updated
+  - index.md updated
   - Reconciliation: [summary from reconcile skill output]
 ```
 
@@ -561,6 +563,6 @@ Do NOT:
 - Delete page images in paper directories (user may want them)
 - Delete chunk reports (preserve for reference)
 - Output findings to conversation
-- Skip the AGENTS.md update (Step 8) - this is what makes the system work
+- Skip the index.md update (Step 8) - this is what makes the system work
 - Skip the reconcile skill invocation (Step 7.5) - this is what turns papers into a conversation
 - Leave temp images behind in papers/ root (clean up after Step 3.5)

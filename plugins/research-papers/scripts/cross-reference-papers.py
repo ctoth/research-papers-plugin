@@ -13,15 +13,21 @@ import re
 from pathlib import Path
 
 PAPERS_DIR = Path(__file__).parent.parent / "papers"
-CLAUDE_MD = PAPERS_DIR / "CLAUDE.md"
+INDEX_MD = PAPERS_DIR / "index.md"
 
 
 def parse_collection_index():
-    """Extract (dirname, author, year) tuples from papers/CLAUDE.md headers."""
-    text = CLAUDE_MD.read_text(encoding="utf-8")
+    """Extract (dirname, author, year) tuples from papers/index.md."""
+    text = INDEX_MD.read_text(encoding="utf-8")
     entries = []
-    for match in re.finditer(r"^## (\S+)", text, re.MULTILINE):
-        dirname = match.group(1)
+    for line in text.strip().split("\n"):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        # Lines are "- DirName" format
+        dirname = re.sub(r"^[-*]\s*", "", line).strip()
+        if not dirname:
+            continue
         # Parse author and year from dirname like "Fant_1985_LFModelGlottalFlow"
         parts = dirname.split("_")
         author = parts[0]

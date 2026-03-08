@@ -10,7 +10,7 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 - **description.md** — Three-sentence summary
 - **abstract.md** — Verbatim abstract + interpretation
 - **citations.md** — Full reference list + key citations for follow-up
-- **papers/AGENTS.md** — Auto-generated index so any agent knows what's in the collection
+- **papers/index.md** — Auto-generated list of paper directories in the collection
 
 ## Skills
 
@@ -27,7 +27,7 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 
 | Script | Description |
 |--------|-------------|
-| `generate-paper-agents-md.sh` | Rebuild papers/AGENTS.md index from all description.md files |
+| `generate-paper-index.py` | Rebuild papers/index.md from paper directories |
 | `cross-reference-papers.py` | Find cross-references between papers in the collection |
 
 ## Installation
@@ -73,7 +73,8 @@ Your project needs this structure:
 ```
 your-project/
 ├── papers/
-│   ├── AGENTS.md    # Paper index (auto-generated, canonical)
+│   ├── AGENTS.md    # Static instructions for agents (how to use the collection)
+│   ├── index.md     # Paper directory listing (auto-generated)
 │   ├── CLAUDE.md    # Contains: @AGENTS.md
 │   └── GEMINI.md    # Contains: @AGENTS.md
 ├── reports/          # Research output

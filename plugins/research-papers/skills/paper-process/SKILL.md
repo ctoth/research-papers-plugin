@@ -23,7 +23,7 @@ Invoke the **paper-reader** skill with the path from Step 1.
 
 If skill invocation is available (e.g., `/research-papers:paper-reader`), use it. Otherwise, follow the paper-reader SKILL.md instructions directly.
 
-Follow all instructions through to completion (notes.md, description.md, abstract.md, citations.md, AGENTS.md update).
+Follow all instructions through to completion (notes.md, description.md, abstract.md, citations.md, index.md update).
 
 ## Step 3: Clean Up Source PDF
 
