@@ -120,19 +120,21 @@ Also try direct read - most agents will error on files >20MB:
 
 ## Step 2B: Image Conversion (Medium Papers 26-100 pages)
 
-1. **Convert page 0 only** to extract metadata for directory naming:
+1. **Convert page 0 only** to extract metadata for directory naming.
+   **CRITICAL: Never write temp files to `papers/` root.** Use a system temp directory:
    ```bash
-   magick -density 150 "$ARGUMENTS[0]" -quality 90 -resize '1960x1960>' "./papers/temp-metadata-page0.png"
+   tmpdir=$(mktemp -d)
+   magick -density 150 "$ARGUMENTS[0]" -quality 90 -resize '1960x1960>' "$tmpdir/page0.png"
    ```
 
-2. **Read the temp page image** to extract author, year, title. Determine directory name (`Author_Year_ShortTitle`).
+2. **Read the temp page image** (`$tmpdir/page0.png`) to extract author, year, title. Determine directory name (`Author_Year_ShortTitle`).
 
 3. **Create output directory** and convert all pages directly there:
    ```bash
    mkdir -p "./papers/Author_Year_ShortTitle/pngs"
-   mv "$ARGUMENTS" "./papers/Author_Year_ShortTitle/paper.pdf"
+   mv "$ARGUMENTS" "./papers/Author_Year_ShortTitle/paper.pdf"  # MUST be mv, NEVER cp
    magick -density 150 "./papers/Author_Year_ShortTitle/paper.pdf" -quality 90 -resize '1960x1960>' "./papers/Author_Year_ShortTitle/pngs/page-%03d.png"
-   rm -f ./papers/temp-metadata-page0.png
+   rm -rf "$tmpdir"
    ```
 
 4. **Read each page image** sequentially from the paper's `pngs/` directory
@@ -149,11 +151,13 @@ For papers >100 pages, split into chunks and process each one. If you can dispat
 
 Read the first page to extract author, year, title for directory naming:
 
+**CRITICAL: Never write temp files to `papers/` root.** Use a system temp directory:
 ```bash
-magick -density 150 "$ARGUMENTS[0]" -quality 90 -resize '1960x1960>' "./papers/temp-metadata-page0.png"
+tmpdir=$(mktemp -d)
+magick -density 150 "$ARGUMENTS[0]" -quality 90 -resize '1960x1960>' "$tmpdir/page0.png"
 ```
 
-Read `./papers/temp-metadata-page0.png` to get paper metadata, then determine directory name (`Author_Year_ShortTitle`). Clean up: `rm -f ./papers/temp-metadata-page0.png`
+Read `$tmpdir/page0.png` to get paper metadata, then determine directory name (`Author_Year_ShortTitle`). Clean up: `rm -rf "$tmpdir"`
 
 ### 2C.2: Create Output Directory Structure
 
@@ -162,7 +166,7 @@ Create the output directory **before** full conversion so chunk readers can writ
 ```bash
 mkdir -p "./papers/Author_Year_ShortTitle/pngs"
 mkdir -p "./papers/Author_Year_ShortTitle/chunks"
-mv "$ARGUMENTS" "./papers/Author_Year_ShortTitle/"
+mv "$ARGUMENTS" "./papers/Author_Year_ShortTitle/paper.pdf"  # MUST be mv, NEVER cp
 ```
 
 ### 2C.3: Convert PDF to Images (directly into output directory)
@@ -251,8 +255,10 @@ Extract author/year/title from paper content:
 
 ```bash
 mkdir -p "./papers/FirstAuthor_Year_ShortTitle"
-mv "$ARGUMENTS" "./papers/FirstAuthor_Year_ShortTitle/"
+mv "$ARGUMENTS" "./papers/FirstAuthor_Year_ShortTitle/paper.pdf"
 ```
+
+**CRITICAL: Use `mv`, NEVER `cp`.** The root-level PDF must be removed. If it stays behind, there is no way to distinguish "unprocessed PDF" from "already processed, agent left a copy." The `mv` is the signal that processing is complete. Using `cp` breaks the entire workflow.
 
 **Naming convention**: `LastName_Year_2-4WordTitle`
 - Examples: `Mack_2021_AccessibilityResearchSurvey`, `Vanderheiden_2023_TraceTechnologyDisability`
@@ -584,4 +590,5 @@ Do NOT:
 - Output findings to conversation
 - Skip the index.md update (Step 8) - this is what makes the system work
 - Skip the reconcile skill invocation (Step 7.5) - this is what turns papers into a conversation
-- Leave temp images behind in papers/ root (clean up after Step 3.5)
+- Write ANY temp files to `papers/` root — use `mktemp -d` for temp work, paper's own `pngs/` for final images
+- Leave temp images behind anywhere (clean up after conversion)
