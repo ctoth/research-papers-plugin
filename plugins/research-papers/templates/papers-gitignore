@@ -8,4 +8,4 @@ papers/*/pngs/
 papers/temp-page-*.png
 
 # Auto-generated tag symlinks
-tagged-papers/
+papers/tagged/

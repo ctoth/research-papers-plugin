@@ -79,10 +79,10 @@ your-project/
 │   ├── index.md     # Paper listing with tags (auto-generated)
 │   ├── CLAUDE.md    # Contains: @AGENTS.md
 │   └── GEMINI.md    # Contains: @AGENTS.md
-├── tagged-papers/    # Symlinks organized by tag (auto-generated)
-│   ├── acoustics/
-│   │   └── Fant_1985_LFModel -> ../../papers/Fant_1985_LFModel
-│   └── voice-quality/
+│   ├── tagged/       # Symlinks organized by tag (auto-generated)
+│   │   ├── acoustics/
+│   │   │   └── Fant_1985_LFModel -> ../../Fant_1985_LFModel
+│   │   └── voice-quality/
 ├── reports/          # Research output
 └── prompts/          # Prompt templates for large papers
 ```

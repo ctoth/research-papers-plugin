@@ -18,7 +18,7 @@ def resolve_project_root() -> Path:
 PROJECT_ROOT = resolve_project_root()
 PAPERS_DIR = PROJECT_ROOT / "papers"
 INDEX_MD = PAPERS_DIR / "index.md"
-TAGGED_DIR = PROJECT_ROOT / "tagged-papers"
+TAGGED_DIR = PAPERS_DIR / "tagged"
 
 
 def parse_tags(description_path: Path) -> list[str]:
@@ -62,7 +62,7 @@ def main():
     tag_map: dict[str, list[str]] = {}
 
     for d in sorted(PAPERS_DIR.iterdir()):
-        if not d.is_dir() or not (d / "notes.md").exists():
+        if not d.is_dir() or d.name == "tagged" or not (d / "notes.md").exists():
             continue
         tags = parse_tags(d / "description.md")
         papers.append((d.name, tags))
