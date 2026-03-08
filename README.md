@@ -19,6 +19,7 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 | `paper-retriever` | Download a paper PDF from arxiv, DOI, ACL Anthology, or sci-hub |
 | `paper-reader` | Read a paper and extract structured notes (handles small/medium/large papers) |
 | `paper-process` | Combined retrieve + read in one step |
+| `lint-paper` | Audit paper directories for completeness and format compliance |
 | `reconcile` | Cross-reference a paper against the collection bidirectionally |
 | `tag-papers` | Add tags to untagged papers using their existing notes |
 | `research` | Web research on a topic, structured findings report |
