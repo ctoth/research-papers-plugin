@@ -9,9 +9,18 @@ Safe to run multiple times (idempotent).
 """
 
 import re
+import sys
 from pathlib import Path
 
-PAPERS_DIR = Path(__file__).resolve().parent.parent / "papers"
+
+def resolve_papers_dir() -> Path:
+    """Resolve papers directory from CLI arg or default to plugin-relative path."""
+    if len(sys.argv) > 1:
+        return Path(sys.argv[1]).resolve() / "papers"
+    return Path(__file__).resolve().parent.parent / "papers"
+
+
+PAPERS_DIR = resolve_papers_dir()
 
 
 def migrate_description_tags(desc_path: Path) -> bool:

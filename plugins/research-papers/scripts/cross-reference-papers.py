@@ -10,9 +10,18 @@ Phase 1: mechanical matching only (author+year string matching).
 """
 
 import re
+import sys
 from pathlib import Path
 
-PAPERS_DIR = Path(__file__).parent.parent / "papers"
+
+def resolve_papers_dir() -> Path:
+    """Resolve papers directory from CLI arg or default to plugin-relative path."""
+    if len(sys.argv) > 1:
+        return Path(sys.argv[1]).resolve() / "papers"
+    return Path(__file__).resolve().parent.parent / "papers"
+
+
+PAPERS_DIR = resolve_papers_dir()
 INDEX_MD = PAPERS_DIR / "index.md"
 
 

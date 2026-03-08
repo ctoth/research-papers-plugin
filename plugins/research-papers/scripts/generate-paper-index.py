@@ -4,11 +4,21 @@
 import os
 import re
 import shutil
+import sys
 from pathlib import Path
 
-PAPERS_DIR = Path(__file__).resolve().parent.parent / "papers"
+
+def resolve_project_root() -> Path:
+    """Resolve project root from CLI arg or default to plugin-relative path."""
+    if len(sys.argv) > 1:
+        return Path(sys.argv[1]).resolve()
+    return Path(__file__).resolve().parent.parent
+
+
+PROJECT_ROOT = resolve_project_root()
+PAPERS_DIR = PROJECT_ROOT / "papers"
 INDEX_MD = PAPERS_DIR / "index.md"
-TAGGED_DIR = PAPERS_DIR.parent / "tagged-papers"
+TAGGED_DIR = PROJECT_ROOT / "tagged-papers"
 
 
 def parse_tags(description_path: Path) -> list[str]:
