@@ -20,6 +20,7 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 | `paper-reader` | Read a paper and extract structured notes (handles small/medium/large papers) |
 | `paper-process` | Combined retrieve + read in one step |
 | `reconcile` | Cross-reference a paper against the collection bidirectionally |
+| `tag-papers` | Add tags to untagged papers using their existing notes |
 | `research` | Web research on a topic, structured findings report |
 | `make-skill` | Create new skills from prompt files |
 
@@ -27,8 +28,9 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 
 | Script | Description |
 |--------|-------------|
-| `generate-paper-index.py` | Rebuild papers/index.md from paper directories |
+| `generate-paper-index.py` | Rebuild papers/index.md and tagged-papers/ symlinks |
 | `cross-reference-papers.py` | Find cross-references between papers in the collection |
+| `migrate-format.py` | Convert legacy Tags: lines → YAML frontmatter, bold refs → wikilinks |
 
 ## Installation
 
@@ -74,9 +76,13 @@ Your project needs this structure:
 your-project/
 ├── papers/
 │   ├── AGENTS.md    # Static instructions for agents (how to use the collection)
-│   ├── index.md     # Paper directory listing (auto-generated)
+│   ├── index.md     # Paper listing with tags (auto-generated)
 │   ├── CLAUDE.md    # Contains: @AGENTS.md
 │   └── GEMINI.md    # Contains: @AGENTS.md
+├── tagged-papers/    # Symlinks organized by tag (auto-generated)
+│   ├── acoustics/
+│   │   └── Fant_1985_LFModel -> ../../papers/Fant_1985_LFModel
+│   └── voice-quality/
 ├── reports/          # Research output
 └── prompts/          # Prompt templates for large papers
 ```

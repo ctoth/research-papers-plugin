@@ -370,12 +370,22 @@ Think: if we implemented this, what must always be true?]
 After writing notes.md, write a three-sentence `description.md` in the same directory:
 
 ```markdown
+---
+tags: [tag1, tag2, tag3]
+---
 [Sentence 1: What the paper does/presents]
 [Sentence 2: Key findings/contributions]
 [Sentence 3: Relevance to this project's research domain]
 ```
 
-**Format**: Single paragraph, no blank lines. Each sentence flows into the next.
+**Format**: YAML frontmatter with tags, then a single paragraph (no blank lines between sentences).
+
+**Tagging guidelines:**
+- 2-5 tags per paper
+- Use lowercase, hyphens for multi-word (`voice-quality`, not `Voice Quality`)
+- Prefer existing tags when they fit — check `papers/index.md` for tags already in use
+- Mix specificity levels: one broad (`acoustics`), one or two narrow (`glottal-source`, `lf-model`)
+- Tags describe **what the paper is about**, not what project it's for
 
 ---
 
@@ -478,15 +488,15 @@ Wait for reconcile to complete before proceeding to Step 8.
 
 ## Step 8: Update papers/index.md
 
-This is the step that makes the collection work across sessions. Add the paper to the index.
+This is the step that makes the collection work across sessions. Add the paper to the index with its tags (read the Tags: line from the description.md you just wrote).
 
 ```bash
-echo "- FirstAuthor_Year_ShortTitle" >> ./papers/index.md
+echo "- FirstAuthor_Year_ShortTitle  (tag1, tag2, tag3)" >> ./papers/index.md
 ```
 
 If `papers/index.md` doesn't exist yet, create it:
 ```bash
-echo "- FirstAuthor_Year_ShortTitle" > ./papers/index.md
+echo "- FirstAuthor_Year_ShortTitle  (tag1, tag2, tag3)" > ./papers/index.md
 ```
 
 **This step is NOT optional.** Without it, future sessions won't know this paper exists.

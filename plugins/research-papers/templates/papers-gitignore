@@ -6,3 +6,6 @@ papers/*/pngs/
 
 # Temporary conversion files
 papers/temp-page-*.png
+
+# Auto-generated tag symlinks
+tagged-papers/

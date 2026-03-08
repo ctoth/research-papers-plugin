@@ -72,7 +72,7 @@ In `notes.md`, write or update the `## Collection Cross-References` section:
 ## Collection Cross-References
 
 ### Already in Collection
-- **AuthorA_Year_ShortTitle** — cited for [reason from citations.md context]
+- [[AuthorA_Year_ShortTitle]] — cited for [reason from citations.md context]
 
 ### New Leads (Not Yet in Collection)
 - AuthorB (Year) — "Paper title" — relevant for [reason]
@@ -82,7 +82,7 @@ In `notes.md`, write or update the `## Collection Cross-References` section:
 - [Only genuine relationships — not every citation]
 
 ### Conceptual Links (not citation-based)
-- **PaperC_Year_Title** — [specific topical connection: what claim/finding/method links these papers]
+- [[PaperC_Year_Title]] — [specific topical connection: what claim/finding/method links these papers]
 ```
 
 ### 2.4: Backward Annotation (Supersedes Only)
@@ -93,7 +93,7 @@ If the "Supersedes or Recontextualizes" section is non-empty, append a see-also 
 echo "" >> ./papers/AffectedPaper_Dir/notes.md
 echo "---" >> ./papers/AffectedPaper_Dir/notes.md
 echo "" >> ./papers/AffectedPaper_Dir/notes.md
-echo "**See also:** NewPaper_Dir - [relationship description]" >> ./papers/AffectedPaper_Dir/notes.md
+echo "**See also:** [[NewPaper_Dir]] - [relationship description]" >> ./papers/AffectedPaper_Dir/notes.md
 ```
 
 **Check first** whether a see-also note already exists (to avoid duplicates):
@@ -128,7 +128,7 @@ If any collection papers cite this one, add or update a "Cited By" subsection in
 
 ```markdown
 ### Cited By (in Collection)
-- **CitingPaper_Year_ShortTitle** — cites this for [aspect, determined in Step 4]
+- [[CitingPaper_Year_ShortTitle]] — cites this for [aspect, determined in Step 4]
 ```
 
 If no papers cite this one, either omit the section or write:
@@ -198,8 +198,8 @@ Add a `### Conceptual Links (not citation-based)` subsection to the Collection C
 
 ```markdown
 ### Conceptual Links (not citation-based)
-- **PaperA_Year_Title** — [specific connection: what claim/finding/method connects these papers and how they relate — convergence, tension, mechanism↔observation, etc.]
-- **PaperB_Year_Title** — [specific connection]
+- [[PaperA_Year_Title]] — [specific connection: what claim/finding/method connects these papers and how they relate — convergence, tension, mechanism↔observation, etc.]
+- [[PaperB_Year_Title]] — [specific connection]
 ```
 
 Each entry must state the **specific relationship**, not just "related to duration modeling." Good: "Hertz's 'stable transition phenomenon' (CV transitions hold at ~65ms while steady states stretch) is exactly what AP predicts for a high-stiffness gesture — different formalisms, same empirical convergence." Bad: "Also about formant transitions."
@@ -234,7 +234,7 @@ If the citing paper lists this paper under "New Leads (Not Yet in Collection)":
 Example:
 ```markdown
 ### Now in Collection (previously listed as leads)
-- **Feinberg_2008_FemininityAveragenessVoicePitch** — F0 manipulation via PSOLA shows linear pitch–attractiveness relationship. Note: Babel found opposite F0 effect when controlling for breathiness.
+- [[Feinberg_2008_FemininityAveragenessVoicePitch]] — F0 manipulation via PSOLA shows linear pitch–attractiveness relationship. Note: Babel found opposite F0 effect when controlling for breathiness.
 ```
 
 ### 5.2: Inaccurate Descriptions

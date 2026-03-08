@@ -95,7 +95,7 @@ def build_crossref_section(found_in_collection, key_citations_not_found):
     if found_in_collection:
         lines.append("### Already in Collection")
         for entry in sorted(found_in_collection, key=lambda e: e["dirname"]):
-            lines.append(f"- **{entry['dirname']}**")
+            lines.append(f"- [[{entry['dirname']}]]")
         lines.append("")
     else:
         lines.append("### Already in Collection")
