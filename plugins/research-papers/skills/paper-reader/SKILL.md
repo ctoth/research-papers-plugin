@@ -488,18 +488,27 @@ Wait for reconcile to complete before proceeding to Step 8.
 
 ## Step 8: Update papers/index.md
 
-This is the step that makes the collection work across sessions. Add the paper to the index with its tags (read the Tags: line from the description.md you just wrote).
+This is the step that makes the collection work across sessions. Append the paper's heading and description to the index.
 
 ```bash
-echo "- FirstAuthor_Year_ShortTitle  (tag1, tag2, tag3)" >> ./papers/index.md
+{
+  echo ""
+  echo "## FirstAuthor_Year_ShortTitle  (tag1, tag2, tag3)"
+  cat ./papers/FirstAuthor_Year_ShortTitle/description.md | grep -v "^---" | grep -v "^tags:" | sed '/^$/d'
+  echo ""
+} >> ./papers/index.md
 ```
 
-If `papers/index.md` doesn't exist yet, create it:
-```bash
-echo "- FirstAuthor_Year_ShortTitle  (tag1, tag2, tag3)" > ./papers/index.md
+Or use your editing tools to append. The format is:
+
+```markdown
+## FirstAuthor_Year_ShortTitle  (tag1, tag2, tag3)
+[description.md body text — no frontmatter, no tags line]
 ```
 
 **This step is NOT optional.** Without it, future sessions won't know this paper exists.
+
+**Note:** `index.md` is NOT auto-loaded into agent context — it's a searchable reference that agents grep when they need to find papers. This keeps session startup fast even with large collections.
 
 ---
 

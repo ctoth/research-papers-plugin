@@ -21,6 +21,20 @@ INDEX_MD = PAPERS_DIR / "index.md"
 TAGGED_DIR = PAPERS_DIR / "tagged"
 
 
+def read_description_body(description_path: Path) -> str:
+    """Read description.md and return the body text (without YAML frontmatter)."""
+    if not description_path.exists():
+        return ""
+    text = description_path.read_text(encoding="utf-8").strip()
+    # Strip YAML frontmatter if present
+    fm_match = re.match(r"^---\s*\n.*?\n---\s*\n?", text, re.DOTALL)
+    if fm_match:
+        text = text[fm_match.end():]
+    # Strip legacy Tags: line
+    text = re.sub(r"\n?Tags:\s*.+$", "", text, flags=re.MULTILINE)
+    return text.strip()
+
+
 def parse_tags(description_path: Path) -> list[str]:
     """Extract tags from YAML frontmatter or legacy Tags: line in description.md."""
     if not description_path.exists():
@@ -57,23 +71,28 @@ def main():
         print(f"No papers/ directory found at {PAPERS_DIR}")
         return
 
-    # Collect papers and their tags
-    papers: list[tuple[str, list[str]]] = []
+    # Collect papers, descriptions, and tags
+    papers: list[tuple[str, str, list[str]]] = []
     tag_map: dict[str, list[str]] = {}
 
     for d in sorted(PAPERS_DIR.iterdir()):
         if not d.is_dir() or d.name == "tagged" or not (d / "notes.md").exists():
             continue
-        tags = parse_tags(d / "description.md")
-        papers.append((d.name, tags))
+        desc_path = d / "description.md"
+        desc = read_description_body(desc_path)
+        tags = parse_tags(desc_path)
+        papers.append((d.name, desc, tags))
         for tag in tags:
             tag_map.setdefault(tag, []).append(d.name)
 
     # Write index.md
     lines = []
-    for name, tags in papers:
+    for name, desc, tags in papers:
         tag_str = f"  ({', '.join(tags)})" if tags else ""
-        lines.append(f"- {name}{tag_str}")
+        lines.append(f"## {name}{tag_str}")
+        if desc:
+            lines.append(desc)
+        lines.append("")
     INDEX_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     # Build tagged-papers/ symlink tree
@@ -90,7 +109,7 @@ def main():
             link.symlink_to(target, target_is_directory=True)
 
     # Report
-    untagged = [name for name, tags in papers if not tags]
+    untagged = [name for name, _, tags in papers if not tags]
     print(f"Generated papers/index.md with {len(papers)} papers")
     print(f"Generated tagged-papers/ with {len(tag_map)} tags")
     for tag in sorted(tag_map):
