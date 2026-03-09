@@ -1,7 +1,7 @@
 ---
 name: process-leads
-description: Extract all "New Leads" from the paper collection and process them via paper-process. Retrieves and reads papers that other papers in your collection cite but you don't have yet. Use --all to process everything, or pass a number to limit (e.g., "10" for first 10). Papers that fail retrieval are skipped and logged.
-argument-hint: "[--all | N]"
+description: Extract all "New Leads" from the paper collection and process them via paper-process. Retrieves and reads papers that other papers in your collection cite but you don't have yet. Use --all to process everything, or pass a number to limit (e.g., "10" for first 10). Add --parallel N to process N leads concurrently via subagents (default: sequential).
+argument-hint: "[--all | N] [--parallel M]"
 disable-model-invocation: false
 ---
 
@@ -14,36 +14,53 @@ Find papers cited as "New Leads" across the collection and retrieve+read them.
 Use the paper_hash.py script to extract and deduplicate leads, filtering out papers already in the collection:
 
 ```bash
-python3 $PLUGIN_DIR/scripts/paper_hash.py --papers-dir papers/ extract-leads
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/paper_hash.py --papers-dir papers/ extract-leads
 ```
 
-If `$PLUGIN_DIR` is not set, find the script by searching for it:
-```bash
-find ~/code -name paper_hash.py -path "*/research-papers/scripts/*" 2>/dev/null | head -1
-```
+## Step 2: Determine Batch Size and Parallelism
 
-## Step 2: Determine Batch Size
+**Count (how many leads to attempt):**
+- If `$ARGUMENTS` contains `--all`: process every lead
+- If `$ARGUMENTS` contains a number N (not after `--parallel`): process the first N leads
+- If neither: default to 10
 
-- If `$ARGUMENTS` is `--all`: process every lead
-- If `$ARGUMENTS` is a number N: process the first N leads
-- If `$ARGUMENTS` is empty: default to 10
+**Parallelism (how many at once):**
+- If `$ARGUMENTS` contains `--parallel M`: process M leads concurrently via subagents
+- If no `--parallel` flag: process sequentially (one at a time)
 
-## Step 3: Process Each Lead
+## Step 3: Process Leads
 
 For each lead, use paper_hash.py to parse the citation and extract a search query:
 
 ```bash
-python3 $PLUGIN_DIR/scripts/paper_hash.py parse "<lead text>"
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/paper_hash.py parse "<lead text>"
 ```
 
 This gives you author, year, and title. Build a search query from those components for retrieval.
 
-Then invoke the **paper-process** skill:
+### Sequential Mode (default)
+
+Process one lead at a time. For each lead, invoke **paper-process**:
 ```
 /research-papers:paper-process <search query>
 ```
 
 If skill invocation is not available, follow the paper-process SKILL.md directly.
+
+### Parallel Mode (--parallel M)
+
+Dispatch up to M leads concurrently using the **Agent tool**. Each agent is independent and gets its own lead to process.
+
+**For each agent, the prompt should include:**
+1. The paper-process SKILL.md instructions (read from `${CLAUDE_PLUGIN_ROOT}/skills/paper-process/SKILL.md`)
+2. The specific search query for that lead
+3. Instructions to write a per-paper report to `./reports/paper-<safe-name>.md`
+
+**Batch processing:** If there are more leads than the parallel limit M, process in waves — dispatch M agents, wait for all to complete, then dispatch the next M.
+
+**Each agent runs in a worktree** (`isolation: "worktree"`) so agents don't conflict with each other on disk. After each wave completes, merge any new paper directories from agent worktrees into the main tree.
+
+**Important:** Parse ALL leads with paper_hash.py BEFORE dispatching agents. The parsing step is fast and should be done in the main conversation to build the full work list.
 
 ### Handling Failures
 
@@ -58,10 +75,6 @@ When a lead fails retrieval:
 2. Move to the next lead
 3. Do NOT retry or try alternative sources
 
-### Pacing
-
-Process leads **one at a time**, sequentially. Each paper-process invocation may take several minutes (retrieval + reading + reconciliation). Do not parallelize — paper-reader may dispatch its own subagents internally.
-
 ## Step 4: Report
 
 Write results to `./reports/process-leads-report.md`:
@@ -72,6 +85,7 @@ Write results to `./reports/process-leads-report.md`:
 **Date:** [date]
 **Leads found:** [total]
 **Attempted:** [N]
+**Parallelism:** [M or "sequential"]
 **Succeeded:** [count]
 **Failed:** [count]
 
