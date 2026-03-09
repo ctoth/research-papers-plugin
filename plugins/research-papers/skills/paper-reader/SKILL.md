@@ -46,7 +46,17 @@ Determine gaps:
 - Has `citations.md`?
 
 ### Case B1: All files present (notes + abstract + citations)
--> Report "Already complete" and stop
+
+If the original argument was a root-level PDF (e.g. `papers/something.pdf`), delete it — the processed copy lives inside the paper directory. The root PDF is a duplicate at this point:
+
+```bash
+# Only delete if it's a root-level PDF file (not a directory reference)
+if [ -f "$paper_path" ]; then
+  rm "$paper_path"
+fi
+```
+
+-> Report "Already complete — deleted duplicate root PDF" and stop
 
 ### Case B2: Missing abstract and/or citations
 
@@ -83,11 +93,19 @@ If you can dispatch a subagent (use a fast/cheap model if available), delegate t
 
 Otherwise, do this yourself: read the references pages and write citations.md following the format above.
 
-After gap-filling completes:
+After gap-filling completes, clean up the root PDF if the argument was a root-level file:
+
+```bash
+if [ -f "$paper_path" ]; then
+  rm "$paper_path"
+fi
+```
+
 ```
 Done - filled gaps in papers/[dirname]/
   - abstract.md: [created/already existed]
   - citations.md: [created/already existed]
+  - root PDF: [deleted/was already a directory reference]
 ```
 -> **Stop here** (do not continue to Step 1)
 
