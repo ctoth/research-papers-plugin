@@ -11,19 +11,26 @@ Read a scientific paper and create comprehensive implementation-focused notes.
 
 ## Step 0: Check for Existing Paper
 
-First, check if this paper has already been processed:
+First, check if this paper has already been processed.
+
+If the argument is a directory, use it directly. If it's a PDF file, use `paper_hash.py lookup` to find a matching paper directory:
 
 ```bash
-# Extract directory name from path (handles both new PDFs and existing directories)
 paper_path="$ARGUMENTS"
 if [ -d "$paper_path" ]; then
   paper_dir="$paper_path"
 elif [ -f "$paper_path" ]; then
-  # Check if a matching directory already exists in papers/
-  basename=$(basename "$paper_path" .pdf)
-  # Look for directories containing this basename
-  existing=$(ls -d papers/*/ 2>/dev/null | grep -i "${basename%_*}" | head -1)
-  paper_dir="$existing"
+  # Use paper_hash.py for canonical lookup
+  HASH_SCRIPT=$(find ~/code -name paper_hash.py -path "*/research-papers/scripts/*" 2>/dev/null | head -1)
+  if [ -n "$HASH_SCRIPT" ]; then
+    paper_dir=$(python3 "$HASH_SCRIPT" --papers-dir papers/ lookup "$(basename "$paper_path" .pdf)" 2>/dev/null)
+    [ $? -ne 0 ] && paper_dir=""
+    [ -n "$paper_dir" ] && paper_dir="papers/$paper_dir"
+  else
+    # Fallback: grep for basename match
+    basename=$(basename "$paper_path" .pdf)
+    paper_dir=$(ls -d papers/*/ 2>/dev/null | grep -i "${basename%_*}" | head -1)
+  fi
 fi
 ```
 
