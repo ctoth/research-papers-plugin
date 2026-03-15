@@ -20,7 +20,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/scripts/paper_hash.py --papers-dir papers/ extract
 ## Step 2: Determine Batch Size and Parallelism
 
 **Count (how many leads to attempt):**
-- If `$ARGUMENTS` contains `--all`: process every lead
+- If `$ARGUMENTS` contains `--all`: no cap — process leads wave by wave until the session ends naturally (context limit, user stops you, etc.). You do NOT need to finish all leads in one session. `--all` just means "don't stop after N, keep going."
 - If `$ARGUMENTS` contains a number N (not after `--parallel`): process the first N leads
 - If neither: default to 10
 
@@ -63,7 +63,7 @@ Instead, split the work: agents do retrieval + reading (the slow part), the fore
 3. Instructions to write a per-paper report to `./reports/paper-<safe-name>.md`
 4. **Instructions to SKIP Steps 7.5 (reconcile) and 8 (index.md update)** — the foreman handles these after each wave
 
-**Batch processing:** If there are more leads than the parallel limit M, process in waves — dispatch M agents, wait for all to complete, then dispatch the next M.
+**Batch processing:** Process in waves of M agents. Dispatch a wave, wait for all to complete, run reconcile, then dispatch the next wave. The session will naturally end at some point (context limit, user intervention) — that's fine. The report captures progress so the next session can pick up where you left off.
 
 **After each wave completes**, the foreman dispatches a single subagent (NOT in a worktree) to run reconcile and update index.md for each new paper from the wave, sequentially. Wait for this subagent to finish before dispatching the next wave. This keeps shared-state writes sequential, consistent, and avoids burning the foreman's context on reconcile output.
 
