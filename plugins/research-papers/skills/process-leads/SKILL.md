@@ -51,16 +51,21 @@ If skill invocation is not available, follow the paper-process SKILL.md directly
 
 Dispatch up to M leads concurrently using the **Agent tool**. Each agent is independent and gets its own lead to process.
 
+**Important:** Parse ALL leads with paper_hash.py BEFORE dispatching agents. The parsing step is fast and should be done in the main conversation to build the full work list.
+
+**Do NOT use worktree isolation.** Paper-process writes to shared state (papers/index.md, cross-references in existing papers' notes.md via reconcile). Worktrees strand all of that with no clean merge path.
+
+Instead, split the work: agents do retrieval + reading (the slow part), the foreman does shared-state writes (the fast part that needs consistency).
+
 **For each agent, the prompt should include:**
 1. The paper-process SKILL.md instructions (read from `${CLAUDE_PLUGIN_ROOT}/skills/paper-process/SKILL.md`)
 2. The specific search query for that lead
 3. Instructions to write a per-paper report to `./reports/paper-<safe-name>.md`
+4. **Instructions to SKIP Steps 7.5 (reconcile) and 8 (index.md update)** — the foreman handles these after each wave
 
 **Batch processing:** If there are more leads than the parallel limit M, process in waves — dispatch M agents, wait for all to complete, then dispatch the next M.
 
-**Each agent runs in a worktree** (`isolation: "worktree"`) so agents don't conflict with each other on disk. After each wave completes, merge any new paper directories from agent worktrees into the main tree.
-
-**Important:** Parse ALL leads with paper_hash.py BEFORE dispatching agents. The parsing step is fast and should be done in the main conversation to build the full work list.
+**After each wave completes**, the foreman dispatches a single subagent (NOT in a worktree) to run reconcile and update index.md for each new paper from the wave, sequentially. Wait for this subagent to finish before dispatching the next wave. This keeps shared-state writes sequential, consistent, and avoids burning the foreman's context on reconcile output.
 
 ### Handling Failures
 
