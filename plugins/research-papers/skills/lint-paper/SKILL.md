@@ -8,6 +8,7 @@ disable-model-invocation: false
 # Lint Paper: $ARGUMENTS
 
 Audit paper directories for completeness and format compliance. No AI needed — just file checks and grep.
+Use `papers/db.yaml` as the schema contract for collection-level format expectations.
 
 ## Step 0: Determine Mode
 

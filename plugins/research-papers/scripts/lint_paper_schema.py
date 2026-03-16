@@ -21,6 +21,7 @@ from audit_paper_corpus import (
     extract_frontmatter_keys,
     read_text,
 )
+from paper_db_manifest import load_paper_db_manifest
 
 
 def resolve_project_root() -> Path:
@@ -31,33 +32,6 @@ def resolve_project_root() -> Path:
 
 PROJECT_ROOT = resolve_project_root()
 PAPERS_DIR = PROJECT_ROOT / "papers"
-
-
-CANONICAL_REQUIRED_KEYS = ("title", "year")
-CANONICAL_RECOMMENDED_KEYS = ("authors", "venue", "doi_url")
-CANONICAL_OPTIONAL_KEYS = (
-    "pages",
-    "affiliation",
-    "affiliations",
-    "institution",
-    "publisher",
-    "supervisor",
-    "supervisors",
-    "funding",
-    "pacs",
-    "note",
-    "correction_doi",
-    "citation",
-)
-CANONICAL_KEYS = set(CANONICAL_REQUIRED_KEYS + CANONICAL_RECOMMENDED_KEYS + CANONICAL_OPTIONAL_KEYS)
-ALIASES = {
-    "author": "authors",
-    "doi": "doi_url",
-    "url": "doi_url",
-    "journal": "venue",
-    "type": "venue",
-    "paper": "title",
-}
 
 
 @dataclass(frozen=True)
@@ -77,6 +51,12 @@ def lint_paper(audit: PaperAudit, papers_root: Path) -> list[Violation]:
     violations: list[Violation] = []
     paper_dir = papers_root / audit.name
     notes_path = paper_dir / "notes.md"
+    manifest = load_paper_db_manifest(papers_root.parent)
+    canonical_keys = set(
+        manifest.canonical_notes_required
+        + manifest.canonical_notes_recommended
+        + manifest.canonical_notes_optional
+    )
 
     if not audit.has_notes:
         violations.append(Violation("NOTES_MISSING", audit.name))
@@ -94,16 +74,16 @@ def lint_paper(audit: PaperAudit, papers_root: Path) -> list[Violation]:
     keys = notes_frontmatter_keys(notes_path)
     key_set = set(keys)
 
-    for required in CANONICAL_REQUIRED_KEYS:
+    for required in manifest.canonical_notes_required:
         if required not in key_set:
             violations.append(Violation("NOTES_REQUIRED_MISSING", audit.name, required))
 
-    for alias, canonical in sorted(ALIASES.items()):
+    for alias, canonical in sorted(manifest.legacy_aliases.items()):
         if alias in key_set:
             violations.append(Violation("NOTES_FIELD_ALIAS", audit.name, f"{alias}->{canonical}"))
 
     for key in sorted(key_set):
-        if key not in CANONICAL_KEYS and key not in ALIASES:
+        if key not in canonical_keys and key not in manifest.legacy_aliases:
             violations.append(Violation("NOTES_UNKNOWN_FIELD", audit.name, key))
 
     if audit.description_style != "yaml-frontmatter":

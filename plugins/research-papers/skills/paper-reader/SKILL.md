@@ -375,6 +375,7 @@ Think: if we implemented this, what must always be true?]
 
 The YAML frontmatter is the canonical machine-readable metadata block for the paper database.
 The repeated title heading remains for human readability; do not omit it.
+The collection-level contract lives in `papers/db.yaml`; new papers must conform to that manifest.
 
 Canonical `notes.md` frontmatter schema:
 - Required: `title`, `year`

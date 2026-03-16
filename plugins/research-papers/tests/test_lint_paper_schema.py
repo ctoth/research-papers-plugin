@@ -18,6 +18,7 @@ def load_module(name: str, path: Path):
 
 
 AUDIT_MODULE = load_module("audit_paper_corpus", SCRIPTS_DIR / "audit_paper_corpus.py")
+MANIFEST_MODULE = load_module("paper_db_manifest", SCRIPTS_DIR / "paper_db_manifest.py")
 LINT_MODULE = load_module("lint_paper_schema", SCRIPTS_DIR / "lint_paper_schema.py")
 
 
@@ -94,6 +95,55 @@ Short description.
             audit = AUDIT_MODULE.audit_paper_dir(paper_dir)
             violations = LINT_MODULE.lint_paper(audit, root)
             self.assertEqual(violations, [])
+
+    def test_linter_reads_manifest_from_project_root(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            papers_dir = root / "papers"
+            papers_dir.mkdir()
+            (papers_dir / "db.yaml").write_text(
+                """schema_version: 1
+database_kind: research-papers
+notes_format: notes-frontmatter-v1
+description_format: description-frontmatter-tags-v1
+required_files: [notes.md, description.md]
+recommended_files: [abstract.md, citations.md]
+canonical_notes_required: [title, year, venue]
+canonical_notes_recommended: [authors]
+canonical_notes_optional: []
+legacy_aliases:
+  author: authors
+""",
+                encoding="utf-8",
+            )
+            paper_dir = papers_dir / "Sample_1980_TestPaper"
+            paper_dir.mkdir()
+            (paper_dir / "notes.md").write_text(
+                """---
+title: "Sample"
+authors: "A. Author"
+year: 1980
+---
+
+# Sample
+
+## Collection Cross-References
+- (none found)
+""",
+                encoding="utf-8",
+            )
+            (paper_dir / "description.md").write_text(
+                """---
+tags: [prosody]
+---
+Short description.
+""",
+                encoding="utf-8",
+            )
+            audit = AUDIT_MODULE.audit_paper_dir(paper_dir)
+            violations = LINT_MODULE.lint_paper(audit, papers_dir)
+            pairs = {(v.code, v.detail) for v in violations}
+            self.assertIn(("NOTES_REQUIRED_MISSING", "venue"), pairs)
 
 
 if __name__ == "__main__":
