@@ -305,12 +305,15 @@ mv "$ARGUMENTS" "./papers/FirstAuthor_Year_ShortTitle/paper.pdf"
 Write to `./papers/FirstAuthor_Year_ShortTitle/notes.md`:
 
 ```markdown
-# [Full Paper Title]
+---
+title: "[Full Paper Title]"
+authors: "[All authors]"
+year: [Year]
+venue: "[Journal/Conference/Thesis]"
+doi_url: "[If available]"
+---
 
-**Authors:** [All authors]
-**Year:** [Year]
-**Venue:** [Journal/Conference/Thesis]
-**DOI/URL:** [If available]
+# [Full Paper Title]
 
 ## One-Sentence Summary
 [What this paper provides for implementation - be specific]
@@ -369,6 +372,15 @@ Think: if we implemented this, what must always be true?]
 ## Related Work Worth Reading
 - [Papers cited worth following]
 ```
+
+The YAML frontmatter is the canonical machine-readable metadata block for the paper database.
+The repeated title heading remains for human readability; do not omit it.
+
+Canonical `notes.md` frontmatter schema:
+- Required: `title`, `year`
+- Recommended: `authors`, `venue`, `doi_url`
+- Optional: `pages`, `affiliation`, `affiliations`, `institution`, `publisher`, `supervisor`, `supervisors`, `funding`, `pacs`, `note`, `correction_doi`, `citation`
+- Legacy aliases that should not be emitted in new papers: `author`, `doi`, `url`, `journal`, `type`, `paper`
 
 ---
 

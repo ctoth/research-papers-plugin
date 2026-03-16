@@ -35,24 +35,33 @@ For each paper directory, run all checks and collect results.
 
 ### Format Checks
 
-1. **Tags**: Does `description.md` have YAML frontmatter with a `tags:` field?
+1. **Notes metadata**: Does `notes.md` have YAML frontmatter with at least `title:` and `year:`?
+   ```bash
+   head -8 "$paper_dir/notes.md" | grep -E "^title:|^year:"
+   ```
+   Missing → report as `NOTES_METADATA_MISSING`
+
+2. **Tags**: Does `description.md` have YAML frontmatter with a `tags:` field?
    ```bash
    head -5 "$paper_dir/description.md" | grep "tags:"
    ```
    Missing → report as `UNTAGGED`
 
-2. **Wikilinks**: Are cross-references in `notes.md` using `[[wikilinks]]`?
+3. **Wikilinks**: Are cross-references in `notes.md` using `[[wikilinks]]`?
    ```bash
    # Check for old-style bold refs in cross-reference sections
    grep -c '\*\*[A-Z][A-Za-z0-9_]*_[0-9]\{4\}' "$paper_dir/notes.md"
    ```
    Found → report as `LEGACY_BOLD_REFS`
 
-3. **Frontmatter validity**: If `description.md` has `---` delimiters, is the YAML valid?
+4. **Frontmatter validity**:
+   - If `notes.md` has `---` delimiters, is the YAML valid?
+   - If `description.md` has `---` delimiters, is the YAML valid?
    - Check that `---` appears on lines 1 and 3+ (not empty frontmatter)
-   - Check that `tags:` value is a list, not empty
+   - Check that `title:` is present in `notes.md`
+   - Check that `tags:` value is a list, not empty in `description.md`
 
-4. **Cross-references section**: Does `notes.md` have `## Collection Cross-References`?
+5. **Cross-references section**: Does `notes.md` have `## Collection Cross-References`?
    ```bash
    grep -c "## Collection Cross-References" "$paper_dir/notes.md"
    ```
@@ -60,18 +69,18 @@ For each paper directory, run all checks and collect results.
 
 ### Index Checks
 
-5. **In index**: Is the paper listed in `papers/index.md`?
+6. **In index**: Is the paper listed in `papers/index.md`?
    ```bash
    grep -c "## $(basename $paper_dir)" papers/index.md
    ```
    Missing → report as `NOT_INDEXED`
 
-6. **Index description matches**: Does the description in `index.md` match `description.md`?
+7. **Index description matches**: Does the description in `index.md` match `description.md`?
    Only check if both exist — flag `INDEX_STALE` if they differ.
 
 ### Source Checks
 
-7. **Orphan PDF**: Is there a PDF in `papers/` root with a name matching this paper?
+8. **Orphan PDF**: Is there a PDF in `papers/` root with a name matching this paper?
    ```bash
    ls papers/*.pdf 2>/dev/null
    ```
@@ -88,6 +97,7 @@ Lint: papers/Author_Year_Title/
   ✓ abstract.md
   ✗ citations.md — MISSING
   ✓ paper.pdf
+  ✗ notes metadata — NOTES_METADATA_MISSING
   ✗ tags — UNTAGGED
   ✓ wikilinks
   ✗ cross-references — NOT_RECONCILED
@@ -111,6 +121,9 @@ Issues found:
 
   MISSING description.md (need paper-reader):
     - Paper4
+
+  NOTES_METADATA_MISSING (need migrate_notes_frontmatter.py or re-run paper-reader):
+    - Paper4a
 
   UNTAGGED (need tag-papers):
     - Paper5, Paper6, Paper7, ...
