@@ -173,6 +173,59 @@ def parse_uncertainty(text: str) -> dict[str, Any]:
     return {}
 
 
+# LaTeX command names to exclude from variable extraction
+_LATEX_COMMANDS = frozenset({
+    "text", "frac", "sqrt", "cdot", "times", "left", "right",
+    "pi", "ln", "log", "exp", "sin", "cos", "tan",
+    "sum", "prod", "int", "lim", "max", "min",
+    "approx", "leq", "geq", "neq",
+    "begin", "end", "mathrm", "mathbf", "hat", "bar", "tilde",
+    "partial", "infty", "alpha", "beta", "gamma", "delta",
+    "epsilon", "zeta", "eta", "theta", "lambda", "mu", "nu",
+    "xi", "rho", "sigma", "tau", "phi", "chi", "psi", "omega",
+})
+
+
+def _extract_equation_variables(expression: str) -> list[dict[str, str]]:
+    """Extract variable-like identifiers from a LaTeX equation.
+
+    Returns list of dicts with 'concept' key for each unique variable found.
+    """
+    # Strip $$ delimiters
+    text = expression.strip().strip("$")
+
+    # Find all alphabetic identifiers (including subscripted like F_1, BW)
+    # Match: letter sequences, possibly with subscripts like F_1, F_{1}
+    tokens = re.findall(r'[A-Za-z][A-Za-z0-9_]*', text)
+
+    # Also capture subscript patterns like F_1, T_p
+    subscript_tokens = re.findall(r'([A-Za-z]+)_\{?([A-Za-z0-9]+)\}?', text)
+
+    seen: set[str] = set()
+    variables: list[dict[str, str]] = []
+
+    for base, sub in subscript_tokens:
+        if base.lower() in _LATEX_COMMANDS:
+            continue
+        symbol = f"{base}_{sub}"
+        concept = _concept_name_from_param(symbol)
+        if concept and concept not in seen:
+            seen.add(concept)
+            variables.append({"symbol": symbol, "concept": concept})
+
+    for token in tokens:
+        if token.lower() in _LATEX_COMMANDS:
+            continue
+        if len(token) == 1 and token.lower() in "abcdefghijklmnopqrstuvwxyz":
+            continue  # skip single-letter variables (too ambiguous)
+        concept = _concept_name_from_param(token)
+        if concept and concept not in seen:
+            seen.add(concept)
+            variables.append({"symbol": token, "concept": concept})
+
+    return variables
+
+
 def parse_equations(text: str) -> list[str]:
     """Extract $$...$$ delimited equation blocks from text.
 
@@ -203,6 +256,37 @@ def parse_equations(text: str) -> list[str]:
             continue
         equations.append(eq)
     return equations
+
+
+# Well-known acoustic concept names to detect in text
+_KNOWN_CONCEPTS = {
+    "f0": "f0", "fundamental frequency": "fundamental_frequency",
+    "f1": "f1", "f2": "f2", "f3": "f3", "f4": "f4",
+    "formant": "formant", "bandwidth": "bandwidth",
+    "duration": "duration", "vot": "vot",
+    "intensity": "intensity", "spl": "spl",
+    "open quotient": "open_quotient", "oq": "open_quotient",
+    "spectral tilt": "spectral_tilt",
+    "jitter": "jitter", "shimmer": "shimmer",
+    "hnr": "hnr", "h1-h2": "h1_h2",
+    "subglottal pressure": "subglottal_pressure",
+    "airflow": "airflow",
+    "speaking rate": "speaking_rate",
+    "voice quality": "voice_quality",
+    "pitch": "pitch",
+}
+
+
+def _extract_concepts_from_text(text: str) -> list[str]:
+    """Extract known concept names mentioned in a text string."""
+    text_lower = text.lower()
+    found: list[str] = []
+    seen: set[str] = set()
+    for phrase, concept_name in _KNOWN_CONCEPTS.items():
+        if phrase in text_lower and concept_name not in seen:
+            found.append(concept_name)
+            seen.add(concept_name)
+    return found
 
 
 def parse_testable_properties(text: str) -> list[str]:
@@ -389,11 +473,11 @@ def _row_to_claim(
                     claim["lower_bound"] = parsed["lower_bound"]
                     claim["upper_bound"] = parsed["upper_bound"]
 
-    # --- Quality gate: require at least one of value, bounds, or unit ---
+    # --- Quality gate: require (value OR bounds) AND unit ---
     has_value = "value" in claim
     has_bounds = "lower_bound" in claim and "upper_bound" in claim
     has_unit = "unit" in claim
-    if not (has_value or has_bounds or has_unit):
+    if not ((has_value or has_bounds) and has_unit):
         return None
 
     return claim
@@ -443,6 +527,11 @@ def _row_to_multi_claims(
         if not parsed:
             continue
 
+        # Try to get unit from column header like "F1 (Hz)"
+        header_unit = _extract_unit_from_header(h)
+        if "unit" not in parsed and header_unit:
+            parsed["unit"] = header_unit
+
         claim_counter += 1
         concept = _concept_name_from_param(f"{row_name}_{h}")
         claim: dict[str, Any] = {
@@ -462,11 +551,11 @@ def _row_to_multi_claims(
         if "unit" in parsed:
             claim["unit"] = parsed["unit"]
 
-        # Quality gate
+        # Quality gate: require (value OR bounds) AND unit
         has_value = "value" in claim
         has_bounds = "lower_bound" in claim and "upper_bound" in claim
         has_unit = "unit" in claim
-        if has_value or has_bounds or has_unit:
+        if (has_value or has_bounds) and has_unit:
             result.append(claim)
         else:
             claim_counter -= 1
@@ -519,11 +608,16 @@ def generate_claims(paper_dir: Path) -> dict[str, Any]:
     # --- Equation claims ---
     equations = parse_equations(notes_text)
     for eq in equations:
+        # Extract variable-like tokens from the equation
+        variables = _extract_equation_variables(eq)
+        if not variables:
+            continue  # skip equations where we can't identify variables
         claim_counter += 1
         claims.append({
             "id": f"claim{claim_counter}",
             "type": "equation",
             "expression": eq,
+            "variables": variables,
             "provenance": {
                 "paper": paper_name,
                 "page": 0,
@@ -531,14 +625,19 @@ def generate_claims(paper_dir: Path) -> dict[str, Any]:
         })
 
     # --- Observation claims from testable properties ---
+    # Only emit if we can extract at least one concept reference
     properties = parse_testable_properties(notes_text)
     for prop in properties:
+        # Extract concept names mentioned in the property text
+        prop_concepts = _extract_concepts_from_text(prop)
+        if not prop_concepts:
+            continue  # skip observations with no concept references
         claim_counter += 1
         claims.append({
             "id": f"claim{claim_counter}",
             "type": "observation",
             "statement": prop,
-            "concepts": [],
+            "concepts": prop_concepts,
             "provenance": {
                 "paper": paper_name,
                 "page": 0,
@@ -584,21 +683,13 @@ def _find_parameter_tables(text: str) -> list[tuple[str, list[str]]]:
                 if headers_lower & param_columns:
                     is_param_table = True
 
-                # Path 2: fuzzy match — >=3 columns and unit-like headers or numeric data
+                # Path 2: fuzzy match — require unit-bearing headers
+                # (No longer accepts tables just because they have numbers)
                 if not is_param_table and len(headers) >= 3:
-                    # Check if any header contains a unit pattern
-                    if any(_UNIT_PATTERN.search(h) for h in headers):
+                    # Only accept if headers contain explicit unit patterns like "F1 (Hz)"
+                    unit_headers = [h for h in headers if _HEADER_UNIT_PATTERN.search(h)]
+                    if len(unit_headers) >= 1:
                         is_param_table = True
-                    # Check if any header has "range" in it (e.g., "Range in Study")
-                    elif any("range" in h.lower() for h in headers):
-                        is_param_table = True
-                    # Check first data row for numeric content
-                    elif i + 2 < len(lines) and lines[i + 2].strip().startswith("|"):
-                        first_data = [v.strip() for v in lines[i + 2].strip().strip("|").split("|")]
-                        # If at least 2 cells look numeric, it's a data table
-                        numeric_count = sum(1 for v in first_data if _is_numeric_cell(v))
-                        if numeric_count >= 2:
-                            is_param_table = True
 
                 if is_param_table:
                     # Collect the full table
