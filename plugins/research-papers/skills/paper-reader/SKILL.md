@@ -392,6 +392,95 @@ Canonical `notes.md` frontmatter schema:
 
 ## Extraction Guidelines
 
+### Parameter Table Format (MANDATORY)
+
+Every parameter table in notes.md MUST use this column structure:
+
+| Name | Symbol | Units | Default | Range | Notes |
+|------|--------|-------|---------|-------|-------|
+| Fundamental frequency | F0 | Hz | 120 | 60-500 | Male speaker baseline |
+| Open quotient | OQ | % | 50 | 30-100 | Fraction of cycle glottis open |
+
+**Rules:**
+- **One row per parameter.** Each row is one measurable quantity.
+- **Name column is required.** Full descriptive name, not abbreviation.
+- **Units column is required.** Use SI units or standard acoustic units (Hz, dB, ms, Pa, %). Write `-` for dimensionless ratios.
+- **Default/Range**: At least one must be populated. Use `X-Y` format for ranges. If the paper gives no default, write `-` and fill Range.
+- **Notes**: Brief context — source table/figure, conditions, caveats.
+
+**If a parameter varies by context** (e.g., different voice qualities, different vowels, different speaker groups), create **one table per context**:
+
+```
+### Modal Voice Parameters
+| Name | Symbol | Units | Default | Range | Notes |
+|------|--------|-------|---------|-------|-------|
+| Amplitude of voicing | AV | dB | 52 | 50-55 | From Fig. 1 |
+| Spectral tilt | TL | dB | 12 | 10-15 | |
+
+### Breathy Voice Parameters
+| Name | Symbol | Units | Default | Range | Notes |
+|------|--------|-------|---------|-------|-------|
+| Amplitude of voicing | AV | dB | 38 | 35-42 | From Fig. 1 |
+| Spectral tilt | TL | dB | 25 | 20-30 | |
+```
+
+**DO NOT use matrix format.** This is WRONG:
+
+```
+| Quality | f0 | AV | TL | OQ |
+|---------|-----|-----|-----|-----|
+| Modal | 120 | 52 | 12 | 50 |
+| Breathy | 120 | 38 | 25 | 90 |
+```
+
+Why: automated extraction cannot determine parameter names, units, or ranges from column headers that are abbreviations. The matrix format puts parameters as columns and contexts as rows — the extractor expects the opposite.
+
+**Measurement/data tables are different from parameter tables.** If the paper reports measured data (e.g., formant frequencies per vowel, durations per consonant), use a descriptive header but include units:
+
+```
+### Vowel Formant Frequencies (Adult Male)
+| Vowel | F1 (Hz) | F2 (Hz) | F3 (Hz) | Duration (ms) |
+|-------|---------|---------|---------|---------------|
+| /i/ | 270 | 2290 | 3010 | 243 |
+```
+
+Include the unit in the column header in parentheses: `F1 (Hz)`, `Duration (ms)`. This allows automated extraction to parse the unit from the header.
+
+### Equation Format (MANDATORY)
+
+Use `$$` delimiters for equations. Each equation block must contain ONLY the equation — no prose, no markdown, no headers.
+
+**Correct:**
+```
+$$
+E(t) = E_0 e^{\alpha t} \sin(\omega_g t)
+$$
+```
+
+**WRONG — do not include prose or markdown inside equation blocks:**
+```
+$$
+Where:
+- $D_f$ = final duration
+- $D_i$ = input duration
+$$
+```
+
+**WRONG — do not include section headers inside equation blocks:**
+```
+$$
+(Kurtosis)
+
+### Relative Amplitude
+$$
+```
+
+**Rules:**
+- One equation per `$$` block
+- Variable definitions go in prose AFTER the equation block, not inside it
+- If the equation is just a label like `(Mean frequency)`, do not wrap it in `$$` — it's not an equation
+- Use standard LaTeX notation
+
 ### Equations
 - LaTeX math blocks: `$inline$` or `$$block$$`
 - Define ALL variables with units
