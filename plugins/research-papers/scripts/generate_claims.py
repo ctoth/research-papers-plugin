@@ -484,17 +484,28 @@ def _row_to_claim(
 
 
 def _is_standard_table(headers: list[str]) -> bool:
-    """Check if a table has standard parameter columns (Value, Default, Range, Units).
+    """Check if a table is a standard parameter table.
 
-    Standard tables produce one claim per row. Non-standard (multi-value) tables
-    produce one claim per numeric cell.
+    A standard parameter table has explicit parameter-like columns:
+    Name/Parameter/Symbol AND Value/Default/Range/Units.
+
+    Tables with unit-bearing headers (like "F1 (Hz)") but no explicit
+    Name/Parameter column are multi-value tables and are skipped.
     """
-    standard_cols = {"default", "value", "range", "units", "unit"}
     headers_lower = {h.strip().lower() for h in headers}
-    # Also count headers with "range" substring (e.g., "Range in Study")
+
+    # Must have a name-like column
+    name_cols = {"name", "parameter", "symbol"}
+    has_name_col = bool(headers_lower & name_cols)
+    if not has_name_col:
+        return False
+
+    # Must have a value-like column
+    value_cols = {"default", "value", "range", "units", "unit"}
+    has_value_col = bool(headers_lower & value_cols)
     has_range_like = any("range" in h.lower() for h in headers)
-    has_unit_in_header = any(_HEADER_UNIT_PATTERN.search(h) for h in headers)
-    return bool((headers_lower & standard_cols) or has_range_like or has_unit_in_header)
+
+    return has_value_col or has_range_like
 
 
 def _row_to_multi_claims(
@@ -588,61 +599,20 @@ def generate_claims(paper_dir: Path) -> dict[str, Any]:
         if not name_col:
             continue
 
-        if _is_standard_table(table_headers):
-            # Standard table: one claim per row
-            for row in rows:
-                claim_counter += 1
-                claim = _row_to_claim(row, name_col, table_headers, paper_name, claim_counter)
-                if claim is not None:
-                    claims.append(claim)
-                else:
-                    claim_counter -= 1  # reclaim unused ID
-        else:
-            # Multi-value table: one claim per numeric cell
-            for row in rows:
-                new_claims, claim_counter = _row_to_multi_claims(
-                    row, name_col, table_headers, paper_name, claim_counter
-                )
-                claims.extend(new_claims)
+        if not _is_standard_table(table_headers):
+            continue  # skip multi-value tables — need LLM enrichment
 
-    # --- Equation claims ---
-    equations = parse_equations(notes_text)
-    for eq in equations:
-        # Extract variable-like tokens from the equation
-        variables = _extract_equation_variables(eq)
-        if not variables:
-            continue  # skip equations where we can't identify variables
-        claim_counter += 1
-        claims.append({
-            "id": f"claim{claim_counter}",
-            "type": "equation",
-            "expression": eq,
-            "variables": variables,
-            "provenance": {
-                "paper": paper_name,
-                "page": 0,
-            },
-        })
+        # Standard table: one claim per row
+        for row in rows:
+            claim_counter += 1
+            claim = _row_to_claim(row, name_col, table_headers, paper_name, claim_counter)
+            if claim is not None:
+                claims.append(claim)
+            else:
+                claim_counter -= 1  # reclaim unused ID
 
-    # --- Observation claims from testable properties ---
-    # Only emit if we can extract at least one concept reference
-    properties = parse_testable_properties(notes_text)
-    for prop in properties:
-        # Extract concept names mentioned in the property text
-        prop_concepts = _extract_concepts_from_text(prop)
-        if not prop_concepts:
-            continue  # skip observations with no concept references
-        claim_counter += 1
-        claims.append({
-            "id": f"claim{claim_counter}",
-            "type": "observation",
-            "statement": prop,
-            "concepts": prop_concepts,
-            "provenance": {
-                "paper": paper_name,
-                "page": 0,
-            },
-        })
+    # Equations and observations are skipped from auto-generation.
+    # Use the extract-claims skill (LLM-based) for these.
 
     return {
         "source": {
@@ -653,20 +623,19 @@ def generate_claims(paper_dir: Path) -> dict[str, Any]:
 
 
 def _find_parameter_tables(text: str) -> list[tuple[str, list[str]]]:
-    """Find markdown tables in the text that look like parameter tables.
+    """Find markdown tables that are standard parameter tables.
 
     Returns a list of (table_text, headers) tuples.
 
-    A parameter table is identified by either:
-    1. Headers containing known parameter column names (Name, Parameter, Symbol, etc.)
-    2. Fuzzy match: table with >=3 columns where any header contains a unit-like
-       string (Hz, dB, ms) or where the first data row has numeric cells.
+    Only detects tables with explicit Name/Parameter/Symbol column AND
+    Value/Default/Range/Units columns. All other tables are left for
+    LLM-based enrichment via the extract-claims skill.
     """
     lines = text.splitlines()
     tables: list[tuple[str, list[str]]] = []
     i = 0
-    param_columns = {"name", "parameter", "symbol", "units", "unit",
-                     "default", "value", "range", "notes"}
+    name_columns = {"name", "parameter", "symbol"}
+    value_columns = {"units", "unit", "default", "value", "range", "notes"}
 
     while i < len(lines):
         line = lines[i].strip()
@@ -677,19 +646,11 @@ def _find_parameter_tables(text: str) -> list[tuple[str, list[str]]]:
             if re.match(r"^\|[\s\-:|]+\|$", next_line):
                 headers = [h.strip() for h in line.strip("|").split("|")]
                 headers_lower = {h.lower() for h in headers}
-                is_param_table = False
 
-                # Path 1: exact header match
-                if headers_lower & param_columns:
-                    is_param_table = True
-
-                # Path 2: fuzzy match — require unit-bearing headers
-                # (No longer accepts tables just because they have numbers)
-                if not is_param_table and len(headers) >= 3:
-                    # Only accept if headers contain explicit unit patterns like "F1 (Hz)"
-                    unit_headers = [h for h in headers if _HEADER_UNIT_PATTERN.search(h)]
-                    if len(unit_headers) >= 1:
-                        is_param_table = True
+                # Require both a name column and a value column
+                has_name = bool(headers_lower & name_columns)
+                has_value = bool(headers_lower & value_columns) or any("range" in h.lower() for h in headers)
+                is_param_table = has_name and has_value
 
                 if is_param_table:
                     # Collect the full table

@@ -25,20 +25,46 @@ import yaml
 # ── Unit → form inference ────────────────────────────────────────────
 
 _UNIT_TO_FORM: dict[str, str] = {
+    # Frequency
     "Hz": "frequency",
     "kHz": "frequency",
+    # Time
     "s": "time",
     "ms": "time",
+    "msec": "time",
+    "sec": "time",
+    # Pressure
     "Pa": "pressure",
+    "kPa": "pressure",
     "cmH2O": "pressure",
     "hPa": "pressure",
+    # Flow / volume
     "cm3/s": "flow",
     "L/s": "flow",
+    "mL": "flow",
     "cm3/s2": "flow_derivative",
+    # Level
     "dB": "level",
     "dB SPL": "level",
     "dB/oct": "level",
     "dB/octave": "level",
+    "SD": "level",
+    # Dimensionless
+    "ratio": "amplitude_ratio",
+    "dimensionless": "dimensionless_compound",
+    "%": "amplitude_ratio",
+    # Length → structural (no dedicated length form)
+    "cm": "structural",
+    "mm": "structural",
+    "m": "structural",
+    "mm²": "structural",
+    # Counts → structural
+    "count": "structural",
+    "samples": "structural",
+    "bits": "structural",
+    "frames": "structural",
+    "points": "structural",
+    "degrees": "structural",
 }
 
 # Concept name patterns → form
@@ -56,15 +82,28 @@ _NAME_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"(^|_)(jitter|shimmer|hnr|snr|h1.*h2|spectral_tilt)(_|$)", re.I), "level"),
     (re.compile(r"(^|_)(rate|speed|velocity|speaking_rate)(_|$)", re.I), "frequency"),
     (re.compile(r"(^|_)(area|cross_section)(_|$)", re.I), "structural"),
+    (re.compile(r"(^|_)(length|width|height|depth|radius|diameter|distance|thickness|volume|mass|density|stiffness)(_|$)", re.I), "structural"),
+    (re.compile(r"(^|_)(coefficient|asymmetry|quotient|efficiency|factor)(_|$)", re.I), "amplitude_ratio"),
+    (re.compile(r"(^|_)(number|count|size|samples|resolution)(_|$)", re.I), "structural"),
 ]
 
 
-def infer_form(concept_name: str, units: set[str]) -> str | None:
-    """Infer a form from unit strings and concept name patterns."""
-    # Try unit-based inference first
-    for unit in units:
-        if unit in _UNIT_TO_FORM:
-            return _UNIT_TO_FORM[unit]
+def infer_form(concept_name: str, units: dict[str, int]) -> str | None:
+    """Infer a form from unit strings and concept name patterns.
+
+    Args:
+        concept_name: The concept's canonical name.
+        units: Mapping of unit string -> occurrence count.
+    """
+    # Try unit-based inference, preferring the most common unit
+    form_votes: dict[str, int] = {}
+    for unit, count in units.items():
+        form = _UNIT_TO_FORM.get(unit)
+        if form:
+            form_votes[form] = form_votes.get(form, 0) + count
+
+    if form_votes:
+        return max(form_votes, key=lambda f: form_votes[f])
 
     # Try name pattern matching
     for pattern, form_name in _NAME_PATTERNS:
@@ -118,11 +157,11 @@ def extract_concepts(papers_dir: Path) -> dict[str, dict[str, Any]]:
 
                 for name in names:
                     if name not in concepts:
-                        concepts[name] = {"units": set(), "count": 0, "papers": set()}
+                        concepts[name] = {"units": {}, "count": 0, "papers": set()}
                     concepts[name]["count"] += 1
                     concepts[name]["papers"].add(paper_name)
                     if unit:
-                        concepts[name]["units"].add(unit)
+                        concepts[name]["units"][unit] = concepts[name]["units"].get(unit, 0) + 1
 
     return concepts
 
