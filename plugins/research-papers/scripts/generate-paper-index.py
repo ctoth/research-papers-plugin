@@ -102,7 +102,7 @@ def main():
 
     for tag, dirnames in sorted(tag_map.items()):
         tag_dir = TAGGED_DIR / tag
-        tag_dir.mkdir()
+        tag_dir.mkdir(exist_ok=True)
         for dirname in sorted(dirnames):
             link = tag_dir / dirname
             target = os.path.relpath(PAPERS_DIR / dirname, tag_dir)
