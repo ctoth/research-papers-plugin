@@ -13,7 +13,6 @@ import argparse
 import importlib.util
 import sys
 from pathlib import Path
-from typing import Any
 
 
 def _load_generate_claims():

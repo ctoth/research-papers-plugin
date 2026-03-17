@@ -31,7 +31,7 @@ def extract_concept_names(claims_dir: Path) -> set[str]:
 
     names: set[str] = set()
 
-    for dirpath, _dirnames, filenames in os.walk(claims_dir):
+    for dirpath, _, filenames in os.walk(claims_dir):
         for fname in filenames:
             if fname != "claims.yaml":
                 continue
