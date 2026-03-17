@@ -1,6 +1,6 @@
 ---
 name: paper-reader
-description: Read scientific papers and extract implementation-focused notes. Use when you have a PDF that needs systematic extraction of equations, parameters, algorithms. Handles small papers (direct read), medium papers (image conversion), and large papers (parallel chunk readers via foreman protocol). Creates structured notes in papers/ directory.
+description: Read scientific papers and extract implementation-focused notes. Use when you have a PDF that needs systematic extraction of equations, parameters, algorithms. Handles small papers (direct read, <=20pp), medium papers (image conversion, 21-25pp), and larger papers (parallel chunk readers, >25pp). Creates structured notes in papers/ directory.
 argument-hint: "[path/to/paper.pdf]"
 disable-model-invocation: false
 ---
@@ -129,13 +129,18 @@ pdfinfo "$ARGUMENTS" 2>/dev/null | grep Pages || echo "pdfinfo not available"
 Also try direct read - most agents will error on files >20MB:
 
 **Decision tree:**
-- **<=25 pages AND <20MB**: Direct PDF read (Step 2A)
-- **26-100 pages OR 20MB error**: Image conversion, read sequentially (Step 2B)
-- **>100 pages**: Foreman protocol with parallel chunk readers (Step 2C)
+- **<=20 pages AND <20MB**: Direct PDF read (Step 2A)
+- **21-25 pages**: Image conversion, read sequentially (Step 2B)
+- **>25 pages**: Chunk protocol with parallel readers (Step 2C)
+
+> **Why these thresholds:** Claude's many-image context has a per-image dimension
+> limit (~2000px) that triggers unpredictably when ~20+ page images accumulate in
+> one agent. Papers over 25 pages reliably hit this. The old threshold (100 pages)
+> was far too high — agents would fail silently mid-read on 30-page papers.
 
 ---
 
-## Step 2A: Direct PDF Read (Small Papers <=25 pages)
+## Step 2A: Direct PDF Read (Small Papers <=20 pages)
 
 1. Read the PDF directly
 2. Continue to Step 3 (Create Output)
@@ -143,7 +148,7 @@ Also try direct read - most agents will error on files >20MB:
 
 ---
 
-## Step 2B: Image Conversion (Medium Papers 26-100 pages)
+## Step 2B: Image Conversion (Medium Papers 21-25 pages)
 
 1. **Convert page 0 only** to extract metadata for directory naming.
    **CRITICAL: Never write temp files to `papers/` root.** Use a system temp directory:
@@ -168,9 +173,9 @@ Also try direct read - most agents will error on files >20MB:
 
 ---
 
-## Step 2C: Foreman Protocol (Large Papers >100 pages)
+## Step 2C: Chunk Protocol (Papers >25 pages)
 
-For papers >100 pages, split into chunks and process each one. If you can dispatch parallel subagents, do so for maximum speed. Otherwise, process chunks sequentially.
+For papers >25 pages, split into chunks and process each one. If you can dispatch parallel subagents, do so for maximum speed. Otherwise, process chunks sequentially.
 
 ### 2C.1: Read Page 0 for Metadata
 
@@ -435,11 +440,11 @@ tags: [tag1, tag2, tag3]
 
 ## Step 6: Write Abstract
 
-**For small papers (Step 2A):** Write abstract.md directly - you already read the paper.
+**For small/medium papers (Steps 2A/2B):** Write abstract.md directly - you already read the paper.
 
-**For medium/large papers (Steps 2B/2C):** Dispatch a **haiku** agent.
+**For chunked papers (Step 2C):** Dispatch a **haiku** agent.
 
-### Small Papers: Write Directly
+### Small/Medium Papers: Write Directly
 
 Write to `./papers/FirstAuthor_Year_ShortTitle/abstract.md`:
 
@@ -587,9 +592,9 @@ If you can dispatch subagents (use a fast/cheap model if available), launch thes
 
 ## Output
 
-**Small papers (<=25 pages)**: `papers/Author_Year_Title/notes.md` + `description.md` + `abstract.md` + `citations.md`
-**Medium papers (26-100 pages)**: `papers/Author_Year_Title/notes.md` + `description.md` + `abstract.md` + `citations.md` + `pngs/`
-**Large papers (>100 pages)**: `papers/Author_Year_Title/notes.md` + `description.md` + `abstract.md` + `citations.md` + `pngs/` + `chunks/`
+**Small papers (<=20 pages)**: `papers/Author_Year_Title/notes.md` + `description.md` + `abstract.md` + `citations.md`
+**Medium papers (21-25 pages)**: `papers/Author_Year_Title/notes.md` + `description.md` + `abstract.md` + `citations.md` + `pngs/`
+**Chunked papers (>25 pages)**: `papers/Author_Year_Title/notes.md` + `description.md` + `abstract.md` + `citations.md` + `pngs/` + `chunks/`
 
 **All sizes also produce**: Updated `papers/index.md` entry + cross-reference annotations in notes.md
 
