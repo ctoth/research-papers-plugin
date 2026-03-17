@@ -23,6 +23,7 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 | `reconcile` | Cross-reference a paper against the collection bidirectionally |
 | `tag-papers` | Add tags to untagged papers using their existing notes |
 | `research` | Web research on a topic, structured findings report |
+| `extract-claims` | Extract/enrich propositional claims from a paper into claims.yaml |
 | `make-skill` | Create new skills from prompt files |
 
 ## Scripts
@@ -32,6 +33,30 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 | `generate-paper-index.py` | Rebuild papers/index.md and tagged-papers/ symlinks |
 | `cross-reference-papers.py` | Find cross-references between papers in the collection |
 | `migrate-format.py` | Convert legacy Tags: lines → YAML frontmatter, bold refs → wikilinks |
+| `generate_claims.py` | Parse notes.md and generate claims.yaml for a single paper |
+| `batch_generate_claims.py` | Generate claims.yaml for all papers in a directory |
+| `bootstrap_concepts.py` | Deduplicate and group concept names from claims files |
+
+## Claims Extraction Pipeline
+
+The claims pipeline extracts machine-readable propositional claims from paper notes. The typical workflow:
+
+1. **`generate_claims.py`** — Parses `notes.md` (parameter tables, equations, key findings) and produces a draft `claims.yaml`. Fast, deterministic, no LLM needed.
+2. **`extract-claims` skill** — LLM-powered enrichment of the draft claims (adds context, fixes types, fills gaps). Can also create claims from scratch if no draft exists.
+3. **`batch_generate_claims.py`** — Runs step 1 across an entire papers directory. Use `--skip-existing` to avoid re-processing.
+4. **`bootstrap_concepts.py`** — Collects concept names from all claims files, deduplicates similar names, and outputs a unified concepts list.
+
+```bash
+# Single paper: generate draft, then enrich with LLM
+uv run scripts/generate_claims.py papers/Author_2024_Title
+/research-papers:extract-claims papers/Author_2024_Title
+
+# Batch: generate drafts for all papers missing claims.yaml
+uv run scripts/batch_generate_claims.py papers/ --skip-existing
+
+# After batch: deduplicate concepts across all claims
+uv run scripts/bootstrap_concepts.py papers/ --output concepts.yaml
+```
 
 ## Installation
 
