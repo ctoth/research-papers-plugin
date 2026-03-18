@@ -41,7 +41,7 @@ _UNIT_TO_FORM: dict[str, str] = {
     # Flow / volume
     "cm3/s": "flow",
     "L/s": "flow",
-    "mL": "flow",
+    "mL": "structural",  # volume, not flow rate
     "cm3/s2": "flow_derivative",
     # Level
     "dB": "level",
