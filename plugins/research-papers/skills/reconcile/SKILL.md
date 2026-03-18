@@ -222,11 +222,23 @@ For each paper found in Step 3, **read its notes.md** (specifically the Collecti
 
 ### 5.1: Leads Listing This Paper
 
-If the citing paper lists this paper under "New Leads (Not Yet in Collection)":
+Leads can appear in **two places** depending on whether the citing paper has been reconciled before:
 
+1. **`### New Leads (Not Yet in Collection)`** — inside a `## Collection Cross-References` section (reconciled papers)
+2. **`## Related Work Worth Reading`** — a flat list at the end of notes.md (unreconciled papers, the paper-reader default)
+
+Search both sections for an entry matching this paper (by author name and year).
+
+**If found in `### New Leads (Not Yet in Collection)`:**
 - **Move** the entry out of "New Leads"
-- **Add** a new subsection `### Now in Collection (previously listed as leads)` (if it doesn't exist)
-- **Write** the entry there with:
+- **Add** it to `### Now in Collection (previously listed as leads)` (create subsection if needed)
+
+**If found in `## Related Work Worth Reading`:**
+- **Do NOT delete** the entry (that section is the paper-reader's historical output)
+- **Annotate inline** by appending `→ NOW IN COLLECTION: [[Author_Year_ShortTitle]]` to the entry
+- **Add** the entry to `### Now in Collection (previously listed as leads)` in the `## Collection Cross-References` section (create section and subsection if needed)
+
+In both cases, write the "Now in Collection" entry with:
   - Correct description of what this paper actually contributes
   - Key finding summary
   - Any tensions or confirmations between the two papers' findings
@@ -234,7 +246,7 @@ If the citing paper lists this paper under "New Leads (Not Yet in Collection)":
 Example:
 ```markdown
 ### Now in Collection (previously listed as leads)
-- [[Feinberg_2008_FemininityAveragenessVoicePitch]] — F0 manipulation via PSOLA shows linear pitch–attractiveness relationship. Note: Babel found opposite F0 effect when controlling for breathiness.
+- [[Groth_2010_AnatomyNanopublication]] — Defines nanopublication model (concept→triple→statement→annotation→nanopublication) with RDF Named Graph serialization. Structurally analogous to the micropublication model but focused on Semantic Web interoperability rather than argumentation structure.
 ```
 
 ### 5.2: Inaccurate Descriptions
