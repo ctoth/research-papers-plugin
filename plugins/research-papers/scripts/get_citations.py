@@ -91,7 +91,7 @@ def fetch_citations(identifier: str, direction: str,
             limit=max_results * 2,  # fetch extra for sorting
         )
         for ref in refs:
-            p = ref.citedPaper
+            p = ref.paper
             if not p or not p.title:
                 continue
             ext = p.externalIds or {}
@@ -123,7 +123,7 @@ def fetch_citations(identifier: str, direction: str,
             limit=max_results * 2,
         )
         for cit in cits:
-            p = cit.citingPaper
+            p = cit.paper
             if not p or not p.title:
                 continue
             ext = p.externalIds or {}
