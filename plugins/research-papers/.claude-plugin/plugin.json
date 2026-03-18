@@ -1,7 +1,7 @@
 {
   "name": "research-papers",
   "description": "Annotated research paper collection management — retrieve, read, extract, cross-reference scientific papers",
-  "version": "3.1.1",
+  "version": "3.2.0",
   "author": {
     "name": "Q"
   },
