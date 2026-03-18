@@ -11,11 +11,27 @@ Find papers cited as "New Leads" across the collection and retrieve+read them.
 
 ## Step 1: Extract All Leads
 
-Use the paper_hash.py script to extract and deduplicate leads, filtering out papers already in the collection:
+There are two lead-discovery modes. Use **both** and merge results (deduplicating by author+year).
+
+### Mode A: Notes-based leads (existing behavior)
+
+Extract leads from "New Leads" sections in notes.md files:
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/paper_hash.py --papers-dir papers/ extract-leads
 ```
+
+### Mode B: Citation-graph leads (new)
+
+If `$ARGUMENTS` contains `--citations` or `--citations-from <identifier>`, also discover leads via Semantic Scholar citation graph:
+
+```bash
+uv run ${CLAUDE_PLUGIN_ROOT}/scripts/get_citations.py <identifier> --direction references --filter-existing --papers-dir papers/ --json
+```
+
+Where `<identifier>` is an arxiv ID or DOI of a paper already in the collection. If `--citations-from` is not specified but `--citations` is, pick the most recently added paper (by directory mtime).
+
+This gets the actual reference list from S2 rather than relying on what paper-reader chose to highlight. Merge these with Mode A leads, deduplicating by author surname + year.
 
 ## Step 2: Determine Batch Size and Parallelism
 
