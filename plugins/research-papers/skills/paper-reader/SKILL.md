@@ -88,7 +88,9 @@ ls ./papers/Author_Year_ShortTitle/pngs/page-*.png | wc -l
 
 ## Step 2A: Direct Read (≤50 pages)
 
-Read every page image sequentially. Take thorough notes — you have the context for it. Continue to Step 3.
+**CRITICAL: Read EVERY page image. No skipping, no sampling, no "reading enough to get the gist."** Call the Read tool on every single page-NNN.png file from page-000 through the last page. If you have 34 pages, that is 34 Read tool calls. Agents routinely skip pages to save tokens — this produces incomplete notes that miss equations, parameters, and key details buried in middle sections. The entire point of reading the paper is completeness. If you skip pages, the notes are worthless.
+
+Take thorough notes as you go. Continue to Step 3.
 
 ---
 
