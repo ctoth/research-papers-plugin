@@ -397,7 +397,7 @@ Before writing claims.yaml:
 If you need to generate the initial `claims.yaml` before enriching, run:
 
 ```bash
-uv run scripts/generate_claims.py <paper_dir>
+python3 ${CLAUDE_PLUGIN_ROOT}/scripts/generate_claims.py <paper_dir>
 ```
 
 This extracts parameters from tables, equations from `$$...$$` blocks, and observations from the Testable Properties section. The output has placeholder page numbers (0) and raw concept names — that is what enrich mode fixes.
