@@ -36,16 +36,26 @@ rm "./papers/somefile.pdf"
 
 This keeps the `papers/` root clean — any PDF still in the root is unprocessed. Do NOT delete if the source was a URL (nothing to clean up) or if the paper directory doesn't have `paper.pdf` yet (something went wrong).
 
-## Step 4: Report
+## Step 4: Extract Claims
 
-When both skills have completed, write a summary to `./reports/paper-$SAFE_NAME.md` where $SAFE_NAME is derived from the paper directory name. Include:
+Invoke the **extract-claims** skill with the paper directory path from Step 1.
+
+If skill invocation is available (e.g., `/research-papers:extract-claims`), use it. Otherwise, follow the extract-claims SKILL.md instructions directly.
+
+The skill will auto-detect whether to enrich (if `generate_claims.py` produced a `claims.yaml`) or create from scratch.
+
+## Step 5: Report
+
+When all skills have completed, write a summary to `./reports/paper-$SAFE_NAME.md` where $SAFE_NAME is derived from the paper directory name. Include:
 
 - Paper directory path
 - Whether retrieval succeeded (and source: arxiv/sci-hub/etc.)
 - Whether reading succeeded
+- Whether claim extraction succeeded (mode used, claim count)
 - Usefulness rating for this project
 
 ## Error Handling
 
 - If retrieval fails: report failure and stop. Do not proceed to reading.
-- If reading fails: report what was retrieved but note the reading failure.
+- If reading fails: report what was retrieved but note the reading failure. Do not proceed to claim extraction.
+- If claim extraction fails: report what was retrieved and read but note the extraction failure.
