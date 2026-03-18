@@ -21,8 +21,8 @@ if [ -d "$paper_path" ]; then
   paper_dir="$paper_path"
 elif [ -f "$paper_path" ]; then
   # Use paper_hash.py for canonical lookup
-  HASH_SCRIPT=$(find ~/code -name paper_hash.py -path "*/research-papers/scripts/*" 2>/dev/null | head -1)
-  if [ -n "$HASH_SCRIPT" ]; then
+  HASH_SCRIPT="${CLAUDE_PLUGIN_ROOT}/scripts/paper_hash.py"
+  if [ -f "$HASH_SCRIPT" ]; then
     paper_dir=$(python3 "$HASH_SCRIPT" --papers-dir papers/ lookup "$(basename "$paper_path" .pdf)" 2>/dev/null)
     [ $? -ne 0 ] && paper_dir=""
     [ -n "$paper_dir" ] && paper_dir="papers/$paper_dir"
