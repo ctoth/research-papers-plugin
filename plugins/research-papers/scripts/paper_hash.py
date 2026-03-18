@@ -21,124 +21,14 @@ import os
 import re
 import sys
 
-
-# Words to drop from titles when generating short dirname
-FILLER_WORDS = {
-    'a', 'an', 'the', 'of', 'in', 'on', 'for', 'and', 'or', 'to', 'with',
-    'from', 'by', 'as', 'at', 'is', 'are', 'was', 'were', 'be', 'been',
-    'its', 'their', 'our', 'your', 'that', 'this', 'these', 'those',
-    'using', 'via', 'through', 'toward', 'towards', 'into', 'between',
-    'based', 'how', 'what', 'when', 'where', 'why', 'which', 'who',
-}
-
-# Max title words in dirname (after filtering)
-MAX_TITLE_WORDS = 4
-
-
-def parse_citation(text):
-    """Parse a freeform citation string into (author, year, title).
-
-    Handles formats like:
-      Fan et al. (2018) - "Hierarchical neural story generation"
-      **Fan et al., 2018** - "Hierarchical neural story generation"
-      Genette, G. (1972). *Narrative discourse: an essay in method.*
-      Fan et al. (2018) - source of Writing Prompts dataset
-      Roemmele and Gordon (2015) - "Creative help"
-    """
-    text = text.strip()
-    # Strip leading markdown bold/italic
-    text = re.sub(r'^\*+\s*', '', text)
-    text = re.sub(r'\s*\*+$', '', text)
-    text = text.strip()
-
-    author = None
-    year = None
-    title = None
-
-    # Extract year - look for (YYYY) or just YYYY near the start
-    year_match = re.search(r'\((\d{4})\)', text)
-    if not year_match:
-        year_match = re.search(r'[\s,](\d{4})[\s,\b\)]', text)
-    if not year_match:
-        year_match = re.search(r'(\d{4})', text)
-    if year_match:
-        year = year_match.group(1)
-
-    # Extract author - everything before the year (or first punctuation pattern)
-    if year_match:
-        before_year = text[:year_match.start()].strip()
-    else:
-        before_year = text.split('-')[0].split('—')[0].strip()
-
-    # Clean up author string
-    before_year = re.sub(r'[,\s]+$', '', before_year)
-    before_year = re.sub(r'\s+et\s+al\.?$', '', before_year)
-    # Get surname (first capitalized word)
-    author_match = re.match(r'([A-Z][a-z]+)', before_year)
-    if author_match:
-        author = author_match.group(1)
-
-    # Extract title - look for quoted or italicized text after author+year
-    if year_match:
-        after_year = text[year_match.end():]
-    else:
-        after_year = text
-
-    # Try quoted title: "Title here"
-    title_match = re.search(r'"([^"]+)"', after_year)
-    if not title_match:
-        # Try italicized: *Title here*
-        title_match = re.search(r'\*([^*]+)\*', after_year)
-    if not title_match:
-        # Try after dash/colon separator
-        sep_match = re.search(r'[\-—:]\s*(.+?)(?:\s*[\-—]|$)', after_year)
-        if sep_match:
-            candidate = sep_match.group(1).strip()
-            # Only use if it looks like a title (starts with cap, reasonable length)
-            if candidate and candidate[0].isupper() and len(candidate) > 5:
-                title = candidate
-    if title_match and not title:
-        title = title_match.group(1).strip()
-
-    # Strip trailing periods from title
-    if title:
-        title = title.rstrip('.')
-
-    return author, year, title
-
-
-def generate_dirname(author, year, title):
-    """Generate canonical directory name: Author_Year_ShortTitle.
-
-    ShortTitle is 2-4 CamelCase words from the title, dropping filler words.
-    Keeps acronyms (all-caps words) as-is.
-    """
-    if not author or not year:
-        return None
-
-    if not title:
-        return f"{author}_{year}"
-
-    # Split title, drop filler, take first MAX_TITLE_WORDS meaningful words
-    words = re.split(r'[\s/]+', title)
-    meaningful = []
-    for w in words:
-        # Strip punctuation from edges
-        clean = re.sub(r'^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$', '', w)
-        if not clean:
-            continue
-        if clean.lower() in FILLER_WORDS:
-            continue
-        # Capitalize unless it's an acronym (already all-caps)
-        if clean.isupper() and len(clean) > 1:
-            meaningful.append(clean)
-        else:
-            meaningful.append(clean[0].upper() + clean[1:])
-        if len(meaningful) >= MAX_TITLE_WORDS:
-            break
-
-    short_title = ''.join(meaningful) if meaningful else 'Untitled'
-    return f"{author}_{year}_{short_title}"
+# Import shared identifier parsing from _paper_id.py
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _paper_id import (  # noqa: E402
+    FILLER_WORDS,
+    MAX_TITLE_WORDS,
+    parse_citation,
+    generate_dirname,
+)
 
 
 def list_papers(papers_dir):
