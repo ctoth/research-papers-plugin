@@ -216,6 +216,11 @@ def extract_leads(papers_dir):
             text, re.DOTALL
         )
         if not m:
+            m = re.search(
+                r'## Related Work Worth Reading\n(.*?)(?:\n## |\Z)',
+                text, re.DOTALL
+            )
+        if not m:
             continue
 
         for line in m.group(1).strip().split('\n'):
