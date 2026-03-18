@@ -16,61 +16,41 @@ The argument can be:
 - A DOI: `10.XXXX/...`
 - An ACL Anthology URL: `https://aclanthology.org/...`
 - An AAAI URL: `https://ojs.aaai.org/...`
-- A paper title (will search arxiv)
+- A paper title (will search)
 
-## Step 2: Determine Download Strategy
+## Step 2: Search (title input only)
 
-**IMPORTANT**: Use a unique temp filename to avoid collisions during parallel downloads.
-Generate a short identifier from the URL (e.g., arxiv ID, last path segment).
-
-### Case A: Arxiv URL
-Arxiv PDFs are freely available. Convert URL to direct PDF link:
-- `https://arxiv.org/abs/XXXX.XXXXX` -> `https://arxiv.org/pdf/XXXX.XXXXX.pdf`
-- `https://arxiv.org/pdf/XXXX.XXXXX` -> already a PDF URL, ensure `.pdf` suffix
+If the input is a paper title (not a URL or DOI), search for it first:
 
 ```bash
-# Use arxiv ID as unique temp name to avoid parallel collisions
-curl -L -o "./papers/temp_ARXIVID.pdf" "https://arxiv.org/pdf/XXXX.XXXXX.pdf" 2>&1
+uv run ${CLAUDE_PLUGIN_ROOT}/scripts/search_papers.py "PAPER TITLE" --source all --max-results 5 --json
 ```
 
-Verify it's a valid PDF:
-```bash
-file "./papers/temp_ARXIVID.pdf"
-```
+Review the results. If there's a clear match, extract the arxiv ID or DOI and continue to Step 3. If ambiguous, present the top results to the user and ask which one.
 
-If the output contains "PDF document" -> success. Continue to Step 3.
-If not -> the download failed or returned HTML. Try adding `.pdf` to the URL.
+## Step 3: Download
 
-**IMPORTANT - Metadata extraction for arxiv papers:**
-Most arxiv PDFs can't be parsed directly (often report "password-protected" falsely).
-Instead, fetch metadata from the arxiv abstract page:
-
-Fetch `https://arxiv.org/abs/XXXX.XXXXX` and extract:
-1. Full paper title
-2. All author names
-3. Year of publication
-4. Venue/conference if mentioned
-5. Abstract text
-
-This reliably gives you title, authors, year without needing to parse the PDF.
-
-### Case B: ACL Anthology URL
-ACL Anthology PDFs are freely available:
-- `https://aclanthology.org/2024.lrec-main.292/` -> `https://aclanthology.org/2024.lrec-main.292.pdf`
+Use the fetch_paper.py script to download the PDF and extract metadata:
 
 ```bash
-curl -L -o "./papers/temp_IDENTIFIER.pdf" "https://aclanthology.org/XXXX.pdf" 2>&1
+uv run ${CLAUDE_PLUGIN_ROOT}/scripts/fetch_paper.py "<identifier>" --papers-dir papers/
 ```
 
-Fetch metadata from the abstract page too.
+Where `<identifier>` is the arxiv ID/URL, DOI, ACL URL, or S2 paper ID from the input or search results.
 
-### Case C: Other URL or DOI (paywalled)
+The script will:
+1. Resolve metadata (title, authors, year, abstract) from arxiv or Semantic Scholar
+2. Create the paper directory with canonical naming (`Author_Year_ShortTitle`)
+3. Write `metadata.json` to the paper directory
+4. Attempt PDF download via waterfall: direct download → Unpaywall → report fallback needed
 
-Use browser automation to navigate to sci-hub and download the PDF.
+## Step 4: Handle Fallback (if needed)
+
+If fetch_paper.py returns `"fallback_needed": true`, the paper couldn't be downloaded via open-access channels. Fall back to browser automation for sci-hub:
 
 **Try browser tools in this order:**
 
-#### Option 1: Playwright MCP (preferred — works on all platforms)
+### Option 1: Playwright MCP (preferred — works on all platforms)
 
 If Playwright MCP tools are available (`browser_navigate`, `browser_click`, etc.):
 
@@ -88,9 +68,9 @@ If Playwright MCP tools are available (`browser_navigate`, `browser_click`, etc.
    const links = [...document.querySelectorAll('a')].filter(a => a.href.includes('.pdf'));
    return links.map(a => a.href);
    ```
-7. Download: `curl -L -o "./papers/temp_IDENTIFIER.pdf" "EXTRACTED_URL" 2>&1`
+7. Download: `curl -L -o "./papers/<dirname>/paper.pdf" "EXTRACTED_URL" 2>&1`
 
-#### Option 2: Claude-in-Chrome (Claude Code fallback)
+### Option 2: Claude-in-Chrome (Claude Code fallback)
 
 If Playwright is not available but `mcp__claude-in-chrome__navigate` is:
 
@@ -98,64 +78,37 @@ If Playwright is not available but `mcp__claude-in-chrome__navigate` is:
 2. `mcp__claude-in-chrome__form_input` to enter the URL/DOI
 3. `mcp__claude-in-chrome__computer` to click submit
 4. `mcp__claude-in-chrome__javascript_tool` to extract PDF URL (same JS as above)
-5. Download: `curl -L -o "./papers/temp_IDENTIFIER.pdf" "EXTRACTED_URL" 2>&1`
+5. Download: `curl -L -o "./papers/<dirname>/paper.pdf" "EXTRACTED_URL" 2>&1`
 
-#### Option 3: No browser automation
+### Option 3: No browser automation
 
-Report the DOI/URL and ask the user to download the PDF manually to `./papers/`.
+Report the DOI/URL and ask the user to download the PDF manually to the paper directory.
 
-### Case D: Paper Title (no URL)
-Search arxiv first:
-
-```bash
-# URL-encode the title and search arxiv API
-curl -s "http://export.arxiv.org/api/query?search_query=ti:%22PAPER+TITLE%22&max_results=3" 2>&1
-```
-
-Parse the XML response to find the arxiv ID, then follow Case A.
-
-If not on arxiv, use Chrome to search Google Scholar and follow Case C with the found DOI.
-
-## Step 3: Create Directory and Move PDF
-
-From the metadata extracted in Step 2, construct the directory name:
-
-**Naming convention**: `FirstAuthorLastName_Year_ShortTitle`
-- ShortTitle: 2-4 key words from the title, CamelCase, no spaces
-- Examples: `Wang_2024_DynamicHierarchicalOutlining`, `Bae_2024_CollectiveCritics`
-- Drop filler words (A, The, An, For, With, etc.) from the short title
-- If title has an acronym (e.g., "GROVE: A Retrieval..."), use it: `Wen_2023_GROVE`
+## Step 5: Verify
 
 ```bash
-mkdir -p "./papers/FirstAuthor_Year_ShortTitle"
-mv "./papers/temp_IDENTIFIER.pdf" "./papers/FirstAuthor_Year_ShortTitle/paper.pdf"
-```
-
-## Step 4: Verify
-
-```bash
-file "./papers/FirstAuthor_Year_ShortTitle/paper.pdf"
-ls -la "./papers/FirstAuthor_Year_ShortTitle/"
+file "./papers/<dirname>/paper.pdf"
+ls -la "./papers/<dirname>/"
 ```
 
 Confirm:
 - PDF exists and is valid ("PDF document" in file output)
 - File size is reasonable (>100KB for a real paper)
+- `metadata.json` exists with title, authors, year
 
 ## Output
 
 When done, report:
 ```
-Retrieved: papers/FirstAuthor_Year_ShortTitle/paper.pdf
-Source: [arxiv/aclanthology/sci-hub]
+Retrieved: papers/<dirname>/paper.pdf
+Source: [arxiv/aclanthology/unpaywall/sci-hub]
 Size: [file size]
 ```
 
 ## Error Handling
 
-- If curl fails: check URL, try with/without .pdf suffix
-- If `file` says it's HTML, not PDF: the server returned a paywall page. Fall back to sci-hub (Case C).
-- If sci-hub fails: report failure, provide the URL for manual download
+- If fetch_paper.py fails metadata resolution: try the other source (arxiv vs S2)
+- If all download methods fail: report failure, provide the URL for manual download
 - ALWAYS clean up temp files on failure: `rm -f ./papers/temp_*.pdf`
 
 ## CRITICAL: File Modified Error Workaround
