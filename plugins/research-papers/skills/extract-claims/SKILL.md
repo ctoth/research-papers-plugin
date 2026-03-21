@@ -4,6 +4,7 @@ description: Extract and enrich propositional claims from a paper directory. In 
 argument-hint: "<papers/Author_Year_Title> [--mode enrich|create]"
 disable-model-invocation: false
 ---
+<!-- Version: concept-first-2026-03-21 -->
 
 # Extract Claims: $ARGUMENTS
 
@@ -46,6 +47,10 @@ ls "$paper_dir"/claims.yaml 2>/dev/null
 Read the existing `claims.yaml` and the paper's `notes.md`. Improve each claim with real data from the paper.
 
 ### Step 1.1: Read Source Material
+
+**Before extracting any claims, run the Concept Registration steps (A through D) above.**
+Read the concept registry, identify concepts this paper needs, and register any that are missing.
+Only after all concepts are registered, proceed with claim extraction below.
 
 Read these files:
 - `<paper_dir>/claims.yaml` — the mechanical extraction to enrich
@@ -213,6 +218,10 @@ Create `claims.yaml` from scratch using `notes.md` content. Use this when `gener
 
 ### Step 2.1: Read Source Material
 
+**Before extracting any claims, run the Concept Registration steps (A through D) above.**
+Read the concept registry, identify concepts this paper needs, and register any that are missing.
+Only after all concepts are registered, proceed with claim extraction below.
+
 Read:
 - `<paper_dir>/notes.md` — primary source
 - `<paper_dir>/paper.pdf` or page images — for page numbers and verification
@@ -366,33 +375,96 @@ Write to `<paper_dir>/claims.yaml`.
 - When enriching, preserve existing IDs and continue the sequence for new claims
 - Never reuse an ID, even if the original claim was removed
 
-## Concept Naming Rules
+## Concept Registration (Concept-First Rule)
 
-- Check the concept registry first: `concepts/*.yaml` in the propstore
-- Use the concept's `id` field (e.g., `concept1`), not its filename or canonical_name
-- Check aliases: a paper might say "F0" which maps to `concept1` (fundamental_frequency)
-- If no concept exists in the registry, use a descriptive `lowercase_underscore` name
-- Do NOT create new concept registry entries — that is a separate workflow
+Claims MUST reference registered concepts. Before extracting any claims, identify the concepts this paper discusses and ensure they all exist in the registry.
 
-## Domain Adaptation
+### Step A: Check for propstore
 
-This skill works across ALL research domains. Adapt your extraction to the paper's domain:
+```bash
+ls concepts/*.yaml 2>/dev/null || ls knowledge/concepts/*.yaml 2>/dev/null
+```
 
-### Vocabulary
-- If a vocabulary file exists in the project (check `knowledge/vocabularies/*.yaml` or `vocabularies/*.yaml`), load it and use its concept names preferentially.
-- When no vocabulary exists, use descriptive `lowercase_underscore` names from the paper's own terminology.
-- Before inventing a new concept name, grep existing claims files for similar names:
-  ```bash
-  grep -r "concept:" papers/*/claims.yaml | sort -u
-  ```
-  Reuse existing names. If 3 papers already use `frame_sampling_rate`, do NOT invent `preprocessing_fps`.
+If no concepts directory exists → **graceful degradation mode**: skip Steps B-D entirely, use descriptive `lowercase_underscore` names in claims. Claims are still valid — they just won't have registry-backed concepts.
 
-### Conditions
-Match the paper's domain:
-- Video: `dataset == 'ActivityNet'`, `video_length > 120`, `model == 'Gemini'`
-- Speech: `vowel == 'a'`, `register == 'modal'`, `sex == 'male'`
-- Biology: `species == 'human'`, `tissue == 'liver'`
-- Use consistent vocabulary ACROSS the collection, not just within one file.
+If concepts directory exists → proceed with concept-first flow.
+
+### Step B: Read the registry
+
+```bash
+ls knowledge/concepts/*.yaml 2>/dev/null | head -100
+```
+
+Read several concept files to understand what's already registered — their names, aliases, definitions, and forms. Build a mental model of the existing vocabulary before proceeding.
+
+### Step C: Identify concepts this paper needs
+
+Read the paper's notes.md. List every distinct concept the paper discusses:
+- Methods and algorithms (e.g., "dense video captioning", "MapReduce decomposition")
+- Metrics and evaluation criteria (e.g., "CIDEr score", "caption quality")
+- Architectures and components (e.g., "temporal tokenizer", "memory bank")
+- Phenomena and properties (e.g., "temporal bias", "frame redundancy")
+- CEL condition variables (e.g., "dataset", "model", "task") — these need category concepts
+
+For each concept, check: does it already exist in the registry (by canonical_name or alias)?
+
+### Step D: Register missing concepts
+
+For each concept NOT already in the registry, create it BEFORE extracting any claims:
+
+```bash
+pks concept add --name <lowercase_underscore_name> \
+  --domain <project-domain> \
+  --form structural \
+  --definition "<1-2 sentence definition>"
+```
+
+**Definition quality is critical.** Definitions are used for concept embeddings and deduplication. Write a definition that:
+- Distinguishes this concept from near-neighbors
+- Would make sense to someone unfamiliar with this specific paper
+- Is specific enough to match against similar concepts in other papers
+
+Good definitions:
+- "The task of generating natural language descriptions for all events in a video, each anchored to a temporal interval"
+- "A mechanism that processes video frames sequentially and compresses similar adjacent frames to maintain constant memory usage for arbitrarily long videos"
+- "A dimensionless evaluation metric for image captioning that measures consensus between generated and reference captions using TF-IDF weighted n-gram similarity"
+
+Bad definitions:
+- "Auto-proposed from claims"
+- "Video captioning method"
+- "A metric"
+
+**Form selection:**
+- `structural` for methods, architectures, phenomena, abstract concepts (most things)
+- `category` for condition variables that take enumerated values (dataset, model, task, metric, video_length_category)
+- `score` for evaluation metrics with numeric values (CIDEr, BLEU, mAP)
+- `count` for discrete quantities (frame counts, segment counts)
+- `rate` for rates (fps, words per minute)
+- `time` for durations
+
+**CEL condition concepts** — these are commonly needed:
+```bash
+# Only create these if they don't already exist in the registry
+pks concept add --name dataset --domain general --form category \
+  --definition "The benchmark dataset a result was evaluated on"
+pks concept add --name model --domain general --form category \
+  --definition "The model or system being evaluated"
+pks concept add --name task --domain general --form category \
+  --definition "The task or application being performed"
+pks concept add --name metric --domain general --form category \
+  --definition "The evaluation metric used to measure performance"
+```
+
+### Step E: Extract claims
+
+Now proceed with claim extraction. Every concept field in every claim MUST match a registered concept canonical_name or alias. If you realize mid-extraction that you need a concept you didn't register in Step D, register it now before writing the claim that references it.
+
+### Reusing existing concepts
+
+When the registry already has concepts from previous papers:
+- Search by name AND by reading definitions — a paper might call something "temporally-grounded captioning" but the registry has "dense_video_captioning" with a definition that matches
+- If you find a match, use the existing concept name — do NOT create a duplicate
+- If unsure whether two concepts are the same, create the new one — deduplication happens later via embedding similarity
 
 ## Provenance Rules
 
