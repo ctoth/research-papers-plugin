@@ -50,21 +50,37 @@ _UNIT_TO_FORM: dict[str, str] = {
     "dB/octave": "level",
     "SD": "level",
     # Dimensionless
-    "ratio": "amplitude_ratio",
+    "ratio": "ratio",
     "dimensionless": "dimensionless_compound",
-    "%": "amplitude_ratio",
+    "%": "score",
     # Length → structural (no dedicated length form)
     "cm": "structural",
     "mm": "structural",
     "m": "structural",
     "mm²": "structural",
-    # Counts → structural
-    "count": "structural",
-    "samples": "structural",
+    # Counts
+    "count": "count",
+    "samples": "count",
     "bits": "structural",
-    "frames": "structural",
-    "points": "structural",
+    "frames": "count",
+    "points": "score",
     "degrees": "structural",
+    # Rates
+    "FPS": "rate",
+    "fps": "rate",
+    "words/min": "rate",
+    "tokens/sec": "rate",
+    "items/sec": "rate",
+    # Scores / evaluation metrics
+    "mAP": "score",
+    "BLEU": "score",
+    "CIDEr": "score",
+    "METEOR": "score",
+    "ROUGE": "score",
+    "IoU": "score",
+    "F1": "score",
+    # Resolution
+    "px": "count",
 }
 
 # Concept name patterns → form
@@ -84,7 +100,10 @@ _NAME_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r"(^|_)(area|cross_section)(_|$)", re.I), "structural"),
     (re.compile(r"(^|_)(length|width|height|depth|radius|diameter|distance|thickness|volume|mass|density|stiffness)(_|$)", re.I), "structural"),
     (re.compile(r"(^|_)(coefficient|asymmetry|quotient|efficiency|factor)(_|$)", re.I), "amplitude_ratio"),
-    (re.compile(r"(^|_)(number|count|size|samples|resolution)(_|$)", re.I), "structural"),
+    (re.compile(r"(^|_)(number|count|num_|n_|size|samples)(_|$)", re.I), "count"),
+    (re.compile(r"(^|_)(resolution|width|height|pixels)(_|$)", re.I), "count"),
+    (re.compile(r"(^|_)(accuracy|precision|recall|f1|map|bleu|cider|meteor|rouge|iou|score)(_|$)", re.I), "score"),
+    (re.compile(r"(^|_)(fps|framerate|throughput|bitrate|words_per)(_|$)", re.I), "rate"),
 ]
 
 
@@ -167,10 +186,15 @@ def extract_concepts(papers_dir: Path) -> dict[str, dict[str, Any]]:
 
 
 _KNOWN_SHORT_NAMES = frozenset({
+    # Phonetics (existing)
     "f0", "f1", "f2", "f3", "f4", "f5", "f6",
     "b1", "b2", "b3", "b4", "b5", "b6",
     "h1", "h2", "h4",
     "oq", "sq", "cq",
+    # ML / general (new)
+    "lr", "bs", "bn", "iou", "ad", "qa",
+    "fp", "fn", "tp", "tn",
+    "f1", "k1", "k2",
 })
 
 
@@ -201,7 +225,7 @@ def propose(
     papers_dir: Path,
     output_dir: Path,
     forms_dir: Path | None = None,
-    domain: str = "speech",
+    domain: str = "general",
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Generate proposed concept YAML files from claims.
@@ -328,8 +352,8 @@ def main() -> None:
                         help="Output directory for concept YAML files")
     parser.add_argument("--forms-dir", type=Path, default=None,
                         help="Forms directory to validate form references")
-    parser.add_argument("--domain", default="speech",
-                        help="Domain prefix for all concepts (default: speech)")
+    parser.add_argument("--domain", default="general",
+                        help="Domain prefix for all concepts (default: general)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Show what would be created without writing")
     args = parser.parse_args()
