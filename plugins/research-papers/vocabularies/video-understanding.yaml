@@ -1,0 +1,67 @@
+# Seed vocabulary for video understanding / audio description research.
+# Maps terms (as they appear in papers) to canonical concept names.
+# Used by extract-claims to normalize vocabulary across papers.
+domain: video-understanding
+
+concepts:
+  # Dense video captioning
+  "dense video captioning": dense_video_captioning
+  "DVC": dense_video_captioning
+  "temporally-grounded captioning": dense_video_captioning
+  "event-level narration": dense_video_captioning
+
+  # Temporal grounding
+  "temporal grounding": temporal_grounding
+  "temporal localization": temporal_grounding
+  "event localization": temporal_grounding
+  "timestamp prediction": temporal_grounding
+
+  # Scene/shot detection
+  "scene detection": scene_detection
+  "shot boundary detection": scene_detection
+  "scene segmentation": scene_detection
+  "cut detection": scene_detection
+
+  # Keyframe selection
+  "keyframe selection": keyframe_selection
+  "keyframe extraction": keyframe_selection
+  "key frame sampling": keyframe_selection
+  "adaptive sampling": keyframe_selection
+
+  # Audio description
+  "audio description": audio_description
+  "AD": audio_description
+  "video description": audio_description
+
+  # Frame sampling
+  "frame sampling rate": frame_sampling_rate
+  "FPS": frame_sampling_rate
+  "extraction rate": frame_sampling_rate
+
+  # Evaluation metrics (as concepts, not values)
+  "CIDEr": cider_score
+  "METEOR": meteor_score
+  "BLEU": bleu_score
+  "SODA_c": soda_c_score
+
+  # Architecture patterns
+  "mixture of experts": mixture_of_experts
+  "MoE": mixture_of_experts
+  "MapReduce": map_reduce_pattern
+  "context caching": context_caching
+  "hierarchical representation": hierarchical_representation
+
+  # Video understanding
+  "video language model": video_language_model
+  "VLM": video_language_model
+  "multimodal LLM": multimodal_llm
+  "MLLM": multimodal_llm
+
+abbreviations:
+  dvc: dense_video_captioning
+  vlm: video_language_model
+  tg: temporal_grounding
+  ad: audio_description
+  sbd: scene_detection
+  aks: adaptive_keyframe_sampling
+  moe: mixture_of_experts
