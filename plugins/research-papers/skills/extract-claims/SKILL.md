@@ -94,11 +94,11 @@ For equation claims, populate the `variables` list with mappings from equation s
 
 ```yaml
 variables:
-  - symbol: "F0"
-    concept: "concept1"
+  - symbol: "S"
+    concept: "similarity_score"
     role: "dependent"
-  - symbol: "Ps"
-    concept: "concept2"
+  - symbol: "q_i"
+    concept: "query_embedding"
     role: "independent"
 ```
 
@@ -106,10 +106,20 @@ Roles: `dependent`, `independent`, `parameter`, `constant`.
 
 #### Conditions (conditions)
 Add CEL expressions where the paper specifies conditions under which a claim holds:
-- Population: `"sex == 'male'"`, `"sex == 'female'"`
-- Task: `"task == 'speech'"`, `"task == 'singing'"`
-- Context: `"vowel == 'a'"`, `"register == 'modal'"`
-- Methodology: `"measurement_method == 'inverse_filtering'"`
+
+```yaml
+# Standard condition dimensions (all domains):
+conditions:
+  - "dataset == 'ActivityNet'"     # which benchmark
+  - "model == 'GPT-4o'"           # which model
+  - "task == 'dense_captioning'"   # which task
+  - "metric == 'CIDEr'"           # which evaluation metric
+
+# Domain-specific conditions also valid:
+  - "video_length > 120"          # video domain
+  - "vowel == 'a'"                # speech domain
+  - "species == 'human'"          # biology domain
+```
 
 Use consistent condition vocabulary across claims in the same file. Conditions are equality checks by default; use comparison operators for ranges.
 
@@ -151,11 +161,11 @@ uncertainty_type: sd  # sd, se, ci95, or range
 If the paper reports how many observations a parameter estimate is based on, add `sample_size`.
 
 #### Measurement Claims
-If the paper contains perceptual or behavioral measurements (JND thresholds, preference ratings, detection thresholds), ensure these are typed as `measurement` with:
+If the paper contains perceptual, behavioral, or evaluation measurements (JND thresholds, preference ratings, detection thresholds, benchmark scores), ensure these are typed as `measurement` with:
 - `target_concept`: the concept being measured
-- `measure`: one of `jnd_absolute`, `jnd_relative`, `discrimination_threshold`, `preference_rating`, `detection_threshold`, `correlation`, `effect_size`
+- `measure`: one of `jnd_absolute`, `jnd_relative`, `discrimination_threshold`, `preference_rating`, `detection_threshold`, `correlation`, `effect_size`, `accuracy`, `precision`, `recall`, `f1_score`, `mean_average_precision`, `intersection_over_union`, `benchmark_score`
 - `value` and `unit`: the measurement result
-- `listener_population`: if specified (e.g., `"native_english"`, `"trained_musicians"`)
+- `evaluation_population`: if specified (e.g., `"blv_users"`, `"expert_annotators"`, `"trained_musicians"`, `"native_english"`)
 - `methodology`: brief description of experimental method
 
 ### Step 1.3: Add Missing Claims
@@ -181,18 +191,18 @@ source:
 claims:
   - id: claim1
     type: parameter
-    concept: concept1
-    value: 200.0
-    unit: Hz
+    concept: ad_reading_speed
+    value: 180.0
+    unit: "words/min"
     conditions:
-      - "task == 'speech'"
+      - "output_format == 'audio_description'"
     provenance:
-      paper: Author_Year_ShortTitle
-      page: 5
-      table: "Table 1"
-      section: "Results"
-      quote_fragment: "Mean F0 was 200 Hz for speech tasks"
-    notes: "Measured via electroglottography, N=24 male speakers"
+      paper: Li_2026_ADCanvas
+      page: 8
+      section: "System Design"
+      table: null
+      quote_fragment: "AD scripts are rendered at 180 words per minute"
+    notes: "Professional AD standard; constrains maximum description density"
 ```
 
 ---
@@ -241,22 +251,19 @@ For each equation or mathematical relationship:
 ```yaml
 - id: claim5
   type: equation
-  expression: "F_0 = k \\cdot P_s^{0.5}"  # human-readable
-  sympy: "F_0 - k * P_s**0.5"  # SymPy-parseable (rearranged to equal zero, or as assignment)
+  expression: "\\text{sim}(q, v) = \\frac{q \\cdot v}{\\|q\\| \\|v\\|}"
+  sympy: "q.dot(v) / (Norm(q) * Norm(v))"
   variables:
-    - symbol: "F_0"
-      concept: "concept1"
-      role: "dependent"
-    - symbol: "P_s"
-      concept: "concept2"
+    - symbol: "q"
+      concept: "query_embedding"
       role: "independent"
-    - symbol: "k"
-      concept: "proportionality_constant"
-      role: "parameter"
+    - symbol: "v"
+      concept: "visual_feature"
+      role: "independent"
   provenance:
-    paper: <paper_dir_name>
-    page: <page number>
-    section: "<section>"
+    paper: Tang_2025_AKS
+    page: 4
+    section: "Method"
 ```
 
 Rules:
@@ -272,17 +279,16 @@ For qualitative claims, empirical observations, and testable properties:
 ```yaml
 - id: claim8
   type: observation
-  statement: "Fundamental frequency increases with subglottal pressure in a roughly logarithmic relationship."
+  statement: "Structured decomposition of video scenes into agent-level attributes, followed by LLM synthesis, outperforms direct end-to-end captioning from VLMs."
   concepts:
-    - concept1
-    - concept2
-  conditions:
-    - "register == 'modal'"
+    - dense_video_captioning
+    - mixture_of_experts
   provenance:
-    paper: <paper_dir_name>
-    page: <page number>
-    section: "Discussion"
-    quote_fragment: "Our results show a logarithmic dependency..."
+    paper: Li_2024_Wolf
+    page: 7
+    section: "Results"
+    quote_fragment: "Wolf achieves 4.2 CIDEr improvement over direct VLM captioning"
+  notes: "Generalizable architectural principle: decompose-then-synthesize beats monolithic"
 ```
 
 Rules:
@@ -297,21 +303,21 @@ For parameterized equation systems (multi-equation frameworks):
 ```yaml
 - id: claim12
   type: model
-  name: "LF model of glottal flow"
+  name: "Multi-stage video captioning pipeline"
   equations:
-    - "U_g(t) = E_0 * exp(alpha * t) * sin(omega_g * t)"
-    - "U_g(t) = -E_e / (epsilon * T_a) * (exp(-epsilon * (t - T_e)) - exp(-epsilon * (T_c - T_e)))"
+    - "captions = LLM_synthesize(agent_attributes, scene_graph)"
+    - "agent_attributes = VLM_extract(frames, detection_boxes)"
   parameters:
-    - name: "E_e"
-      concept: "concept3"
-      note: "Excitation strength at maximum discontinuity"
-    - name: "T_a"
-      concept: "concept8"
-      note: "Return phase time constant"
+    - name: "num_agents"
+      concept: "max_tracked_agents"
+      note: "Maximum number of agents tracked per scene"
+    - name: "caption_window"
+      concept: "temporal_window_size"
+      note: "Duration of each captioning segment in seconds"
   provenance:
-    paper: <paper_dir_name>
-    page: <page number>
-    section: "<section>"
+    paper: Li_2024_Wolf
+    page: 5
+    section: "Method"
 ```
 
 ### Step 2.6: Extract Measurement Claims
@@ -321,17 +327,17 @@ For perceptual or behavioral measurements:
 ```yaml
 - id: claim15
   type: measurement
-  target_concept: concept1
-  measure: jnd_absolute
-  value: 3.0
-  unit: "Hz"
-  listener_population: "native_english"
-  methodology: "2AFC adaptive staircase"
+  target_concept: ad_quality_score
+  measure: preference_rating
+  value: 4.2
+  unit: "points"
+  evaluation_population: "blv_users"
+  methodology: "Likert scale rating by 14 blind/low-vision participants"
   conditions:
-    - "stimulus_type == 'synthetic_vowel'"
+    - "system == 'VideoA11y'"
   provenance:
-    paper: <paper_dir_name>
-    page: <page number>
+    paper: Li_2025_VideoA11y
+    page: 12
 ```
 
 ### Step 2.7: Assemble and Write
@@ -368,6 +374,26 @@ Write to `<paper_dir>/claims.yaml`.
 - If no concept exists in the registry, use a descriptive `lowercase_underscore` name
 - Do NOT create new concept registry entries — that is a separate workflow
 
+## Domain Adaptation
+
+This skill works across ALL research domains. Adapt your extraction to the paper's domain:
+
+### Vocabulary
+- If a vocabulary file exists in the project (check `knowledge/vocabularies/*.yaml` or `vocabularies/*.yaml`), load it and use its concept names preferentially.
+- When no vocabulary exists, use descriptive `lowercase_underscore` names from the paper's own terminology.
+- Before inventing a new concept name, grep existing claims files for similar names:
+  ```bash
+  grep -r "concept:" papers/*/claims.yaml | sort -u
+  ```
+  Reuse existing names. If 3 papers already use `frame_sampling_rate`, do NOT invent `preprocessing_fps`.
+
+### Conditions
+Match the paper's domain:
+- Video: `dataset == 'ActivityNet'`, `video_length > 120`, `model == 'Gemini'`
+- Speech: `vowel == 'a'`, `register == 'modal'`, `sex == 'male'`
+- Biology: `species == 'human'`, `tissue == 'liver'`
+- Use consistent vocabulary ACROSS the collection, not just within one file.
+
 ## Provenance Rules
 
 - `paper`: always the paper directory name (e.g., `Gobl_1988`)
@@ -391,6 +417,34 @@ Before writing claims.yaml:
 - [ ] Concept IDs match the registry where possible
 - [ ] No speculative stances (only add what the paper supports)
 - [ ] Notes added where methodological context matters
+
+## Claim Value Filter
+
+Before extracting a claim, ask: **"Would someone building a system in this domain query this claim?"** If no, skip it.
+
+### EXTRACT (high value)
+- **Architectural insights**: "decompose-then-synthesize outperforms end-to-end" — generalizable design principles
+- **Design constraints**: "AD reading speed is 180 wpm" — directly usable parameters
+- **Validated thresholds**: parameters the paper showed sensitivity analysis for
+- **Cross-paper findings**: observations that generalize beyond one paper's experiments
+- **Failure modes**: "transformer attention is biased toward long-duration events"
+- **Benchmark results that reveal patterns**: "all models degrade on videos > 3 minutes"
+
+### SKIP (low value)
+- **Training hyperparameters without interpretation**: learning rate, batch size, weight decay, LoRA rank — UNLESS the paper studies their effect via ablation
+- **Study logistics**: participant count, session duration, annotator wages, number of videos used
+- **Benchmark metadata**: dataset sizes, category counts, duration bin boundaries — these describe the benchmark, not findings on it
+- **Implementation details without rationale**: pooling rates, filter thresholds — UNLESS the paper explains why this value matters
+- **Config dumps**: any parameter that's just "we used X" without "because Y"
+
+### CONVERT (transform to higher-value claims)
+When a paper reports the same parameter under multiple conditions (e.g., memory_bank_length = 20 for dataset A, 10 for dataset B, 10 for dataset C):
+- Do NOT create N separate parameter claims
+- DO create 1 observation claim synthesizing the pattern: "Optimal memory bank length is 10-20 frames across datasets, suggesting a universal sweet spot"
+
+When a paper reports benchmark numbers across models:
+- Do NOT create N parameter claims for each model's score
+- DO create 1-2 observation claims about what the numbers reveal: "Open-source models trail proprietary by ~11 points on long-video tasks"
 
 ## Generating the Mechanical Baseline
 
