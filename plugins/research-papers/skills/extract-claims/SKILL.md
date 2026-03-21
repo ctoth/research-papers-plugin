@@ -446,6 +446,47 @@ When a paper reports benchmark numbers across models:
 - Do NOT create N parameter claims for each model's score
 - DO create 1-2 observation claims about what the numbers reveal: "Open-source models trail proprietary by ~11 points on long-video tasks"
 
+## Claim Decomposition
+
+One proposition per claim. If a statement contains multiple independent findings, split it into separate claims.
+
+**BAD** — multiple findings packed into one claim:
+```yaml
+- id: claim1
+  type: observation
+  statement: "X improves Y by 55.6% on quality and 77.4% on similarity on driving videos"
+```
+
+**GOOD** — one finding per claim:
+```yaml
+- id: claim1
+  type: observation
+  statement: "Combining image-level and video-level VLMs outperforms either model type alone for dense video captioning."
+  concepts: [dense_video_captioning, mixture_of_experts]
+
+- id: claim2
+  type: parameter
+  concept: capscore_quality_improvement
+  value: 55.6
+  unit: "%"
+  conditions: ["dataset == 'driving'", "model == 'Wolf'"]
+
+- id: claim3
+  type: parameter
+  concept: capscore_similarity_improvement
+  value: 77.4
+  unit: "%"
+  conditions: ["dataset == 'driving'", "model == 'Wolf'"]
+```
+
+**Signals to split:**
+- Statement contains "and" joining two independent findings
+- Statement contains multiple numbers that could each be a parameter claim
+- Statement makes claims about different concepts
+- Statement would need a semicolon to be grammatically correct
+
+**Do not split** when a statement describes a single finding with necessary context (e.g., "X outperforms Y because Z" is one causal claim, not three).
+
 ## Generating the Mechanical Baseline
 
 If you need to generate the initial `claims.yaml` before enriching, run:
