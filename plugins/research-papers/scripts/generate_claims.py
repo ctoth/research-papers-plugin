@@ -258,32 +258,32 @@ def parse_equations(text: str) -> list[str]:
     return equations
 
 
-# Well-known acoustic concept names to detect in text
-_KNOWN_CONCEPTS = {
-    "f0": "f0", "fundamental frequency": "fundamental_frequency",
-    "f1": "f1", "f2": "f2", "f3": "f3", "f4": "f4",
-    "formant": "formant", "bandwidth": "bandwidth",
-    "duration": "duration", "vot": "vot",
-    "intensity": "intensity", "spl": "spl",
-    "open quotient": "open_quotient", "oq": "open_quotient",
-    "spectral tilt": "spectral_tilt",
-    "jitter": "jitter", "shimmer": "shimmer",
-    "hnr": "hnr", "h1-h2": "h1_h2",
-    "subglottal pressure": "subglottal_pressure",
-    "airflow": "airflow",
-    "speaking rate": "speaking_rate",
-    "voice quality": "voice_quality",
-    "pitch": "pitch",
-}
+def _load_vocabulary(vocab_path: Path | None = None) -> dict[str, str]:
+    """Load concept vocabulary from a YAML file.
+
+    The YAML file should have a 'concepts' key mapping terms to canonical names:
+        concepts:
+          "dense video captioning": dense_video_captioning
+          "DVC": dense_video_captioning
+    """
+    if vocab_path and vocab_path.exists():
+        import yaml
+
+        with open(vocab_path, encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        return data.get("concepts", {})
+    return {}
 
 
-def _extract_concepts_from_text(text: str) -> list[str]:
+def _extract_concepts_from_text(text: str, vocabulary: dict[str, str] | None = None) -> list[str]:
     """Extract known concept names mentioned in a text string."""
+    if not vocabulary:
+        return []
     text_lower = text.lower()
     found: list[str] = []
     seen: set[str] = set()
-    for phrase, concept_name in _KNOWN_CONCEPTS.items():
-        if phrase in text_lower and concept_name not in seen:
+    for phrase, concept_name in vocabulary.items():
+        if phrase.lower() in text_lower and concept_name not in seen:
             found.append(concept_name)
             seen.add(concept_name)
     return found
@@ -574,16 +574,18 @@ def _row_to_multi_claims(
     return result, claim_counter
 
 
-def generate_claims(paper_dir: Path) -> dict[str, Any]:
+def generate_claims(paper_dir: Path, vocab_path: Path | None = None) -> dict[str, Any]:
     """Generate a claims dict from a paper directory containing notes.md.
 
     Args:
         paper_dir: Path to the paper directory (e.g., Author_2000_Title/).
                    Must contain a notes.md file.
+        vocab_path: Optional path to a vocabulary YAML file for concept matching.
 
     Returns:
         A dict matching the ClaimFile schema with 'source' and 'claims' keys.
     """
+    vocabulary = _load_vocabulary(vocab_path)
     paper_name = paper_dir.name
     notes_path = paper_dir / "notes.md"
     notes_text = notes_path.read_text(encoding="utf-8")
@@ -675,6 +677,8 @@ def main() -> None:
     parser.add_argument("paper_dir", type=Path, help="Path to the paper directory")
     parser.add_argument("--output", "-o", type=Path, default=None,
                         help="Output YAML file path (default: <paper_dir>/claims.yaml)")
+    parser.add_argument("--vocabulary", type=Path, default=None,
+                        help="Path to vocabulary YAML file for concept matching")
     args = parser.parse_args()
 
     paper_dir = Path(args.paper_dir).resolve()
@@ -688,7 +692,7 @@ def main() -> None:
         print("Error: pyyaml is required. Install with: pip install pyyaml", file=sys.stderr)
         sys.exit(1)
 
-    result = generate_claims(paper_dir)
+    result = generate_claims(paper_dir, vocab_path=args.vocabulary)
     output_path = args.output or (paper_dir / "claims.yaml")
 
     with open(output_path, "w", encoding="utf-8") as f:
