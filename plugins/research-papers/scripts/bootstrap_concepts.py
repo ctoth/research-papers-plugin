@@ -95,6 +95,27 @@ _ABBREVIATIONS: dict[str, str] = {
     "spec": "spectral",
     "harm": "harmonic",
     "fund": "fundamental",
+    # Cross-domain
+    "fps": "frames_per_second",
+    "iou": "intersection_over_union",
+    "map": "mean_average_precision",
+    "lr": "learning_rate",
+    "res": "resolution",
+    "seg": "segment",
+    "det": "detection",
+    "cls": "classification",
+    "desc": "description",
+    "cap": "caption",
+    "vid": "video",
+    "img": "image",
+    "eval": "evaluation",
+    "acc": "accuracy",
+    "prec": "precision",
+    "enc": "encoder",
+    "dec": "decoder",
+    "attn": "attention",
+    "emb": "embedding",
+    "feat": "feature",
 }
 
 
@@ -228,6 +249,8 @@ def main() -> None:
     parser.add_argument("claims_dir", type=Path, help="Directory containing paper subdirs with claims.yaml")
     parser.add_argument("--output", "-o", type=Path, default=None,
                         help="Output YAML file path (default: stdout)")
+    parser.add_argument("--abbreviations", type=Path, default=None,
+                        help="YAML file with additional abbreviation mappings (overrides built-in)")
     args = parser.parse_args()
 
     claims_dir = Path(args.claims_dir).resolve()
@@ -240,6 +263,16 @@ def main() -> None:
     except ImportError:
         print("Error: pyyaml is required.", file=sys.stderr)
         sys.exit(1)
+
+    if args.abbreviations:
+        abbrev_path = Path(args.abbreviations).resolve()
+        if not abbrev_path.is_file():
+            print(f"Error: abbreviations file not found: {abbrev_path}", file=sys.stderr)
+            sys.exit(1)
+        with open(abbrev_path, encoding="utf-8") as f:
+            custom = yaml.safe_load(f)
+        if isinstance(custom, dict):
+            _ABBREVIATIONS.update(custom)
 
     groups = bootstrap(claims_dir)
 
