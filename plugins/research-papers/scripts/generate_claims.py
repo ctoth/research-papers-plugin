@@ -574,18 +574,16 @@ def _row_to_multi_claims(
     return result, claim_counter
 
 
-def generate_claims(paper_dir: Path, vocab_path: Path | None = None) -> dict[str, Any]:
+def generate_claims(paper_dir: Path) -> dict[str, Any]:
     """Generate a claims dict from a paper directory containing notes.md.
 
     Args:
         paper_dir: Path to the paper directory (e.g., Author_2000_Title/).
                    Must contain a notes.md file.
-        vocab_path: Optional path to a vocabulary YAML file for concept matching.
 
     Returns:
         A dict matching the ClaimFile schema with 'source' and 'claims' keys.
     """
-    vocabulary = _load_vocabulary(vocab_path)
     paper_name = paper_dir.name
     notes_path = paper_dir / "notes.md"
     notes_text = notes_path.read_text(encoding="utf-8")
@@ -677,8 +675,6 @@ def main() -> None:
     parser.add_argument("paper_dir", type=Path, help="Path to the paper directory")
     parser.add_argument("--output", "-o", type=Path, default=None,
                         help="Output YAML file path (default: <paper_dir>/claims.yaml)")
-    parser.add_argument("--vocabulary", type=Path, default=None,
-                        help="Path to vocabulary YAML file for concept matching")
     args = parser.parse_args()
 
     paper_dir = Path(args.paper_dir).resolve()
@@ -686,13 +682,9 @@ def main() -> None:
         print(f"Error: {paper_dir / 'notes.md'} not found", file=sys.stderr)
         sys.exit(1)
 
-    try:
-        import yaml
-    except ImportError:
-        print("Error: pyyaml is required. Install with: pip install pyyaml", file=sys.stderr)
-        sys.exit(1)
+    import yaml
 
-    result = generate_claims(paper_dir, vocab_path=args.vocabulary)
+    result = generate_claims(paper_dir)
     output_path = args.output or (paper_dir / "claims.yaml")
 
     with open(output_path, "w", encoding="utf-8") as f:
