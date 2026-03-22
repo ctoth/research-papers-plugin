@@ -115,7 +115,7 @@ Page images: `./papers/Author_Year_ShortTitle/pngs/page-NNN.png`
 ## Your Chunk
 **START_PAGE** to **END_PAGE** (inclusive)
 
-Read each page image in your range. Be exhaustive — extract EVERY equation, parameter, algorithm step, and implementation detail. Do not summarize or skip "minor" content.
+Read each page image in your range. Be exhaustive — extract EVERY equation, parameter, algorithm step, and implementation detail. Do not summarize or skip "minor" content. **Tag every finding with its page number** using *(p.N)* notation — downstream claim extraction depends on this.
 
 ## Output Format
 Write DIRECTLY to `./papers/Author_Year_ShortTitle/chunks/chunk-STARTPAGE-ENDPAGE.md`:
@@ -191,31 +191,42 @@ $$
 [equation in LaTeX]
 $$
 Where: [variable definitions with units]
+*(p.N)*
 
 ## Parameters
 
-| Name | Symbol | Units | Default | Range | Notes |
-|------|--------|-------|---------|-------|-------|
+| Name | Symbol | Units | Default | Range | Page | Notes |
+|------|--------|-------|---------|-------|------|-------|
 
 ## Implementation Details
-- Data structures needed
-- Initialization procedures
-- Edge cases
-- Pseudo-code if provided
+- Data structures needed *(p.N)*
+- Initialization procedures *(p.N)*
+- Edge cases *(p.N)*
+- Pseudo-code if provided *(p.N)*
 
 ## Figures of Interest
-- **Fig N (page X):** [What it shows]
+- **Fig N (p.X):** [What it shows]
 
 ## Results Summary
-[Key performance characteristics]
+[Key performance characteristics] *(p.N)*
 
 ## Limitations
-[What authors acknowledge doesn't work]
+[What authors acknowledge doesn't work] *(p.N)*
+
+## Arguments Against Prior Work
+- [What specific prior approaches does this paper criticize?] *(p.N)*
+- [What failure modes or limitations of prior work does it identify?] *(p.N)*
+- [What evidence does it present for the criticism?] *(p.N)*
+
+## Design Rationale
+- [What architectural choices does this paper justify?] *(p.N)*
+- [What alternatives were considered and why were they rejected?] *(p.N)*
+- [What properties does the chosen design preserve that alternatives don't?] *(p.N)*
 
 ## Testable Properties
-- [Property 1: e.g., "Parameter X must be in [low, high]"]
-- [Property 2: e.g., "Increasing A must increase B"]
-- [Property 3: e.g., "Output of algorithm must satisfy constraint C"]
+- [Property 1: e.g., "Parameter X must be in [low, high]"] *(p.N)*
+- [Property 2: e.g., "Increasing A must increase B"] *(p.N)*
+- [Property 3: e.g., "Output of algorithm must satisfy constraint C"] *(p.N)*
 
 ## Relevance to Project
 [How this paper applies to the project's research domain]
@@ -264,12 +275,23 @@ Where: [variable definitions with units]
 - Variable definitions go in prose AFTER the equation block
 - Use standard LaTeX notation
 
+### Page Citations (MANDATORY)
+
+**Every finding must include its page number.** You are reading page images — you know which page you are on. Tag every equation, parameter, key finding, definition, and testable property with `*(p.N)*` where N is the page number. This is not optional — downstream claim extraction depends on page provenance to produce valid claims. A finding without a page number is a finding that cannot be traced back to the source.
+
+- Equations: `*(p.12)*` after the Where: block
+- Parameters: `Page` column in the parameter table
+- Key findings / contributions: `*(p.N)*` inline
+- Testable properties: `*(p.N)*` at end of each bullet
+- Implementation details: `*(p.N)*` at end of each bullet
+- Figures: already use `(p.X)` format — keep doing this
+
 ### Extraction Targets
 
-- **Equations**: Every equation with all variables defined and units given
-- **Parameters**: Every parameter, constant, and threshold — values, ranges, defaults, source
-- **Algorithms**: Numbered steps with inputs, outputs, state
-- **Testable Properties**: Bounds, monotonic relationships, invariants — these become property-based tests
+- **Equations**: Every equation with all variables defined and units given, with page citation
+- **Parameters**: Every parameter, constant, and threshold — values, ranges, defaults, source, page
+- **Algorithms**: Numbered steps with inputs, outputs, state, page citation
+- **Testable Properties**: Bounds, monotonic relationships, invariants — with page citation
 
 ---
 
@@ -356,10 +378,11 @@ Append:
 
 ## Quality Checklist
 
-- [ ] All equations with variable definitions
-- [ ] All parameters in standard table format
-- [ ] Algorithm steps numbered
+- [ ] All equations with variable definitions and page citations
+- [ ] All parameters in standard table format with Page column
+- [ ] Algorithm steps numbered with page citations
 - [ ] Figures described with page numbers
+- [ ] Key findings and testable properties have page citations
 - [ ] Limitations section filled
 - [ ] Testable properties extracted
 - [ ] description.md written
