@@ -352,7 +352,78 @@ For perceptual or behavioral measurements:
     page: 12
 ```
 
-### Step 2.7: Assemble and Write
+### Step 2.7: Extract Mechanism Claims
+
+For claims about how or why something works — architectural arguments, design rationales, proposed causal pathways:
+
+```yaml
+- id: claim18
+  type: mechanism
+  statement: "Qualitative simulation avoids spurious predictions by enforcing confluences (qualitative differential equations) at each component boundary rather than propagating global constraints."
+  concepts:
+    - qualitative_simulation
+    - confluence
+  provenance:
+    paper: deKleer_1984_QualitativePhysicsConfluences
+    page: 12
+    section: "Methodology"
+    quote_fragment: "confluences are local constraints that eliminate the need for global propagation"
+  notes: "Design rationale for why component-local equations outperform global constraint propagation"
+```
+
+Rules:
+- `statement`: describes a causal or architectural argument the paper makes
+- Use for "X works by Y", "the reason for X is Y", "X is designed to achieve Y by doing Z"
+- Include the reasoning chain, not just the conclusion
+
+### Step 2.8: Extract Comparison Claims
+
+For contrastive claims positioning this work against prior approaches:
+
+```yaml
+- id: claim20
+  type: comparison
+  statement: "Statement-based models (nanopublications, SWAN, BEL) represent only the statements themselves, with no representation of backing evidence or argumentation structure."
+  concepts:
+    - micropublication
+    - nanopublication
+  provenance:
+    paper: Clark_2014_Micropublications
+    page: 3
+    section: "Related Work"
+    quote_fragment: "statement-based models model only the statements themselves"
+  notes: "Positions micropublications against prior work by identifying what they lack"
+```
+
+Rules:
+- `statement`: "X is superior/inferior to Y because Z" or "Unlike Y, X handles Z"
+- Must name both the subject and the comparand
+- Include the evidence or reasoning for the comparison, not just the verdict
+
+### Step 2.9: Extract Limitation Claims
+
+For acknowledged scope boundaries, failure modes, and unsolved problems:
+
+```yaml
+- id: claim22
+  type: limitation
+  statement: "The qualitative value set {+, 0, -} often produces multiple interpretations where quantitative analysis yields a unique answer."
+  concepts:
+    - qualitative_value
+    - ambiguity
+  provenance:
+    paper: deKleer_1984_QualitativePhysicsConfluences
+    page: 42
+    section: "Limitations"
+    quote_fragment: "ambiguity: the qualitative value set often produces multiple interpretations"
+```
+
+Rules:
+- `statement`: what the approach does not handle, fails on, or leaves unsolved
+- Include the scope boundary, not just "has limitations"
+- Self-reported limitations (from the authors) and externally identified ones both qualify
+
+### Step 2.10: Assemble and Write
 
 Assemble all claims into the ClaimFile structure:
 
@@ -488,6 +559,9 @@ Before writing claims.yaml:
 - [ ] Observation claims have statement and concepts list
 - [ ] Model claims have name, equations list, and parameter bindings
 - [ ] Measurement claims have target_concept, measure, value, and unit
+- [ ] Mechanism claims have statement with causal/architectural reasoning
+- [ ] Comparison claims name both subject and comparand with evidence
+- [ ] Limitation claims specify the scope boundary, not just "has limitations"
 - [ ] Conditions use consistent CEL vocabulary across the file
 - [ ] Concept IDs match the registry where possible
 - [ ] No speculative stances (only add what the paper supports)
@@ -495,7 +569,7 @@ Before writing claims.yaml:
 
 ## Claim Value Filter
 
-Before extracting a claim, ask: **"Would someone building a system in this domain query this claim?"** If no, skip it.
+Before extracting a claim, ask: **"Would someone building a system in this domain query this claim?"** and **"Would someone adjudicating between competing approaches query this?"** If neither, skip it.
 
 ### EXTRACT (high value)
 - **Architectural insights**: "decompose-then-synthesize outperforms end-to-end" — generalizable design principles
@@ -504,6 +578,9 @@ Before extracting a claim, ask: **"Would someone building a system in this domai
 - **Cross-paper findings**: observations that generalize beyond one paper's experiments
 - **Failure modes**: "transformer attention is biased toward long-duration events"
 - **Benchmark results that reveal patterns**: "all models degrade on videos > 3 minutes"
+- **Design rationale**: "confluences enforce locality because global propagation produces spurious states" (mechanism)
+- **Positioning against prior work**: "unlike nanopublications, micropublications represent backing evidence" (comparison)
+- **Acknowledged scope boundaries**: "qualitative values cannot distinguish magnitudes of the same sign" (limitation)
 
 ### SKIP (low value)
 - **Training hyperparameters without interpretation**: learning rate, batch size, weight decay, LoRA rank — UNLESS the paper studies their effect via ablation
@@ -578,7 +655,7 @@ When done:
 ```
 Claims extracted: papers/[dirname]/claims.yaml
   Mode: [enrich|create]
-  Claims: N total (P parameter, E equation, O observation, M model, X measurement)
+  Claims: N total (P parameter, E equation, O observation, M model, X measurement, K mechanism, C comparison, L limitation)
   Enrichments: [if enrich mode]
     - Page numbers resolved: X of Y
     - Concepts resolved to IDs: X of Y
