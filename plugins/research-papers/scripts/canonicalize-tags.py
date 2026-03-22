@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """Canonicalize paper tags in description.md files.
 
-Reads a project-level tag map from papers/tag-canon.yaml, applies it to all
-description.md files, rewrites tags in-place. Run generate-paper-index.py
-afterward to rebuild the index.
+Reads the canonical tag registry from papers/tags.yaml, builds an alias map,
+and applies it to all description.md files, rewriting tags in-place.
+Run generate-paper-index.py afterward to rebuild the index.
 
-The tag map file format is:
-    # variant -> canonical
-    F0: fundamental-frequency
-    f0: fundamental-frequency
-    ToBI: tobi
-    stop-consonants: stops
+The tags.yaml format is:
+    tags:
+      fundamental-frequency:
+        description: "..."
+        aliases: [F0, f0, pitch-frequency]
+      acoustics:
+        description: "..."
+        aliases: [acoustic]
 
-Tags not in the map are left as-is. The map is applied transitively
-(if A->B and B->C, then A->C).
+Each alias is mapped to its parent canonical tag name. Tags not in any alias
+list are left as-is. The map is applied transitively (if A->B and B->C,
+then A->C).
 
 Usage:
     python scripts/canonicalize-tags.py <project-root> [--dry-run]
@@ -27,18 +30,31 @@ import yaml
 
 
 def load_tag_map(papers_dir: Path) -> dict[str, str]:
-    """Load tag canonicalization map from papers/tag-canon.yaml."""
-    canon_path = papers_dir / "tag-canon.yaml"
-    if not canon_path.exists():
-        print(f"No tag-canon.yaml found at {canon_path}")
-        print("Create one with entries like:  F0: fundamental-frequency")
+    """Load tag canonicalization map from papers/tags.yaml.
+
+    Builds a variant->canonical map from the aliases lists in tags.yaml.
+    """
+    tags_path = papers_dir / "tags.yaml"
+    if not tags_path.exists():
+        print(f"No tags.yaml found at {tags_path}")
+        print("Create one with format:")
+        print("  tags:")
+        print("    canonical-tag:")
+        print("      description: '...'")
+        print("      aliases: [variant1, variant2]")
         sys.exit(1)
-    with open(canon_path, encoding="utf-8") as f:
-        raw = yaml.safe_load(f)
-    if not isinstance(raw, dict):
-        print(f"tag-canon.yaml must be a YAML mapping, got {type(raw).__name__}")
+    with open(tags_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+    if not isinstance(data, dict) or "tags" not in data:
+        print(f"tags.yaml must contain a 'tags' mapping, got: {type(data).__name__}")
         sys.exit(1)
-    return {str(k): str(v) for k, v in raw.items()}
+
+    tag_map: dict[str, str] = {}
+    for tag_name, tag_info in data["tags"].items():
+        if isinstance(tag_info, dict) and "aliases" in tag_info:
+            for alias in tag_info["aliases"]:
+                tag_map[str(alias)] = str(tag_name)
+    return tag_map
 
 
 def canonicalize(tag: str, tag_map: dict[str, str]) -> str:
@@ -121,7 +137,7 @@ def main():
         sys.exit(1)
 
     tag_map = load_tag_map(papers_dir)
-    print(f"Loaded {len(tag_map)} tag mappings from tag-canon.yaml")
+    print(f"Loaded {len(tag_map)} tag mappings from tags.yaml")
 
     total_files = 0
     total_changes = 0

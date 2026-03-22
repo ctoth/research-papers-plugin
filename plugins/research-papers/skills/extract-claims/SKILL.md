@@ -110,15 +110,20 @@ variables:
 Roles: `dependent`, `independent`, `parameter`, `constant`.
 
 #### Conditions (conditions)
+
+**Vocabulary constraint:** Before writing any condition, check the category vocabulary from Step B2. Every string literal compared against a category concept MUST use a value from that concept's registered value set. If the paper uses a value not yet registered, run `pks concept add-value <concept> --value "<new_value>"` first.
+
+If no category vocabulary was loaded in Step B2 (no category concepts registered), use consistent `lowercase_underscore` names across all claims in this file.
+
 Add CEL expressions where the paper specifies conditions under which a claim holds:
 
 ```yaml
 # Standard condition dimensions (all domains):
 conditions:
-  - "dataset == 'ActivityNet'"     # which benchmark
-  - "model == 'GPT-4o'"           # which model
-  - "task == 'dense_captioning'"   # which task
-  - "metric == 'CIDEr'"           # which evaluation metric
+  - "dataset == 'ActivityNet'"     # which benchmark — must be in dataset value set
+  - "model == 'GPT-4o'"           # which model — must be in model value set
+  - "task == 'dense_captioning'"   # which task — must be in task value set
+  - "metric == 'CIDEr'"           # which metric — must be in metric value set
 
 # Domain-specific conditions also valid:
   - "video_length > 120"          # video domain
@@ -472,6 +477,30 @@ ls knowledge/concepts/*.yaml 2>/dev/null | head -100
 
 Read several concept files to understand what's already registered — their names, aliases, definitions, and forms. Build a mental model of the existing vocabulary before proceeding.
 
+### Step B2: Load condition vocabulary
+
+If the propstore has category concepts, load their value sets:
+
+```bash
+pks concept categories
+```
+
+This lists all registered category concepts and their allowed values. Example output:
+
+```
+dataset (extensible): ActivityNet, YouCook2, Charades
+model: GPT-4o, Wolf, VideoLLaMA
+metric (extensible): CIDEr, METEOR, BLEU
+```
+
+**When writing CEL conditions (Step E), you MUST use values from these registered sets.** If a paper introduces a value not in the set (e.g., a new dataset name), register it first:
+
+```bash
+pks concept add-value dataset --value "NewDatasetName"
+```
+
+If no category concepts exist yet, skip this step — condition vocabulary will be free-form until the first category concepts are registered.
+
 ### Step C: Identify concepts this paper needs
 
 Read the paper's notes.md. List every distinct concept the paper discusses:
@@ -521,12 +550,16 @@ Bad definitions:
 ```bash
 # Only create these if they don't already exist in the registry
 pks concept add --name dataset --domain general --form category \
+  --values "ActivityNet,YouCook2,Charades" \
   --definition "The benchmark dataset a result was evaluated on"
 pks concept add --name model --domain general --form category \
+  --values "GPT-4o,Wolf,VideoLLaMA" \
   --definition "The model or system being evaluated"
 pks concept add --name task --domain general --form category \
+  --values "dense_captioning,summarization,question_answering" \
   --definition "The task or application being performed"
 pks concept add --name metric --domain general --form category \
+  --values "CIDEr,METEOR,BLEU" \
   --definition "The evaluation metric used to measure performance"
 ```
 

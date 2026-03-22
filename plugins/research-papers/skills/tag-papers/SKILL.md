@@ -34,6 +34,16 @@ cat ./papers/index.md
 
 Parse the `(tag1, tag2)` suffixes to build a list of existing tags and their frequencies. These are your preferred vocabulary — reuse existing tags when they fit rather than inventing synonyms.
 
+Also read `papers/tags.yaml` if it exists:
+
+```bash
+cat ./papers/tags.yaml
+```
+
+This file is the **canonical tag vocabulary**. It lists all approved tags and their aliases. If it exists, you MUST use tags from this file. Do not invent new tags when an existing tag or its alias covers the topic.
+
+If `tags.yaml` does not exist, fall back to the existing behavior of preferring tags already used in `index.md`.
+
 ## Step 2: Check Each Paper
 
 For each paper directory, check if it already has tags.
@@ -51,7 +61,8 @@ Read the paper's `notes.md` and `description.md` to understand what it's about.
 Pick 2-5 tags following these guidelines:
 
 - **Lowercase, hyphenated**: `voice-quality`, not `Voice Quality`
-- **Prefer existing tags**: if `acoustics` is already used in the collection and fits, use it
+- **MUST use tags from tags.yaml**: if a canonical tag fits, use it. If the paper's topic matches an alias listed in tags.yaml, use the canonical form instead.
+- **Proposing new tags**: if no existing tag fits, you may propose a new one. List it in Step 6 as a proposed addition to tags.yaml. Use lowercase-hyphenated format.
 - **Mix specificity**: one broad tag (`acoustics`, `perception`, `synthesis`) plus one or two narrow ones (`formant-transitions`, `lf-model`)
 - **Tags describe the paper's topic**, not its method or venue
 - **Don't over-tag**: 3 tags is usually right
@@ -106,6 +117,13 @@ Tag summary:
   acoustics: 5 papers
   voice-quality: 3 papers
   ...
+```
+
+If you introduced any tags NOT in tags.yaml, list them:
+
+```
+Proposed new tags (add to tags.yaml):
+  - new-tag-name: "Brief description of what this tag covers"
 ```
 
 After tagging, remind the user to run `generate-paper-index.py` to rebuild the `tagged-papers/` symlinks.
