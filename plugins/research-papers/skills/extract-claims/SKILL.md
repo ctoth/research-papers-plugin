@@ -4,7 +4,7 @@ description: Extract and enrich propositional claims from a paper directory. In 
 argument-hint: "<papers/Author_Year_Title> [--mode enrich|create]"
 disable-model-invocation: false
 ---
-<!-- Version: concept-first-2026-03-21 -->
+<!-- Version: context-aware-2026-03-22 -->
 
 # Extract Claims: $ARGUMENTS
 
@@ -202,6 +202,7 @@ claims:
     concept: ad_reading_speed
     value: 180.0
     unit: "words/min"
+    context: ctx_audio_description  # from Step F — omit if universal
     conditions:
       - "output_format == 'audio_description'"
     provenance:
@@ -540,6 +541,34 @@ When the registry already has concepts from previous papers:
 - If you find a match, use the existing concept name — do NOT create a duplicate
 - If unsure whether two concepts are the same, create the new one — deduplication happens later via embedding similarity
 
+### Step F: Context identification
+
+Before writing claims, identify which theoretical tradition or framework this paper belongs to.
+
+1. Read the paper's "Arguments Against Prior Work" and "Design Rationale" sections in notes.md
+2. Determine the tradition: does this paper belong to an established school of thought?
+   - Examples: ATMS tradition, JTMS tradition, AGM belief revision, ASPIC+ structured argumentation, Dung abstract argumentation, Pollock's epistemological approach, etc.
+3. Check existing contexts:
+   ```bash
+   ls knowledge/contexts/*.yaml 2>/dev/null
+   ```
+4. If the tradition matches an existing context, use it. Assign `context: <context_id>` to claims.
+5. If the tradition is NEW and clearly distinct from existing contexts:
+   ```bash
+   pks context add --name ctx_<tradition> --description "<1-2 sentence description>"
+   ```
+   If it refines an existing tradition (e.g., ASPIC+ extends Dung):
+   ```bash
+   pks context add --name ctx_<tradition> --description "<description>" --inherits ctx_<parent>
+   ```
+6. If the paper is cross-cutting (bridges two traditions) or the tradition is unclear: **do not assign a context**. Claims without a context are universal — visible in all contexts. This is the conservative default.
+
+**Context naming convention:** `ctx_` prefix + lowercase_underscore tradition name (e.g., `ctx_atms_tradition`, `ctx_aspic_plus`, `ctx_default_logic`).
+
+**Expected frequency:** Roughly one new context per 3-4 papers. Most papers slot into existing traditions. Don't create one-paper contexts unless the paper genuinely introduces a novel framework.
+
+Then assign `context: <context_id>` to each claim in the claims.yaml output. All claims from a single paper typically share the same context, but cross-cutting papers may have some universal claims and some context-specific ones.
+
 ## Provenance Rules
 
 - `paper`: always the paper directory name (e.g., `Gobl_1988`)
@@ -564,6 +593,7 @@ Before writing claims.yaml:
 - [ ] Limitation claims specify the scope boundary, not just "has limitations"
 - [ ] Conditions use consistent CEL vocabulary across the file
 - [ ] Concept IDs match the registry where possible
+- [ ] Context identified and assigned (Step F) — or explicitly universal
 - [ ] No speculative stances (only add what the paper supports)
 - [ ] Notes added where methodological context matters
 
@@ -688,10 +718,28 @@ This extracts parameters from tables, equations from `$$...$$` blocks, and obser
 
 ## Output
 
+## Post-Write Validation
+
+After writing claims.yaml, validate it:
+
+```bash
+uv run pks claim validate-file <paper_dir>/claims.yaml
+```
+
+If validation fails:
+1. Read the error messages
+2. Fix the claims (missing provenance page, bad concept reference, missing required fields)
+3. Re-validate
+4. Repeat until clean (0 errors)
+
+**Do not consider the extraction complete until validation passes.**
+
 When done:
 ```
 Claims extracted: papers/[dirname]/claims.yaml
   Mode: [enrich|create]
+  Context: [context_id or "universal"]
+  Validation: PASS (0 errors, N warnings)
   Claims: N total (P parameter, E equation, O observation, M model, X measurement, K mechanism, C comparison, L limitation)
   Enrichments: [if enrich mode]
     - Page numbers resolved: X of Y

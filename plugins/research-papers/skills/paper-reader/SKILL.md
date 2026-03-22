@@ -42,7 +42,7 @@ ls "$paper_dir"/*.pdf 2>/dev/null | head -1
 ```
 
 - **No `notes.md`?** Incomplete — continue to Step 1.
-- **All files present (notes + abstract + citations)?** Delete root PDF if argument was a root-level file (`rm "$paper_path"`), report "Already complete," stop.
+- **All files present (notes + abstract + citations)?** If the argument was a root-level PDF (i.e., NOT inside a paper directory's own folder), delete it (`rm "$paper_path"`). **NEVER delete a PDF that lives inside its own paper directory** (e.g., `papers/Author_Year/paper.pdf`). Report "Already complete," stop.
 - **Missing abstract.md and/or citations.md?** Fill gaps using page images or PDF, then delete root PDF and stop. See Steps 5-6 for format.
 
 ---
@@ -66,7 +66,10 @@ Read `$tmpdir/page0.png` to extract author, year, title. Determine directory nam
 Create output directory and convert all pages:
 ```bash
 mkdir -p "./papers/Author_Year_ShortTitle/pngs"
-mv "$ARGUMENTS" "./papers/Author_Year_ShortTitle/paper.pdf"  # MUST be mv, NEVER cp
+# Move source PDF into paper directory — skip if already there
+if [ "$(realpath "$ARGUMENTS")" != "$(realpath "./papers/Author_Year_ShortTitle/paper.pdf")" ]; then
+  mv "$ARGUMENTS" "./papers/Author_Year_ShortTitle/paper.pdf"  # MUST be mv, NEVER cp
+fi
 magick -density 150 "./papers/Author_Year_ShortTitle/paper.pdf" -quality 90 -resize '1960x1960>' "./papers/Author_Year_ShortTitle/pngs/page-%03d.png"
 rm -rf "$tmpdir"
 ```
