@@ -639,6 +639,43 @@ One proposition per claim. If a statement contains multiple independent findings
 
 **Do not split** when a statement describes a single finding with necessary context (e.g., "X outperforms Y because Z" is one causal claim, not three).
 
+**Definitional claims — do not decompose components:**
+When a paper introduces a formal definition (a tuple, a data structure, a composed abstraction), create one `observation` claim for the top-level definition and DO NOT create separate claims for each component. Components become `concepts` list entries on the parent claim, not standalone claims. If a component has its own non-trivial constraints or behaviors described separately in the paper, THEN it gets its own claim with a stance of `supports` pointing at the parent.
+
+**BAD** — definition exploded into redundant claims:
+```yaml
+- id: claim1
+  type: model
+  statement: "A micropublication is a tuple MP = (A, c, A_c, Phi, R)"
+- id: claim3
+  type: observation
+  statement: "A minimal valid micropublication has exactly one Claim and one Attribution"
+- id: claim5
+  type: observation
+  statement: "Support relations must form a directed acyclic graph"
+```
+
+**GOOD** — single definition with components as concepts:
+```yaml
+- id: claim1
+  type: observation
+  statement: "A micropublication is a 5-tuple (A, c, A_c, Phi, R) where A is attributions, c is the claim, A_c is supporting artifacts, Phi is the support graph, and R is the retraction set."
+  concepts:
+    - micropublication
+    - attribution
+    - support_graph
+    - retraction
+
+- id: claim2
+  type: observation
+  statement: "Support relations in a micropublication must form a directed acyclic graph."
+  concepts: [micropublication, support_graph]
+  stances:
+    - type: supports
+      target: "claim1"
+      note: "Structural constraint on the support graph component"
+```
+
 ## Generating the Mechanical Baseline
 
 If you need to generate the initial `claims.yaml` before enriching, run:
