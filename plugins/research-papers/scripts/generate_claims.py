@@ -437,6 +437,20 @@ def _row_to_claim(
     if unit and unit != "-":
         claim["unit"] = unit
 
+    # If Units column was "-" (dimensionless), the value was excluded from
+    # the row dict by parse_parameter_table.  Check the raw table for this.
+    if "unit" not in claim:
+        # Re-check: a "-" in the Units column means dimensionless, not missing
+        raw_unit = None
+        for h in headers:
+            if h.strip().lower() in ("units", "unit"):
+                # Look at the original row data — we need to check the raw line
+                raw_unit = h
+                break
+        if raw_unit and raw_unit not in row and name_col in row:
+            # The unit column existed but had "-", meaning dimensionless
+            claim["unit"] = "dimensionless"
+
     # --- Fuzzy columns: headers with embedded units ---
     # For columns like "D_inh (ms)", "F1 (Hz)", "Range in Study", etc.
     for h in headers:
@@ -574,6 +588,31 @@ def _row_to_multi_claims(
     return result, claim_counter
 
 
+def _resolve_page_reference(text: str, target: str) -> int:
+    """Find the nearest (p.N) page reference to a target string in the text.
+
+    Searches for the target string, then scans a window around it for
+    page references like *(p.12)*, *(p.8-9)*, or *(p.12, 17)*.
+    Returns the first page number found, or 0 if none.
+    """
+    target_lower = target.lower()
+    text_lower = text.lower()
+    idx = text_lower.find(target_lower)
+    if idx == -1:
+        return 0
+
+    # Search a window of 500 chars around the target
+    window_start = max(0, idx - 200)
+    window_end = min(len(text), idx + len(target) + 300)
+    window = text[window_start:window_end]
+
+    # Match patterns like (p.12), *(p.8-9)*, *(p.12, 17)*
+    page_refs = re.findall(r"\(p\.(\d+)", window)
+    if page_refs:
+        return int(page_refs[0])
+    return 0
+
+
 def generate_claims(paper_dir: Path) -> dict[str, Any]:
     """Generate a claims dict from a paper directory containing notes.md.
 
@@ -611,8 +650,45 @@ def generate_claims(paper_dir: Path) -> dict[str, Any]:
             else:
                 claim_counter -= 1  # reclaim unused ID
 
-    # Equations and observations are skipped from auto-generation.
-    # Use the extract-claims skill (LLM-based) for these.
+    # --- Equation claims from $$ blocks ---
+    for eq_text in parse_equations(notes_text):
+        claim_counter += 1
+        variables = _extract_equation_variables(eq_text)
+        claims.append({
+            "id": f"claim{claim_counter}",
+            "type": "equation",
+            "expression": eq_text,
+            "variables": variables,
+            "provenance": {"paper": paper_name, "page": 0},
+        })
+
+    # --- Observation claims from Testable Properties ---
+    for prop_text in parse_testable_properties(notes_text):
+        claim_counter += 1
+        claims.append({
+            "id": f"claim{claim_counter}",
+            "type": "observation",
+            "statement": prop_text,
+            "concepts": [],
+            "provenance": {"paper": paper_name, "page": 0},
+        })
+
+    # --- Resolve page references for all claims ---
+    for claim in claims:
+        if claim["provenance"].get("page", 0) == 0:
+            # Pick the best search target for this claim type
+            if claim["type"] == "parameter":
+                target = claim.get("concept", "")
+            elif claim["type"] == "equation":
+                target = claim.get("expression", "")[:80]
+            elif claim["type"] == "observation":
+                target = claim.get("statement", "")[:80]
+            else:
+                target = ""
+            if target:
+                page = _resolve_page_reference(notes_text, target)
+                if page > 0:
+                    claim["provenance"]["page"] = page
 
     return {
         "source": {
