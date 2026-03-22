@@ -7,6 +7,8 @@ import shutil
 import sys
 from pathlib import Path
 
+import yaml
+
 
 def resolve_project_root() -> Path:
     """Resolve project root from CLI arg or default to plugin-relative path."""
@@ -66,6 +68,57 @@ def parse_tags(description_path: Path) -> list[str]:
     return []
 
 
+def load_tag_registry(papers_dir: Path) -> tuple[set[str], dict[str, str]]:
+    """Load canonical tags and alias map from papers/tags.yaml.
+
+    Returns (canonical_tags, alias_map) where alias_map maps variant -> canonical.
+    Returns (set(), {}) if tags.yaml doesn't exist.
+    """
+    tags_path = papers_dir / "tags.yaml"
+    if not tags_path.exists():
+        return set(), {}
+
+    with open(tags_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    if not isinstance(data, dict) or "tags" not in data:
+        return set(), {}
+
+    canonical = set()
+    aliases = {}
+    for tag_name, tag_info in data["tags"].items():
+        canonical.add(tag_name)
+        if isinstance(tag_info, dict) and "aliases" in tag_info:
+            for alias in tag_info["aliases"]:
+                aliases[alias] = tag_name
+
+    return canonical, aliases
+
+
+def canonicalize_tag(tag: str, aliases: dict[str, str]) -> str:
+    """Return canonical form of a tag, resolving aliases."""
+    return aliases.get(tag, tag)
+
+
+def validate_tags(
+    tags: list[str],
+    canonical: set[str],
+    aliases: dict[str, str],
+) -> list[str]:
+    """Validate tags against the registry. Returns list of warning strings."""
+    if not canonical and not aliases:
+        return []  # No registry loaded, skip validation
+    warnings = []
+    for tag in tags:
+        if tag in canonical:
+            continue
+        if tag in aliases:
+            warnings.append(f"Tag '{tag}' is an alias for '{aliases[tag]}' — consider updating")
+        else:
+            warnings.append(f"Tag '{tag}' is not in tags.yaml — consider adding it")
+    return warnings
+
+
 def main():
     if not PAPERS_DIR.is_dir():
         print(f"No papers/ directory found at {PAPERS_DIR}")
@@ -84,6 +137,26 @@ def main():
         papers.append((d.name, desc, tags))
         for tag in tags:
             tag_map.setdefault(tag, []).append(d.name)
+
+    # Load tag registry and validate/canonicalize
+    canonical_tags, tag_aliases = load_tag_registry(PAPERS_DIR)
+    if canonical_tags:
+        all_warnings = []
+        new_tag_map: dict[str, list[str]] = {}
+        for i, (name, desc, tags) in enumerate(papers):
+            canonicalized = [canonicalize_tag(t, tag_aliases) for t in tags]
+            for tag in tags:
+                warnings = validate_tags([tag], canonical_tags, tag_aliases)
+                all_warnings.extend(f"  {name}: {w}" for w in warnings)
+            if canonicalized != tags:
+                papers[i] = (name, desc, canonicalized)
+            for tag in canonicalized:
+                new_tag_map.setdefault(tag, []).append(name)
+        tag_map = new_tag_map
+        if all_warnings:
+            print(f"\nTag warnings ({len(all_warnings)}):")
+            for w in all_warnings:
+                print(w)
 
     # Write index.md
     lines = []
