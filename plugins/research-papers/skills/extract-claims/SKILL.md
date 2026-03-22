@@ -140,17 +140,20 @@ Add stances for cross-paper relationships when evident from the paper's discussi
 
 ```yaml
 stances:
-  - type: supported_by
-    target: "claim3"  # claim ID in another paper's claims.yaml
+  - type: supports
+    target: "claim3"
     strength: "strong"
     note: "Replicates finding with larger sample"
-  - type: contradicted_by
+  - type: rebuts
     target: "claim7"
     strength: "moderate"
-    conditions_differ: "Different vowel context"
+    conditions_differ: "Different methodology"
 ```
 
-Stance types: `supported_by`, `contradicted_by`, `superseded_by`, `mechanism_for`.
+Stance types (ASPIC+ taxonomy, active voice):
+- **Attack**: `rebuts` (attacks the conclusion directly), `undercuts` (attacks the inference method/rule), `undermines` (attacks a premise or evidence quality)
+- **Support**: `supports` (provides corroborating evidence), `explains` (provides a mechanistic explanation)
+- **Preference**: `supersedes` (replaces the target — larger sample, newer method, corrects an error)
 
 **Only add stances you can justify from the paper text.** Do not speculate about relationships.
 
