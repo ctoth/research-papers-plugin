@@ -32,7 +32,7 @@ For each paper directory, run all checks and collect results.
 | `description.md` | REQUIRED — run paper-reader if missing |
 | `abstract.md` | recommended |
 | `citations.md` | recommended |
-| `paper.pdf` or `pngs/` | at least one should exist |
+| `paper.pdf` or `pngs/` | REQUIRED — at least one source artifact must exist. Notes without a verifiable source are untrustworthy. |
 
 ### Format Checks
 
@@ -79,13 +79,25 @@ For each paper directory, run all checks and collect results.
 7. **Index description matches**: Does the description in `index.md` match `description.md`?
    Only check if both exist — flag `INDEX_STALE` if they differ.
 
-### Source Checks
+### Source Artifact Checks
 
-8. **Orphan PDF**: Is there a PDF in `papers/` root with a name matching this paper?
+8. **Source artifact**: Does the paper have a PDF or page images?
+   ```bash
+   ls "$paper_dir/paper.pdf" "$paper_dir"/pngs/page-*.png 2>/dev/null | wc -l
+   ```
+   Zero → report as `NO_SOURCE_ARTIFACT` (notes without a verifiable source are untrustworthy — retrieve the PDF)
+
+9. **Orphan PDF**: Is there a PDF in `papers/` root with a name matching this paper?
    ```bash
    ls papers/*.pdf 2>/dev/null
    ```
    Any root-level PDFs → report as `ORPHAN_PDF` (should have been moved by paper-reader)
+
+10. **Page citations in notes**: Do findings in notes.md include page references?
+    ```bash
+    grep -c '(p\.[0-9]' "$paper_dir/notes.md"
+    ```
+    Zero → report as `NO_PAGE_CITATIONS` (re-read paper with updated paper-reader to add page provenance)
 
 ## Step 2: Report
 
