@@ -27,6 +27,9 @@ INDEX_MD = PAPERS_DIR / "index.md"
 
 def parse_collection_index():
     """Extract (dirname, author, year) tuples from papers/index.md."""
+    if not INDEX_MD.exists():
+        print(f"Warning: {INDEX_MD} not found, no collection index available.")
+        return []
     text = INDEX_MD.read_text(encoding="utf-8")
     entries = []
     for line in text.strip().split("\n"):
