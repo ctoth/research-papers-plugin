@@ -48,9 +48,9 @@ Read the existing `claims.yaml` and the paper's `notes.md`. Improve each claim w
 
 ### Step 1.1: Read Source Material
 
-**Before extracting any claims, run the Concept Registration steps (A through D) above.**
+**Before extracting any claims, run the Concept Registration steps (A through D) below.**
 Read the concept registry, identify concepts this paper needs, and register any that are missing.
-Only after all concepts are registered, proceed with claim extraction below.
+Only after all concepts are registered, proceed with claim extraction.
 
 Read these files:
 - `<paper_dir>/claims.yaml` — the mechanical extraction to enrich
@@ -227,9 +227,9 @@ Create `claims.yaml` from scratch using `notes.md` content. Use this when `gener
 
 ### Step 2.1: Read Source Material
 
-**Before extracting any claims, run the Concept Registration steps (A through D) above.**
+**Before extracting any claims, run the Concept Registration steps (A through D) below.**
 Read the concept registry, identify concepts this paper needs, and register any that are missing.
-Only after all concepts are registered, proceed with claim extraction below.
+Only after all concepts are registered, proceed with claim extraction.
 
 Read:
 - `<paper_dir>/notes.md` — primary source
