@@ -13,11 +13,14 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import logging
 import os
 import re
 from datetime import date
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 import yaml
 
@@ -148,7 +151,8 @@ def extract_concepts(papers_dir: Path) -> dict[str, dict[str, Any]]:
             try:
                 with open(fpath, encoding="utf-8") as f:
                     data = yaml.safe_load(f)
-            except Exception:
+            except Exception as exc:
+                logger.warning("Failed to load %s: %s", fpath, exc)
                 continue
 
             if not data or "claims" not in data:
@@ -251,7 +255,8 @@ def propose(
             if entry.is_file() and entry.suffix == ".yaml":
                 try:
                     data = yaml.safe_load(entry.read_text(encoding="utf-8"))
-                except Exception:
+                except Exception as exc:
+                    logger.warning("Failed to load %s: %s", entry, exc)
                     continue
                 if not data:
                     continue
