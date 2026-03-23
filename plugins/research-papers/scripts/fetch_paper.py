@@ -31,7 +31,7 @@ from semanticscholar import SemanticScholar
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _paper_id import IdType, classify_identifier, generate_dirname  # noqa: E402
 
-UNPAYWALL_EMAIL = "research-papers-plugin@example.com"
+UNPAYWALL_EMAIL = os.environ.get("UNPAYWALL_EMAIL", "research-papers-plugin@example.com")
 
 
 def resolve_metadata_arxiv(arxiv_id: str) -> dict | None:
@@ -69,7 +69,7 @@ def resolve_metadata_s2(s2_query: str) -> dict | None:
             ],
         )
     except Exception as exc:
-        logger.debug("Semantic Scholar lookup failed: %s", exc)
+        logger.info("Semantic Scholar lookup failed: %s", exc)
         return None
     if not paper or not paper.title:
         return None
@@ -108,7 +108,7 @@ def try_unpaywall(doi: str) -> str | None:
         if best:
             return best.get('url_for_pdf') or best.get('url')
     except Exception as exc:
-        logger.debug("Unpaywall lookup failed: %s", exc)
+        logger.info("Unpaywall lookup failed: %s", exc)
     return None
 
 
@@ -129,7 +129,7 @@ def download_pdf(url: str, dest: Path) -> bool:
             return False
         return True
     except Exception as exc:
-        logger.debug("PDF download failed: %s", exc)
+        logger.info("PDF download failed: %s", exc)
         dest.unlink(missing_ok=True)
         return False
 
@@ -263,4 +263,5 @@ def main():
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     main()
