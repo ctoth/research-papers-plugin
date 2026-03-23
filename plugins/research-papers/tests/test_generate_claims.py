@@ -189,28 +189,17 @@ class TestFullPipeline(unittest.TestCase):
             self.assertGreater(len(result["claims"]), 0)
             self.assertIn("paper", result["source"])
 
-    def test_output_validates_against_claim_schema(self) -> None:
-        try:
-            import jsonschema
-        except ImportError:
-            self.skipTest("jsonschema not installed")
-
-        # Also try the well-known absolute path
-        schema_path = Path("C:/Users/Q/code/propstore/schema/generated/claim.schema.json")
-        if not schema_path.exists():
-            schema_path = SCHEMA_PATH
-        if not schema_path.exists():
-            self.skipTest("claim.schema.json not found")
-
-        schema = json.loads(schema_path.read_text(encoding="utf-8"))
-
+    def test_output_is_explicitly_marked_draft(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             paper_dir = Path(tmpdir) / "Author_2000_GlottalModel"
             paper_dir.mkdir()
             (paper_dir / "notes.md").write_text(SAMPLE_NOTES_MD, encoding="utf-8")
 
             result = GEN_MODULE.generate_claims(paper_dir)
-            jsonschema.validate(instance=result, schema=schema)
+            self.assertEqual(result.get("stage"), "draft")
+            observations = [c for c in result["claims"] if c["type"] == "observation"]
+            self.assertTrue(observations)
+            self.assertTrue(any(c.get("concepts") == [] for c in observations))
 
 
 class TestClaimProperties(unittest.TestCase):

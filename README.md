@@ -41,7 +41,7 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 
 The claims pipeline extracts machine-readable propositional claims from paper notes. The typical workflow:
 
-1. **`generate_claims.py`** — Parses `notes.md` (parameter tables, equations, key findings) and produces a draft `claims.yaml`. Fast, deterministic, no LLM needed.
+1. **`generate_claims.py`** — Parses `notes.md` (parameter tables, equations, key findings) and produces a draft `claims.yaml` marked with `stage: draft`. Fast, deterministic, no LLM needed.
 2. **`extract-claims` skill** — LLM-powered enrichment of the draft claims (adds context, fixes types, fills gaps). Can also create claims from scratch if no draft exists.
 3. **`batch_generate_claims.py`** — Runs step 1 across an entire papers directory. Use `--skip-existing` to avoid re-processing.
 4. **`bootstrap_concepts.py`** — Collects concept names from all claims files, deduplicates similar names, and outputs a unified concepts list.

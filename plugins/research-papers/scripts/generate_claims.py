@@ -691,6 +691,7 @@ def generate_claims(paper_dir: Path) -> dict[str, Any]:
                     claim["provenance"]["page"] = page
 
     return {
+        "stage": "draft",
         "source": {
             "paper": paper_name,
         },
