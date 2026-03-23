@@ -44,44 +44,49 @@ This gets the actual reference list from S2 rather than relying on what paper-re
 - If `$ARGUMENTS` contains `--parallel M`: process M leads concurrently via subagents
 - If no `--parallel` flag: process sequentially (one at a time)
 
-## Step 3: Process Leads
+## Step 2.5: Triage Leads
 
-For each lead, use paper_hash.py to parse the citation and extract a search query:
+Before processing, sort leads by retrieval likelihood. Parse ALL leads with paper_hash.py first:
 
 ```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/scripts/paper_hash.py parse "<lead text>"
 ```
 
-This gives you author, year, and title. Build a search query from those components for retrieval.
+Then classify each lead:
 
-### Sequential Mode (default)
+- **Likely available:** Has a title that sounds like a journal/conference paper, year after ~1990
+- **Unlikely available:** Books (keywords: "Knowledge in Flux", "The Uses of Argument", "Introduction to..."), technical reports/deliverables, dissertations, pre-1985 papers without DOIs
 
-Process one lead at a time. For each lead, invoke **paper-process**:
-```
-/research-papers:paper-process <search query>
-```
+**Process likely-available leads first.** Defer unlikely leads to the end of the batch. If the batch limit (N) is reached before getting to unlikely leads, that's fine — they go in the "Remaining" section of the report. Don't waste retrieval attempts on leads that will almost certainly fail when there are good leads waiting.
 
-If skill invocation is not available, follow the paper-process SKILL.md directly.
+## Step 3: Process Leads
 
-### Parallel Mode (--parallel M)
+For each lead, build a search query from the parsed author, year, and title components.
 
-Dispatch up to M leads concurrently using the **Agent tool**. Each agent is independent and gets its own lead to process.
+### Always Use Subagents
 
-**Important:** Parse ALL leads with paper_hash.py BEFORE dispatching agents. The parsing step is fast and should be done in the main conversation to build the full work list.
+**Every paper-process invocation runs as a subagent**, even in sequential mode. This protects the foreman's context window from the large volume of page-reading output that paper-process generates. Without subagents, processing 3-4 papers fills the context window and forces compaction, losing earlier work.
+
+### Subagent Prompt Template
+
+Read the paper-process SKILL.md once (`${CLAUDE_PLUGIN_ROOT}/skills/paper-process/SKILL.md`) and use it as the base prompt for all subagents. Each subagent prompt should include:
+
+1. The paper-process SKILL.md instructions
+2. The specific search query for that lead
+3. Instructions to write a per-paper report to `./reports/paper-<safe-name>.md`
+4. **Instructions to SKIP reconcile (Step 7) and index.md update (Step 8)** — the foreman handles these after each agent completes
 
 **Do NOT use worktree isolation.** Paper-process writes to shared state (papers/index.md, cross-references in existing papers' notes.md via reconcile). Worktrees strand all of that with no clean merge path.
 
-Instead, split the work: agents do retrieval + reading (the slow part), the foreman does shared-state writes (the fast part that needs consistency).
+### Sequential Mode (default)
 
-**For each agent, the prompt should include:**
-1. The paper-process SKILL.md instructions (read from `${CLAUDE_PLUGIN_ROOT}/skills/paper-process/SKILL.md`)
-2. The specific search query for that lead
-3. Instructions to write a per-paper report to `./reports/paper-<safe-name>.md`
-4. **Instructions to SKIP Steps 7.5 (reconcile) and 8 (index.md update)** — the foreman handles these after each wave
+Process one lead at a time. Dispatch a **general-purpose Agent** for each lead, wait for it to complete, then run reconcile + index.md update yourself (or via a small subagent), then dispatch the next lead.
 
-**Batch processing:** Process in waves of M agents. Dispatch a wave, wait for all to complete, run reconcile, then dispatch the next wave. The session will naturally end at some point (context limit, user intervention) — that's fine. The report captures progress so the next session can pick up where you left off.
+### Parallel Mode (--parallel M)
 
-**After each wave completes**, the foreman dispatches a single subagent (NOT in a worktree) to run reconcile and update index.md for each new paper from the wave, sequentially. Wait for this subagent to finish before dispatching the next wave. This keeps shared-state writes sequential, consistent, and avoids burning the foreman's context on reconcile output.
+Dispatch up to M leads concurrently using the **Agent tool**.
+
+**Batch processing:** Process in waves of M agents. Dispatch a wave, wait for all to complete, run reconcile + update index.md for each new paper from the wave, then dispatch the next wave. The session will naturally end at some point (context limit, user intervention) — that's fine. The report captures progress so the next session can pick up where you left off.
 
 ### Handling Failures
 
