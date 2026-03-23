@@ -15,6 +15,8 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 from audit_paper_corpus import (
     PaperAudit,
     collect_audits,
