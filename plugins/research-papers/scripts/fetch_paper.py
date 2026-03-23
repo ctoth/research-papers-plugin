@@ -16,9 +16,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import sys
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 import arxiv
 import requests
@@ -65,7 +68,8 @@ def resolve_metadata_s2(s2_query: str) -> dict | None:
                 'url', 'abstract', 'openAccessPdf',
             ],
         )
-    except Exception:
+    except Exception as exc:
+        logger.debug("Semantic Scholar lookup failed: %s", exc)
         return None
     if not paper or not paper.title:
         return None
@@ -103,8 +107,8 @@ def try_unpaywall(doi: str) -> str | None:
         best = data.get('best_oa_location')
         if best:
             return best.get('url_for_pdf') or best.get('url')
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("Unpaywall lookup failed: %s", exc)
     return None
 
 
@@ -124,7 +128,8 @@ def download_pdf(url: str, dest: Path) -> bool:
             dest.unlink(missing_ok=True)
             return False
         return True
-    except Exception:
+    except Exception as exc:
+        logger.debug("PDF download failed: %s", exc)
         dest.unlink(missing_ok=True)
         return False
 
