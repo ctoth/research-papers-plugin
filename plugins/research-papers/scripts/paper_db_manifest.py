@@ -5,7 +5,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-import re
+
+import yaml
 
 
 @dataclass(frozen=True)
@@ -56,62 +57,14 @@ DEFAULT_MANIFEST = PaperDbManifest(
 )
 
 
-def parse_inline_list(value: str) -> tuple[str, ...]:
-    value = value.strip()
-    if not value.startswith("[") or not value.endswith("]"):
-        return ()
-    inner = value[1:-1].strip()
-    if not inner:
-        return ()
-    return tuple(part.strip() for part in inner.split(",") if part.strip())
-
-
-def parse_scalar(value: str):
-    value = value.strip()
-    if re.fullmatch(r"\d+", value):
-        return int(value)
-    if value.startswith('"') and value.endswith('"') and len(value) >= 2:
-        return value[1:-1]
-    return value
-
-
 def load_paper_db_manifest(project_root: Path) -> PaperDbManifest:
     manifest_path = project_root / "papers" / "db.yaml"
     if not manifest_path.exists():
         return DEFAULT_MANIFEST
 
-    raw: dict[str, object] = {}
-    nested_key: str | None = None
-
-    for raw_line in manifest_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.rstrip()
-        if not line or line.lstrip().startswith("#"):
-            continue
-
-        if line.startswith("  ") and nested_key is not None:
-            match = re.match(r"^\s{2}([A-Za-z0-9_]+):\s*(.+)$", line)
-            if not match:
-                continue
-            nested = raw.setdefault(nested_key, {})
-            assert isinstance(nested, dict)
-            nested[match.group(1)] = parse_scalar(match.group(2))
-            continue
-
-        match = re.match(r"^([A-Za-z0-9_]+):(?:\s*(.+))?$", line)
-        if not match:
-            continue
-        key = match.group(1)
-        value = match.group(2)
-        if value is None or value == "":
-            raw[key] = {}
-            nested_key = key
-            continue
-
-        nested_key = None
-        if value.strip().startswith("["):
-            raw[key] = parse_inline_list(value)
-        else:
-            raw[key] = parse_scalar(value)
+    raw = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        return DEFAULT_MANIFEST
 
     return PaperDbManifest(
         schema_version=int(raw.get("schema_version", DEFAULT_MANIFEST.schema_version)),
