@@ -291,10 +291,33 @@ Rules:
 - Include `fit` statistics (r, r_sd, slope, slope_sd) when the paper reports them
 
 Sympy requirements:
-- All sympy fields MUST use `Eq(lhs, rhs)` form
-- Variable references in sympy MUST use the concept IDs from the variables list, not raw symbol names like "m", "v", "F"
-- Mathematical constants (i, pi, e, numeric coefficients like 0.5, 2) are NOT concepts — use them as bare sympy symbols without concept bindings
-- The imaginary unit i is `sympy.I`, not a physical concept
+
+The `sympy` field encodes the equation as a sympy `Eq(lhs, rhs)` object — an equality with the dependent variable on the left and the expression on the right. Use concept IDs (not letter symbols) as variable names so the system can verify dimensional consistency.
+
+**How to build a sympy field:**
+1. Identify the dependent variable (what's being defined) — use its concept ID as lhs
+2. Write the rhs using concept IDs for all physical quantities from the variables list
+3. Use bare symbols for mathematical constants (pi, e, I for imaginary unit, numeric coefficients)
+4. Wrap in `Eq(lhs, rhs)`
+
+**Examples from a working propstore:**
+
+| Expression | sympy | Why |
+|------------|-------|-----|
+| `F = m * a` | `Eq(concept2, concept1 * concept3)` | concept2=force, concept1=mass, concept3=acceleration |
+| `E = 0.5 * m * v^2` | `Eq(concept7, 0.5 * concept1 * concept4**2)` | 0.5 is a bare number, concept4 squared via `**2` |
+| `v = f * lambda` | `Eq(concept4, concept43 * concept44)` | concept4=velocity, concept43=frequency, concept44=wavelength |
+| `gamma = 1/sqrt(1-v^2/c^2)` | `Eq(concept31, 1/(1 - concept4**2/concept26**2)**0.5)` | Dimensionless ratio under sqrt |
+| `c = 1/sqrt(eps0 * mu0)` | `Eq(concept26, 1/(concept27 * concept28)**0.5)` | Square root via `**0.5` |
+
+**Common mistakes to avoid:**
+- `m*v**2/r` — bare expression without `Eq()` wrapper. The system cannot verify which quantity this equals.
+- `F - m*a` — rearranged to "expression = 0" form. Use `Eq(F, m*a)` instead.
+- `Eq(F, m*a)` with raw letters — use concept IDs: `Eq(concept2, concept1 * concept3)`
+- Mapping the imaginary unit `i` to a concept like `current` — use `sympy.I` or just `I`
+- Mapping `pi` to a concept — use `pi` as a bare sympy symbol
+
+Mathematical constants (i, pi, e, numeric coefficients like 0.5, 2) are NOT concepts — use them as bare sympy symbols without concept bindings.
 
 ### Step 2.4: Extract Observation Claims
 
