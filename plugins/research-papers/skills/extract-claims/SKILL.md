@@ -290,6 +290,12 @@ Rules:
 - Every symbol in the equation must have a variable binding
 - Include `fit` statistics (r, r_sd, slope, slope_sd) when the paper reports them
 
+Sympy requirements:
+- All sympy fields MUST use `Eq(lhs, rhs)` form
+- Variable references in sympy MUST use the concept IDs from the variables list, not raw symbol names like "m", "v", "F"
+- Mathematical constants (i, pi, e, numeric coefficients like 0.5, 2) are NOT concepts — use them as bare sympy symbols without concept bindings
+- The imaginary unit i is `sympy.I`, not a physical concept
+
 ### Step 2.4: Extract Observation Claims
 
 For qualitative claims, empirical observations, and testable properties:
@@ -477,6 +483,14 @@ ls knowledge/concepts/*.yaml 2>/dev/null | head -100
 
 Read several concept files to understand what's already registered — their names, aliases, definitions, and forms. Build a mental model of the existing vocabulary before proceeding.
 
+### Step B1: Read form definitions to understand dimensional types
+
+```bash
+pks form list
+```
+
+This shows all forms with their units. For each concept you plan to reference, verify that the concept's form matches the physical quantity in the equation. Example: if concept22 has form "charge" with unit "C", do NOT use it for a position variable "q" which should have form "distance" with unit "m". A symbol match is not a concept match — dimensional consistency is what matters.
+
 ### Step B2: Load condition vocabulary
 
 If the propstore has category concepts, load their value sets:
@@ -500,6 +514,21 @@ pks concept add-value dataset --value "NewDatasetName"
 ```
 
 If no category concepts exist yet, skip this step — condition vocabulary will be free-form until the first category concepts are registered.
+
+### Step B3: Read existing claims to detect duplicates
+
+Read the claim files in the project's claims directory:
+
+```bash
+ls knowledge/claims/*.yaml 2>/dev/null | head -100
+```
+
+Read several claim files to understand what equations, parameters, and observations are already captured. Before creating a new equation claim, check if the same equation already exists. If it does:
+- Do NOT create a duplicate equation claim
+- Instead, create a `supports` stance in the new paper's claims referencing the existing claim ID
+- Reference the existing concept IDs used in the original equation
+
+This prevents duplicate conflicts and creates proper provenance chains. When two papers state the same equation, the second paper's claim should say "this paper also uses/confirms this relationship" rather than restating it as if novel.
 
 ### Step C: Identify concepts this paper needs
 
@@ -566,6 +595,19 @@ pks concept add --name metric --domain general --form category \
 ### Step E: Extract claims
 
 Now proceed with claim extraction. Every concept field in every claim MUST match a registered concept canonical_name or alias. If you realize mid-extraction that you need a concept you didn't register in Step D, register it now before writing the claim that references it.
+
+### Concept disambiguation
+
+When a symbol in an equation could match multiple existing concepts (e.g., "R" could be gas_constant or distance), check the equation's context:
+- What are the dimensions of the other terms?
+- What form/unit does this variable need to make the equation dimensionally consistent?
+- If unsure, register a NEW concept rather than reusing a wrong one
+
+Never map a mathematical constant or operator to a physical concept:
+- i (imaginary unit) is NOT current
+- pi is NOT a concept
+- e (Euler's number) is NOT a concept
+- Numeric coefficients (0.5, 2, 3) are NOT concepts
 
 ### Reusing existing concepts
 
