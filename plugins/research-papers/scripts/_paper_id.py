@@ -53,7 +53,7 @@ def parse_citation(text):
     # Extract year - look for (YYYY) or just YYYY near the start
     year_match = re.search(r'\((\d{4})\)', text)
     if not year_match:
-        year_match = re.search(r'[\s,](\d{4})[\s,\b\)]', text)
+        year_match = re.search(r'[\s,](\d{4})[\s,)]', text)
     if not year_match:
         year_match = re.search(r'(\d{4})', text)
     if year_match:
