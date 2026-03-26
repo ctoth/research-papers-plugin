@@ -30,9 +30,14 @@ def main() -> None:
             3. Download and create the canonical paper directory with this exact command:
                `uv run "{p(fetch_script)}" "<identifier>" --papers-dir papers/`
             4. Capture the resulting paper directory and PDF path. The expected success shape is
-               `papers/<Author_Year_Title>/paper.pdf` plus `metadata.json`.
+               `papers/<Author_Year_Title>/paper.pdf` plus `metadata.json`. If the script reports
+               `fallback_needed: true`, treat `dirname`/`directory` as planned output paths only:
+               no paper directory or `metadata.json` has been created yet.
             5. If the fetch script reports `fallback_needed: true`, try browser automation for
-               sci-hub. If browser automation is unavailable, stop and ask the user for a manual PDF.
+               sci-hub. If browser automation succeeds, create `./papers/<dirname>/paper.pdf`,
+               then run `uv run "{p(fetch_script)}" "<identifier>" --papers-dir papers/ --output-dir "<dirname>" --metadata-only`
+               so `metadata.json` is written only after the PDF exists. If browser automation is
+               unavailable, stop and ask the user for a manual PDF.
             6. Verify success:
                `file "./papers/<dirname>/paper.pdf"`
                `ls -la "./papers/<dirname>/"`

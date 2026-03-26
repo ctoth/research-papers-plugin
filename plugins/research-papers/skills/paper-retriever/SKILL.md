@@ -45,13 +45,13 @@ Where `<identifier>` is the arxiv ID/URL, DOI, ACL URL, or S2 paper ID from the 
 
 The script will:
 1. Resolve metadata (title, authors, year, abstract) from arxiv or Semantic Scholar
-2. Create the paper directory with canonical naming (`Author_Year_ShortTitle`)
-3. Write `metadata.json` to the paper directory
-4. Attempt PDF download via waterfall: direct download → Unpaywall → report fallback needed
+2. Attempt PDF download via waterfall: direct download → Unpaywall → report fallback needed
+3. Only after a real PDF is downloaded, create the canonical paper directory (`Author_Year_ShortTitle`)
+4. Only after a real PDF is downloaded, write `metadata.json` alongside `paper.pdf`
 
 ## Step 4: Handle Fallback (if needed)
 
-If fetch_paper.py returns `"fallback_needed": true`, the paper couldn't be downloaded via open-access channels. Fall back to browser automation for sci-hub:
+If fetch_paper.py returns `"fallback_needed": true`, the paper couldn't be downloaded via open-access channels. In that case it returns the planned `dirname`/`directory` plus inline `metadata`, but it does **not** create `metadata.json` or the paper directory yet. Fall back to browser automation for sci-hub:
 
 **Try browser automation in this order:**
 
@@ -72,7 +72,9 @@ If you have browser automation available, use it to:
    const links = [...document.querySelectorAll('a')].filter(a => a.href.includes('.pdf'));
    return links.map(a => a.href);
    ```
-6. Download: `curl -L -o "./papers/<dirname>/paper.pdf" "EXTRACTED_URL" 2>&1`
+6. Create the paper directory and download the PDF: `mkdir -p "./papers/<dirname>" && curl -L -o "./papers/<dirname>/paper.pdf" "EXTRACTED_URL" 2>&1`
+7. Materialize `metadata.json` only after `paper.pdf` exists:
+   `uv run scripts/fetch_paper.py "<identifier>" --papers-dir papers/ --output-dir "<dirname>" --metadata-only`
 
 ### Option 2: No browser automation
 

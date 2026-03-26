@@ -19,6 +19,7 @@ import json
 import logging
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -180,61 +181,84 @@ def fetch_paper(identifier: str, papers_dir: Path, output_dir: str | None = None
     if not dirname:
         dirname = f"paper_{value.replace('/', '_')}"
 
-    paper_dir = papers_dir / dirname
-    paper_dir.mkdir(parents=True, exist_ok=True)
-
-    # Write metadata
-    meta_path = paper_dir / 'metadata.json'
     meta_out = {k: v for k, v in metadata.items()
                 if k != 'first_author_surname'}
-    with open(meta_path, 'w', encoding='utf-8') as f:
-        json.dump(meta_out, f, indent=2, ensure_ascii=False)
+    paper_dir = papers_dir / dirname
 
     result = {
         'success': True,
         'directory': str(paper_dir),
         'dirname': dirname,
-        'metadata_path': str(meta_path),
         'title': metadata.get('title'),
         'authors': metadata.get('authors'),
         'year': metadata.get('year'),
+        'directory_created': False,
+        'metadata_written': False,
     }
 
     if metadata_only:
+        paper_dir.mkdir(parents=True, exist_ok=True)
+        meta_path = paper_dir / 'metadata.json'
+        with open(meta_path, 'w', encoding='utf-8') as f:
+            json.dump(meta_out, f, indent=2, ensure_ascii=False)
+        result['metadata_path'] = str(meta_path)
         result['pdf_downloaded'] = False
+        result['directory_created'] = True
+        result['metadata_written'] = True
         return result
 
     # --- Download waterfall ---
-    pdf_path = paper_dir / 'paper.pdf'
     downloaded = False
+    temp_pdf_path: Path | None = None
+    with tempfile.NamedTemporaryFile(
+        prefix='temp_fetch_',
+        suffix='.pdf',
+        dir=papers_dir if papers_dir.exists() else None,
+        delete=False,
+    ) as temp_pdf:
+        temp_pdf_path = Path(temp_pdf.name)
 
-    # 1. Direct PDF URL from metadata (arxiv, ACL, S2 open access)
-    if metadata.get('pdf_url'):
-        downloaded = download_pdf(metadata['pdf_url'], pdf_path)
+    try:
+        # 1. Direct PDF URL from metadata (arxiv, ACL, S2 open access)
+        if metadata.get('pdf_url'):
+            downloaded = download_pdf(metadata['pdf_url'], temp_pdf_path)
 
-    # 2. Arxiv PDF URL construction
-    if not downloaded and metadata.get('arxiv_id'):
-        arxiv_url = f"https://arxiv.org/pdf/{metadata['arxiv_id']}.pdf"
-        downloaded = download_pdf(arxiv_url, pdf_path)
+        # 2. Arxiv PDF URL construction
+        if not downloaded and metadata.get('arxiv_id'):
+            arxiv_url = f"https://arxiv.org/pdf/{metadata['arxiv_id']}.pdf"
+            downloaded = download_pdf(arxiv_url, temp_pdf_path)
 
-    # 3. ACL direct download
-    if not downloaded and id_type == IdType.ACL_URL:
-        acl_url = f"https://aclanthology.org/{value}.pdf"
-        downloaded = download_pdf(acl_url, pdf_path)
+        # 3. ACL direct download
+        if not downloaded and id_type == IdType.ACL_URL:
+            acl_url = f"https://aclanthology.org/{value}.pdf"
+            downloaded = download_pdf(acl_url, temp_pdf_path)
 
-    # 4. Unpaywall
-    if not downloaded and metadata.get('doi'):
-        unpaywall_url = try_unpaywall(metadata['doi'])
-        if unpaywall_url:
-            downloaded = download_pdf(unpaywall_url, pdf_path)
+        # 4. Unpaywall
+        if not downloaded and metadata.get('doi'):
+            unpaywall_url = try_unpaywall(metadata['doi'])
+            if unpaywall_url:
+                downloaded = download_pdf(unpaywall_url, temp_pdf_path)
+    finally:
+        if temp_pdf_path and not downloaded:
+            temp_pdf_path.unlink(missing_ok=True)
 
     result['pdf_downloaded'] = downloaded
     if downloaded:
+        paper_dir.mkdir(parents=True, exist_ok=True)
+        pdf_path = paper_dir / 'paper.pdf'
+        temp_pdf_path.replace(pdf_path)
+        meta_path = paper_dir / 'metadata.json'
+        with open(meta_path, 'w', encoding='utf-8') as f:
+            json.dump(meta_out, f, indent=2, ensure_ascii=False)
+        result['metadata_path'] = str(meta_path)
         result['pdf_path'] = str(pdf_path)
         result['pdf_size'] = pdf_path.stat().st_size
+        result['directory_created'] = True
+        result['metadata_written'] = True
     else:
         result['fallback_needed'] = True
         result['doi'] = metadata.get('doi')
+        result['metadata'] = meta_out
 
     return result
 
