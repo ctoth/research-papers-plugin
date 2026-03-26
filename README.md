@@ -73,7 +73,7 @@ uv run plugins/research-papers/scripts/bootstrap_concepts.py papers/ --output co
 Use the repo itself as a Claude Code marketplace source. The marketplace manifest lives at `.claude-plugin/marketplace.json` and currently exposes the plugin ID `research-papers@research-papers-marketplace`.
 
 ```bash
-git clone https://github.com/Q/research-papers-plugin
+git clone https://github.com/ctoth/research-papers-plugin
 cd research-papers-plugin
 claude plugin marketplace add . --scope user
 claude plugin install research-papers@research-papers-marketplace --scope user
