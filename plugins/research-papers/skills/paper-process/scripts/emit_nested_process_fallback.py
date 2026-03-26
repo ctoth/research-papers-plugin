@@ -37,6 +37,7 @@ def main() -> None:
                `python "{p(retriever_helper)}"`
                Then follow that procedure on the current paper identifier until you have a retrieved
                paper directory and `paper.pdf`.
+               A retrieved `paper.pdf` plus `metadata.json` is not success for paper-process.
             2. Run this exact helper for reading and read its full stdout:
                `python "{p(reader_helper)}"`
                Then follow that procedure on the retrieved PDF path or paper directory until
