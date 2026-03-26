@@ -38,10 +38,10 @@ def main() -> None:
                then run `uv run "{p(fetch_script)}" "<identifier>" --papers-dir papers/ --output-dir "<dirname>" --metadata-only`
                so `metadata.json` is written only after the PDF exists. If browser automation is
                unavailable, stop and ask the user for a manual PDF.
-            6. Verify success:
-               `file "./papers/<dirname>/paper.pdf"`
-               `ls -la "./papers/<dirname>/"`
-               Confirm a real PDF and `metadata.json` both exist.
+            6. Verify success using platform-appropriate commands. Confirm:
+               - `./papers/<dirname>/paper.pdf` exists and is a real PDF
+               - `./papers/<dirname>/metadata.json` exists
+               Do not treat shell-syntax differences as blockers if you can verify these facts.
             7. Report the retrieved PDF path and source, then hand that paper directory/PDF path
                back to the calling workflow.
 
