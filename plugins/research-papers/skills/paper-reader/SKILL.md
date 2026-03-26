@@ -18,6 +18,8 @@ This skill is a checklist, not an outcome sketch.
 - Do not substitute alternate text-extraction or summarization workflows for the required page-image reading flow unless this skill explicitly tells you to.
 - Do not add unlisted probes or "better" preprocessing steps.
 - If you are blocked on a specific step, stop there and report the exact blocker instead of inventing a workaround.
+- Do not declare yourself blocked merely because this skill does not name a platform-specific image-view tool. Use the platform's native local-image inspection capability for `pngs/page-*.png`; that is the intended page-image workflow, not an alternate extraction method.
+- Only report an image-reading blocker after you have actually attempted to inspect a local page image such as `page-000.png` and the platform refused or failed.
 
 ## Extraction Objective
 
@@ -75,35 +77,64 @@ ls "$paper_dir"/*.pdf 2>/dev/null | head -1
 ```
 
 - **No `notes.md`?** Incomplete — continue to Step 1.
+- **No `notes.md`, but `paper.pdf` and `pngs/page-000.png` already exist?** This is a rerun/regeneration case. Do **not** rename or move files. Reuse the existing paper directory, inspect the existing page images directly, and continue to Step 1 with the existing assets.
+- **No `notes.md`, `paper.pdf` exists, but `pngs/` is missing or incomplete?** Regenerate `pngs/` from the existing `paper.pdf`, then continue.
 - **All files present (notes + abstract + citations)?** If the argument was a root-level PDF (i.e., NOT inside a paper directory's own folder), delete it (`rm "$paper_path"`). **NEVER delete a PDF that lives inside its own paper directory** (e.g., `papers/Author_Year/paper.pdf`). Report "Already complete," stop.
 - **Missing abstract.md and/or citations.md?** Fill gaps using page images or PDF, then delete root PDF and stop. See Steps 5-6 for format.
 
 ---
 
-## Step 1: Determine Paper Size and Convert
+## Step 1: Determine Working PDF and Reuse/Convert Assets
+
+First determine the working PDF path:
+
+```bash
+paper_path="$ARGUMENTS"
+if [ -d "$paper_path" ]; then
+  paper_dir="$paper_path"
+  work_pdf="$paper_dir/paper.pdf"
+else
+  work_pdf="$paper_path"
+fi
+```
+
+If you are in a rerun/regeneration case and `"$paper_dir"/pngs/page-000.png` already exists, **reuse the existing page images**. Do not reconvert just because `notes.md` is missing.
 
 Get page count:
 ```bash
-pdfinfo "$ARGUMENTS" 2>/dev/null | grep Pages || echo "pdfinfo not available"
+pdfinfo "$work_pdf" 2>/dev/null | grep Pages || echo "pdfinfo not available"
 ```
 
-**Always convert to page images.** Extract page 0 first in a temp dir for metadata:
+If `pngs/page-000.png` does not already exist, extract page 0 first in a temp dir for metadata:
 
 ```bash
 tmpdir=$(mktemp -d)
-magick -density 150 "$ARGUMENTS[0]" -quality 90 -resize '1960x1960>' "$tmpdir/page0.png"
+magick -density 150 "$work_pdf[0]" -quality 90 -resize '1960x1960>' "$tmpdir/page0.png"
 ```
 
-Read `$tmpdir/page0.png` to extract author, year, title. Determine directory name: `LastName_Year_2-4WordTitle` (e.g., `Mack_2021_AccessibilityResearchSurvey`).
+Read either the existing `pngs/page-000.png` or `$tmpdir/page0.png` to extract author, year, and title. Determine directory name: `LastName_Year_2-4WordTitle` (e.g., `Mack_2021_AccessibilityResearchSurvey`).
 
-Create output directory and convert all pages:
+For a new paper, set:
+
 ```bash
-mkdir -p "./papers/Author_Year_ShortTitle/pngs"
+paper_dir="./papers/Author_Year_ShortTitle"
+```
+
+If this is a new paper, create the output directory and convert all pages:
+```bash
+mkdir -p "$paper_dir/pngs"
 # Move source PDF into paper directory — skip if already there
-if [ "$(realpath "$ARGUMENTS")" != "$(realpath "./papers/Author_Year_ShortTitle/paper.pdf")" ]; then
-  mv "$ARGUMENTS" "./papers/Author_Year_ShortTitle/paper.pdf"  # MUST be mv, NEVER cp
+if [ "$(realpath "$work_pdf")" != "$(realpath "$paper_dir/paper.pdf")" ]; then
+  mv "$work_pdf" "$paper_dir/paper.pdf"  # MUST be mv, NEVER cp
 fi
-magick -density 150 "./papers/Author_Year_ShortTitle/paper.pdf" -quality 90 -resize '1960x1960>' "./papers/Author_Year_ShortTitle/pngs/page-%03d.png"
+magick -density 150 "$paper_dir/paper.pdf" -quality 90 -resize '1960x1960>' "$paper_dir/pngs/page-%03d.png"
+rm -rf "$tmpdir"
+```
+
+If this is an existing paper directory with `paper.pdf` present but missing/incomplete `pngs/`, regenerate:
+```bash
+mkdir -p "$paper_dir/pngs"
+magick -density 150 "$paper_dir/paper.pdf" -quality 90 -resize '1960x1960>' "$paper_dir/pngs/page-%03d.png"
 rm -rf "$tmpdir"
 ```
 
@@ -113,18 +144,30 @@ rm -rf "$tmpdir"
 
 Count pages:
 ```bash
-ls ./papers/Author_Year_ShortTitle/pngs/page-*.png | wc -l
+ls "$paper_dir"/pngs/page-*.png | wc -l
 ```
 
 **Decision:**
 - **≤50 pages**: Read all page images yourself (Step 2A)
 - **>50 pages**: Chunk protocol (Step 2B)
 
+## Step 1.5: Prove the Page-Image Lane Works
+
+Before long extraction, inspect `page-000.png` from the paper's `pngs/` directory using the platform's native local-image inspection capability.
+
+- This is the intended workflow. It is **not** an OCR/text-extraction fallback.
+- Do not stop just because the exact tool name is unspecified in this skill.
+- Only stop if you actually attempted to inspect `page-000.png` and the platform prevented it.
+
+Once `page-000.png` is visible, continue immediately to Step 2A or Step 2B.
+
 ---
 
 ## Step 2A: Direct Read (≤50 pages)
 
 **CRITICAL: Read EVERY page image. No skipping, no sampling, no "reading enough to get the gist."** Read every single `page-NNN.png` file from `page-000` through the last page. If you have 34 pages, read 34 page images. Agents routinely skip pages to save tokens — this produces incomplete notes that miss equations, parameters, and key details buried in middle sections. The entire point of reading the paper is completeness. If you skip pages, the notes are worthless.
+
+For papers with 50 pages or fewer, the assigned worker must do this reading itself. Do **not** dispatch additional readers for a small paper.
 
 Take thorough notes as you go. Continue to Step 3.
 
@@ -182,6 +225,8 @@ mkdir -p "./papers/Author_Year_ShortTitle/chunks"
 ```
 
 **If you can dispatch parallel subagents**, launch one per chunk simultaneously. Each reads its page range and writes to `chunks/chunk-START-END.md`. Use the strongest available full-size model for every chunk worker. Never use a mini/small tier worker for chunk extraction.
+
+Do not dispatch chunk workers until you have successfully inspected at least one local page image from this paper yourself. If you cannot inspect even `page-000.png`, that is a concrete blocker and you should stop there.
 
 **If parallel dispatch is not available**, process each chunk sequentially yourself.
 
@@ -282,6 +327,32 @@ Where: [variable definitions with units]
 - Recommended: `authors`, `venue`, `doi_url`
 - Optional: `pages`, `affiliation`, `affiliations`, `institution`, `publisher`, `supervisor`, `supervisors`, `funding`, `pacs`, `note`, `correction_doi`, `citation`
 - Legacy aliases (do not emit in new papers): `author`, `doi`, `url`, `journal`, `type`, `paper`
+
+## Step 3.5: Write metadata.json
+
+Write `./papers/Author_Year_ShortTitle/metadata.json`.
+
+Use this schema and fill every field you can from the paper/frontmatter:
+
+```json
+{
+  "title": "Full Paper Title",
+  "authors": ["Author One", "Author Two"],
+  "year": "2024",
+  "arxiv_id": null,
+  "doi": "10.xxxx/xxxxx",
+  "abstract": "Exact or near-exact abstract text",
+  "url": null,
+  "pdf_url": null
+}
+```
+
+Rules:
+- `title`, `authors`, and `year` are required.
+- `authors` must be a JSON array, not a single string.
+- Use `null` for unknown fields rather than omitting them.
+- `doi` should be the DOI string without `https://doi.org/` when possible.
+- If the paper is on arXiv, fill `arxiv_id`.
 
 ---
 
@@ -436,6 +507,7 @@ Append:
 - [ ] description.md written
 - [ ] abstract.md written
 - [ ] citations.md written
+- [ ] metadata.json written
 - [ ] Reconcile skill invoked
 - [ ] papers/index.md updated
 - [ ] No temp files left behind
@@ -444,7 +516,7 @@ Append:
 
 ## Output
 
-All papers produce: `papers/Author_Year_Title/` containing `notes.md`, `description.md`, `abstract.md`, `citations.md`, `pngs/`, and an updated `papers/index.md` entry.
+All papers produce: `papers/Author_Year_Title/` containing `notes.md`, `metadata.json`, `description.md`, `abstract.md`, `citations.md`, `pngs/`, and an updated `papers/index.md` entry.
 
 Papers >50 pages also produce `chunks/`.
 
