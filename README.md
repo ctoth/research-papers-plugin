@@ -2,6 +2,11 @@
 
 A plugin for managing annotated research paper collections. Works with Claude Code, Codex CLI, and Gemini CLI.
 
+This repo supports two distribution models:
+
+- **Claude Code marketplace repo** via `.claude-plugin/marketplace.json`
+- **Script-based skill installer** for Codex CLI and Gemini CLI via `scripts/install_skills.py`
+
 ## What it does
 
 This plugin provides skills for retrieving, reading, and annotating scientific papers into a structured, cross-referenced collection. Each paper gets:
@@ -28,10 +33,12 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 
 ## Scripts
 
+Repository-level installer utilities live in `scripts/`. Paper-collection helper scripts live in `plugins/research-papers/scripts/`.
+
 | Script | Description |
 |--------|-------------|
 | `lint_skill_frontmatter.py` | Parse every `SKILL.md` frontmatter block and fail on invalid YAML |
-| `generate-paper-index.py` | Rebuild papers/index.md and tagged-papers/ symlinks |
+| `generate-paper-index.py` | Rebuild papers/index.md and papers/tagged/ symlinks |
 | `cross-reference-papers.py` | Find cross-references between papers in the collection |
 | `migrate-format.py` | Convert legacy Tags: lines → YAML frontmatter, bold refs → wikilinks |
 | `generate_claims.py` | Parse notes.md and generate claims.yaml for a single paper |
@@ -49,50 +56,59 @@ The claims pipeline extracts machine-readable propositional claims from paper no
 
 ```bash
 # Single paper: generate draft, then enrich with LLM
-uv run scripts/generate_claims.py papers/Author_2024_Title
+uv run plugins/research-papers/scripts/generate_claims.py papers/Author_2024_Title
 $extract-claims papers/Author_2024_Title
 
 # Batch: generate drafts for all papers missing claims.yaml
-uv run scripts/batch_generate_claims.py papers/ --skip-existing
+uv run plugins/research-papers/scripts/batch_generate_claims.py papers/ --skip-existing
 
 # After batch: deduplicate concepts across all claims
-uv run scripts/bootstrap_concepts.py papers/ --output concepts.yaml
+uv run plugins/research-papers/scripts/bootstrap_concepts.py papers/ --output concepts.yaml
 ```
 
 ## Installation
 
-Clone the repo, then run one installer command:
+### Claude Code marketplace
+
+Use the repo itself as a Claude Code marketplace source. The marketplace manifest lives at `.claude-plugin/marketplace.json` and currently exposes the plugin ID `research-papers@research-papers-marketplace`.
 
 ```bash
-uv run scripts/install_skills.py install
-```
-
-That does three things:
-
-- discovers all skill directories under `plugins/*/skills/*` for Codex and Gemini
-- discovers the Claude marketplace manifest at `.claude-plugin/marketplace.json`
-- installs everything at user scope
-
-For Claude Code specifically, the installer now prefers the native CLI path:
-
-```bash
-claude plugin marketplace add <this-repo> --scope user
+git clone https://github.com/Q/research-papers-plugin
+cd research-papers-plugin
+claude plugin marketplace add . --scope user
 claude plugin install research-papers@research-papers-marketplace --scope user
 ```
 
-The Python installer runs that for you. It does not install Claude by writing directly into a Claude skills directory.
+If your clone already exists somewhere else, replace `.` with that repo path.
+
+### Script-based installer for Codex CLI and Gemini CLI
+
+Use the bundled installer when you want the skills installed into Codex and/or Gemini user skill directories:
+
+```bash
+uv run scripts/install_skills.py doctor
+uv run scripts/install_skills.py install --platform codex --platform gemini
+```
+
+What the installer does:
+
+- discovers every skill directory under `plugins/*/skills/*`
+- installs Codex skills into `~/.agents/skills`
+- installs Gemini skills into `~/.gemini/skills`
+- prefers whole-directory symlinks and falls back to copying if symlinks are unavailable
 
 Useful variants:
 
 ```bash
-uv run scripts/install_skills.py doctor
 uv run scripts/lint_skill_frontmatter.py
+uv run scripts/install_skills.py install
 uv run scripts/install_skills.py install --platform codex
+uv run scripts/install_skills.py install --platform gemini
 uv run scripts/install_skills.py install --platform claude
 uv run scripts/install_skills.py uninstall
 ```
 
-For Codex and Gemini, the installer prefers whole-directory symlinks and falls back to copying if symlinks are unavailable.
+`install --platform claude` uses Claude's native `claude plugin marketplace add/install` flow under the hood. Omitting `--platform` installs all supported targets.
 
 ### Project setup
 
@@ -110,13 +126,13 @@ your-project/
 └── prompts/          # Prompt templates for large papers
 ```
 
-Copy `templates/papers-gitignore` content into your `.gitignore` to exclude PDFs from git.
+Copy `plugins/research-papers/templates/papers-gitignore` into your `.gitignore` to exclude PDFs from git.
 
 ## Usage
 
 ### Claude Code
 
-After install:
+After marketplace install:
 
 ```
 /research-papers:paper-process https://arxiv.org/abs/2104.01005
@@ -126,7 +142,7 @@ After install:
 
 ### Codex CLI
 
-Run Codex from the project repo that contains your `papers/` directory, then invoke the skills explicitly:
+Run Codex from the project repo that contains your `papers/` directory, then invoke the installed skills explicitly:
 
 ```bash
 $paper-process https://arxiv.org/abs/2104.01005
@@ -138,6 +154,16 @@ $extract-claims papers/Author_2024_Title
 Some skill command examples use `scripts/...` paths. Those are skill-local paths relative to the installed skill directory, not paths relative to the user's project repo.
 
 Codex can also auto-select these skills from a natural-language prompt, but explicit `$skill-name` invocation is the most reliable way to verify the install.
+
+### Gemini CLI
+
+Run Gemini from the project repo that contains your `papers/` directory. Gemini loads the installed skills from `~/.gemini/skills`; unlike Codex, it does not use `$skill-name` command syntax, so invoke the skill by name in your prompt:
+
+```text
+Use the paper-process skill on https://arxiv.org/abs/2104.01005
+Use the research skill to investigate screen reader accessibility
+Use the paper-reader skill on papers/Mack_2021_AccessibilityResearch/paper.pdf
+```
 
 ## Requirements
 
