@@ -4,6 +4,7 @@ description: Research a topic using web search and create structured findings. U
 argument-hint: "[topic]"
 context: fork
 agent: general-purpose
+compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires web search access."
 ---
 
 # Research: $ARGUMENTS

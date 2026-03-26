@@ -3,6 +3,7 @@ name: tag-papers
 description: Add tags to papers that are missing them. Reads notes.md and description.md to pick 2-5 tags, preferring tags already in use. Run on a single paper directory or use --all for the entire collection.
 argument-hint: "<papers/Author_Year_Title> or --all"
 disable-model-invocation: false
+compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Tag Papers: $ARGUMENTS

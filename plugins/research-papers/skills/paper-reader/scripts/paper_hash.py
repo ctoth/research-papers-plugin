@@ -1,0 +1,1 @@
+../../../scripts/paper_hash.py

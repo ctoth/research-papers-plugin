@@ -3,11 +3,16 @@ name: paper-retriever
 description: Retrieve a scientific paper PDF given an arxiv URL, DOI, or paper title. Downloads to papers/ directory. Uses direct download for arxiv, Chrome + sci-hub for paywalled papers.
 argument-hint: "<arxiv-url-or-doi> [optional-output-name]"
 disable-model-invocation: false
+compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires shell access; browser automation is optional for paywalled papers."
 ---
 
 # Paper Retriever: $ARGUMENTS
 
 Download a scientific paper PDF to the `papers/` directory.
+
+## Script Paths
+
+The command examples below use `scripts/...` paths that are relative to this skill's directory. Resolve them against the installed skill location, not the user's project root.
 
 ## Step 1: Parse Input
 
@@ -23,7 +28,7 @@ The argument can be:
 If the input is a paper title (not a URL or DOI), search for it first:
 
 ```bash
-uv run ${CLAUDE_PLUGIN_ROOT}/scripts/search_papers.py "PAPER TITLE" --source all --max-results 5 --json
+uv run scripts/search_papers.py "PAPER TITLE" --source all --max-results 5 --json
 ```
 
 Review the results. If there's a clear match, extract the arxiv ID or DOI and continue to Step 3. If ambiguous, present the top results to the user and ask which one.
@@ -33,7 +38,7 @@ Review the results. If there's a clear match, extract the arxiv ID or DOI and co
 Use the fetch_paper.py script to download the PDF and extract metadata:
 
 ```bash
-uv run ${CLAUDE_PLUGIN_ROOT}/scripts/fetch_paper.py "<identifier>" --papers-dir papers/
+uv run scripts/fetch_paper.py "<identifier>" --papers-dir papers/
 ```
 
 Where `<identifier>` is the arxiv ID/URL, DOI, ACL URL, or S2 paper ID from the input or search results.
@@ -48,18 +53,17 @@ The script will:
 
 If fetch_paper.py returns `"fallback_needed": true`, the paper couldn't be downloaded via open-access channels. Fall back to browser automation for sci-hub:
 
-**Try browser tools in this order:**
+**Try browser automation in this order:**
 
-### Option 1: Playwright MCP (preferred — works on all platforms)
+### Option 1: Any available browser automation (preferred)
 
-If Playwright MCP tools are available (`browser_navigate`, `browser_click`, etc.):
+If you have browser automation available, use it to:
 
-1. `browser_navigate` to `https://sci-hub.st/`
-2. `browser_snapshot` to find the input field
-3. `browser_type` to enter the URL/DOI in the search field
-4. `browser_click` the submit/open button
-5. `browser_snapshot` to look for an iframe or embed with a PDF URL
-6. If needed, `browser_evaluate` to extract the PDF URL:
+1. Open `https://sci-hub.st/`
+2. Find the input field and enter the URL or DOI
+3. Submit the form
+4. Inspect the result page for an iframe, embed, or direct PDF link
+5. If needed, evaluate JavaScript in the page to extract the PDF URL:
    ```js
    const iframe = document.querySelector('#pdf');
    if (iframe) return iframe.src;
@@ -68,19 +72,9 @@ If Playwright MCP tools are available (`browser_navigate`, `browser_click`, etc.
    const links = [...document.querySelectorAll('a')].filter(a => a.href.includes('.pdf'));
    return links.map(a => a.href);
    ```
-7. Download: `curl -L -o "./papers/<dirname>/paper.pdf" "EXTRACTED_URL" 2>&1`
+6. Download: `curl -L -o "./papers/<dirname>/paper.pdf" "EXTRACTED_URL" 2>&1`
 
-### Option 2: Claude-in-Chrome (Claude Code fallback)
-
-If Playwright is not available but `mcp__claude-in-chrome__navigate` is:
-
-1. `mcp__claude-in-chrome__navigate` to `https://sci-hub.st/`
-2. `mcp__claude-in-chrome__form_input` to enter the URL/DOI
-3. `mcp__claude-in-chrome__computer` to click submit
-4. `mcp__claude-in-chrome__javascript_tool` to extract PDF URL (same JS as above)
-5. Download: `curl -L -o "./papers/<dirname>/paper.pdf" "EXTRACTED_URL" 2>&1`
-
-### Option 3: No browser automation
+### Option 2: No browser automation
 
 Report the DOI/URL and ask the user to download the PDF manually to the paper directory.
 

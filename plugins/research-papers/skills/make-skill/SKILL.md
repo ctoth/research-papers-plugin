@@ -3,6 +3,7 @@ name: make-skill
 description: Create new skills from existing prompts or workflow patterns. Analyzes prompt files to extract reusable structure, determines appropriate frontmatter settings, and generates properly formatted SKILL.md files.
 argument-hint: "[prompt-path(s)] [--name name] [--global]"
 allowed-tools: Read, Write, Bash(mkdir:*), Bash(ls:*), Glob
+compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Make Skill: $ARGUMENTS
@@ -14,7 +15,7 @@ Create a new skill from existing prompt file(s).
 Extract from `$ARGUMENTS`:
 - **paths**: Prompt file paths or glob patterns (e.g., `./prompts/research-*.md`, `./prompts/paper-reader.md`)
 - **--name NAME**: Optional explicit skill name (otherwise derived from content)
-- **--global**: If present, install to `~/.claude/skills/` instead of `./.claude/skills/`
+- **--global**: If present, install to the user-level skills directory for the active platform instead of the repo-local skills directory
 
 ## Step 2: Read Source Prompts
 
@@ -145,12 +146,12 @@ Do NOT:
 
 ```bash
 # Project-specific (default)
-mkdir -p "./.claude/skills/[skill-name]"
-# Output: ./.claude/skills/[skill-name]/SKILL.md
+mkdir -p "./.agents/skills/[skill-name]"
+# Output: ./.agents/skills/[skill-name]/SKILL.md
 
 # Global (if --global flag)
-mkdir -p "~/.claude/skills/[skill-name]"
-# Output: ~/.claude/skills/[skill-name]/SKILL.md
+# Codex: ~/.codex/skills/[skill-name]
+# Claude/Gemini: use that platform's user-level skills directory
 ```
 
 ## Step 7: Write Skill File
@@ -181,7 +182,7 @@ Present to user:
 
 ### Usage
 ```
-/[skill-name] [example-arguments]
+$[skill-name] [example-arguments]
 ```
 
 **Confirm creation? [Y/n]**

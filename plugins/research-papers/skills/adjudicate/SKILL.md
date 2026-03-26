@@ -4,6 +4,7 @@ description: Systematically adjudicate disagreements across a paper collection. 
 argument-hint: "[topic-scope or --all]"
 context: fork
 agent: general-purpose
+compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Adjudicate: $ARGUMENTS
@@ -159,6 +160,16 @@ If a critical missing paper would change the verdict, use the paper-process skil
 ```
 Use the paper-process skill to retrieve and process: [citation or DOI]
 ```
+
+If nested skill invocation is unavailable or unreliable on this platform, derive this skill's
+installed directory from the injected `<path>`, then run:
+
+```bash
+python "<skill-dir>/../paper-process/scripts/emit_nested_process_fallback.py"
+```
+
+Read the FULL stdout and follow it exactly instead of opening `paper-process/SKILL.md` piecemeal.
+
 A verdict rendered without key evidence is worse than a slower verdict.
 
 ## Step 5: Wave Ordering (for --all mode)

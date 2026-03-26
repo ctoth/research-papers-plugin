@@ -3,11 +3,44 @@ name: paper-reader
 description: Read scientific papers and extract implementation-focused notes. Converts PDFs to page images, then reads them. Papers <=50pp are read directly; papers >50pp are chunked into 50-page ranges for thorough parallel extraction. Creates structured notes in papers/ directory.
 argument-hint: "[path/to/paper.pdf]"
 disable-model-invocation: false
+compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires shell access; subagents are optional but improve large-paper throughput."
 ---
 
 # Paper Reader: $ARGUMENTS
 
 Read a scientific paper and create comprehensive implementation-focused notes.
+
+## Execution Discipline
+
+This skill is a checklist, not an outcome sketch.
+
+- Follow the steps in order.
+- Do not substitute alternate text-extraction or summarization workflows for the required page-image reading flow unless this skill explicitly tells you to.
+- Do not add unlisted probes or "better" preprocessing steps.
+- If you are blocked on a specific step, stop there and report the exact blocker instead of inventing a workaround.
+
+## Extraction Objective
+
+The target output in this repo is a **dense paper surrogate**, not a sharpened executive summary.
+
+- Favor **high recall over compression**.
+- Preserve the paper's formal content, definitions, equations, thresholds, algorithm steps, caveats, and section-level structure.
+- Do **not** collapse notes into only the "main idea" or a few elegant abstractions.
+- Do **not** optimize for brevity. Optimize for faithful extraction with useful organization.
+- The standard is: a later reader should rarely need to reopen the PDF except to inspect a figure in full detail.
+
+## Subagent Model Policy
+
+Paper extraction is high-stakes and context-heavy. If you dispatch any subagent for reading, chunk extraction, synthesis, abstract extraction, citations extraction, or end-to-end paper processing:
+
+- Use the **strongest available full-size model** on the platform.
+- **Never** use a mini, small, flash, nano, lightweight, or economy tier model for paper extraction work.
+- If the platform exposes named model choices, choose the top-tier frontier model rather than a cheaper/faster variant.
+- If the strongest full model is unavailable, do the work yourself instead of delegating to a weaker mini-tier worker.
+
+## Script Paths
+
+The command examples below use `scripts/...` paths that are relative to this skill's directory. Resolve them against the installed skill location, not the user's project root.
 
 ## Step 0: Check for Existing Paper
 
@@ -18,7 +51,7 @@ paper_path="$ARGUMENTS"
 if [ -d "$paper_path" ]; then
   paper_dir="$paper_path"
 elif [ -f "$paper_path" ]; then
-  HASH_SCRIPT="${CLAUDE_PLUGIN_ROOT}/scripts/paper_hash.py"
+  HASH_SCRIPT="scripts/paper_hash.py"
   if [ -f "$HASH_SCRIPT" ]; then
     paper_dir=$(python3 "$HASH_SCRIPT" --papers-dir papers/ lookup "$(basename "$paper_path" .pdf)" 2>/dev/null)
     [ $? -ne 0 ] && paper_dir=""
@@ -91,7 +124,7 @@ ls ./papers/Author_Year_ShortTitle/pngs/page-*.png | wc -l
 
 ## Step 2A: Direct Read (≤50 pages)
 
-**CRITICAL: Read EVERY page image. No skipping, no sampling, no "reading enough to get the gist."** Call the Read tool on every single page-NNN.png file from page-000 through the last page. If you have 34 pages, that is 34 Read tool calls. Agents routinely skip pages to save tokens — this produces incomplete notes that miss equations, parameters, and key details buried in middle sections. The entire point of reading the paper is completeness. If you skip pages, the notes are worthless.
+**CRITICAL: Read EVERY page image. No skipping, no sampling, no "reading enough to get the gist."** Read every single `page-NNN.png` file from `page-000` through the last page. If you have 34 pages, read 34 page images. Agents routinely skip pages to save tokens — this produces incomplete notes that miss equations, parameters, and key details buried in middle sections. The entire point of reading the paper is completeness. If you skip pages, the notes are worthless.
 
 Take thorough notes as you go. Continue to Step 3.
 
@@ -115,10 +148,12 @@ Write to `./prompts/paper-chunk-reader.md`:
 You are reading a chunk of [PAPER TITLE] being processed in parallel.
 Page images: `./papers/Author_Year_ShortTitle/pngs/page-NNN.png`
 
+Use the strongest available full-size model for this job. Do not use any mini/small tier model.
+
 ## Your Chunk
 **START_PAGE** to **END_PAGE** (inclusive)
 
-Read each page image in your range. Be exhaustive — extract EVERY equation, parameter, algorithm step, and implementation detail. Do not summarize or skip "minor" content. **Tag every finding with its page number** using *(p.N)* notation — downstream claim extraction depends on this.
+Read each page image in your range. Be exhaustive — extract EVERY equation, parameter, algorithm step, implementation detail, limitation, criticism of prior work, and design rationale. Do not summarize away formal content or skip "minor" material. **Tag every finding with its page number** using *(p.N)* notation — downstream claim extraction depends on this.
 
 ## Output Format
 Write DIRECTLY to `./papers/Author_Year_ShortTitle/chunks/chunk-STARTPAGE-ENDPAGE.md`:
@@ -146,13 +181,13 @@ You are running alongside other chunk readers.
 mkdir -p "./papers/Author_Year_ShortTitle/chunks"
 ```
 
-**If you can dispatch parallel subagents**, launch one per chunk simultaneously. Each reads its page range and writes to `chunks/chunk-START-END.md`.
+**If you can dispatch parallel subagents**, launch one per chunk simultaneously. Each reads its page range and writes to `chunks/chunk-START-END.md`. Use the strongest available full-size model for every chunk worker. Never use a mini/small tier worker for chunk extraction.
 
 **If parallel dispatch is not available**, process each chunk sequentially yourself.
 
 ### Synthesize
 
-Read all `chunks/chunk-*.md` files and synthesize into `notes.md`. Merge, deduplicate, and organize into the format from Step 3. If you can dispatch a synthesis subagent, do so; otherwise do it yourself.
+Read all `chunks/chunk-*.md` files and synthesize into `notes.md`. Merge, deduplicate, and organize into the format from Step 3. Preserve detail; synthesis should reorganize and deduplicate, not compress the paper into sparse abstractions. If you can dispatch a synthesis subagent, do so using the strongest available full-size model; otherwise do it yourself.
 
 Continue to Step 3.
 
@@ -160,7 +195,7 @@ Continue to Step 3.
 
 ## Step 3: Write Notes
 
-**Be exhaustive.** Extract every equation, every parameter, every algorithm. The goal is that someone implementing this paper never needs to open the PDF. More detail is always better.
+**Be exhaustive.** Extract every equation, every parameter, every algorithm, every stated limitation, every criticism of prior work, and every explicit design choice the authors justify. The goal is that someone implementing this paper never needs to open the PDF. More detail is better than elegant compression.
 
 Write to `./papers/Author_Year_ShortTitle/notes.md`:
 
@@ -333,7 +368,7 @@ Write `./papers/Author_Year_ShortTitle/abstract.md`:
 [2-3 sentences: What problem? Key finding? Why relevant?]
 ```
 
-For chunked papers, delegate to a **haiku** subagent reading `pngs/page-000.png`.
+For chunked papers, if you can dispatch a subagent for this extraction, do so using `pngs/page-000.png` and the strongest available full-size model. Do not use a fast/mini/small model here. Otherwise, read `pngs/page-000.png` yourself and write `abstract.md`.
 
 ---
 
@@ -353,7 +388,7 @@ Write `./papers/Author_Year_ShortTitle/citations.md`:
 [3-5 most relevant citations with brief notes on why]
 ```
 
-For chunked papers, delegate to a **haiku** subagent reading the last 5-10 page images.
+For chunked papers, if you can dispatch a subagent for this extraction, do so using the last 5-10 page images and the strongest available full-size model. Do not use a fast/mini/small model here. Otherwise, read those pages yourself and write `citations.md`.
 
 **Steps 5 and 6 can run in parallel** since they write to different files.
 
@@ -361,7 +396,17 @@ For chunked papers, delegate to a **haiku** subagent reading the last 5-10 page 
 
 ## Step 7: Cross-Reference Collection
 
-Invoke the **reconcile** skill on `papers/Author_Year_ShortTitle`. This handles forward/reverse cross-referencing, reconciliation of citing papers, and backward annotations.
+Invoke the **reconcile** skill on `papers/Author_Year_ShortTitle` if skill invocation is available. Otherwise, follow the reconcile skill instructions directly on that directory. This handles forward/reverse cross-referencing, reconciliation of citing papers, and backward annotations.
+
+If nested skill invocation is unavailable or unreliable on this platform, derive this skill's
+installed directory from the injected `<path>`, then run:
+
+```bash
+python "<skill-dir>/../reconcile/scripts/emit_nested_reconcile_fallback.py"
+```
+
+Read the FULL stdout and follow it exactly on the current paper directory instead of opening
+`reconcile/SKILL.md` piecemeal.
 
 Wait for reconcile to complete before proceeding.
 

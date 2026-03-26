@@ -30,6 +30,7 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 
 | Script | Description |
 |--------|-------------|
+| `lint_skill_frontmatter.py` | Parse every `SKILL.md` frontmatter block and fail on invalid YAML |
 | `generate-paper-index.py` | Rebuild papers/index.md and tagged-papers/ symlinks |
 | `cross-reference-papers.py` | Find cross-references between papers in the collection |
 | `migrate-format.py` | Convert legacy Tags: lines → YAML frontmatter, bold refs → wikilinks |
@@ -49,7 +50,7 @@ The claims pipeline extracts machine-readable propositional claims from paper no
 ```bash
 # Single paper: generate draft, then enrich with LLM
 uv run scripts/generate_claims.py papers/Author_2024_Title
-/research-papers:extract-claims papers/Author_2024_Title
+$extract-claims papers/Author_2024_Title
 
 # Batch: generate drafts for all papers missing claims.yaml
 uv run scripts/batch_generate_claims.py papers/ --skip-existing
@@ -60,39 +61,38 @@ uv run scripts/bootstrap_concepts.py papers/ --output concepts.yaml
 
 ## Installation
 
-### From GitHub (recommended)
-
-Add this repo as a marketplace, then install the plugin:
+Clone the repo, then run one installer command:
 
 ```bash
-claude plugin marketplace add ctoth/research-papers-plugin
-claude plugin install research-papers@research-papers-marketplace
+uv run scripts/install_skills.py install
 ```
 
-### From local path (development)
+That does three things:
+
+- discovers all skill directories under `plugins/*/skills/*` for Codex and Gemini
+- discovers the Claude marketplace manifest at `.claude-plugin/marketplace.json`
+- installs everything at user scope
+
+For Claude Code specifically, the installer now prefers the native CLI path:
 
 ```bash
-claude plugin marketplace add /path/to/research-papers-plugin
-claude plugin install research-papers@research-papers-marketplace
+claude plugin marketplace add <this-repo> --scope user
+claude plugin install research-papers@research-papers-marketplace --scope user
 ```
 
-### For Codex CLI
+The Python installer runs that for you. It does not install Claude by writing directly into a Claude skills directory.
 
-Create symlinks so Codex discovers the skills:
+Useful variants:
 
 ```bash
-mkdir -p .agents/skills
-ln -s ../../plugins/research-papers/skills/* .agents/skills/
+uv run scripts/install_skills.py doctor
+uv run scripts/lint_skill_frontmatter.py
+uv run scripts/install_skills.py install --platform codex
+uv run scripts/install_skills.py install --platform claude
+uv run scripts/install_skills.py uninstall
 ```
 
-### For Gemini CLI
-
-Create symlinks so Gemini discovers the skills:
-
-```bash
-mkdir -p .gemini/skills
-ln -s ../../plugins/research-papers/skills/* .gemini/skills/
-```
+For Codex and Gemini, the installer prefers whole-directory symlinks and falls back to copying if symlinks are unavailable.
 
 ### Project setup
 
@@ -101,10 +101,7 @@ Your project needs this structure:
 ```
 your-project/
 ├── papers/
-│   ├── AGENTS.md    # Static instructions for agents (how to use the collection)
 │   ├── index.md     # Paper listing with tags (auto-generated)
-│   ├── CLAUDE.md    # Contains: @AGENTS.md
-│   └── GEMINI.md    # Contains: @AGENTS.md
 │   ├── tagged/       # Symlinks organized by tag (auto-generated)
 │   │   ├── acoustics/
 │   │   │   └── Fant_1985_LFModel -> ../../Fant_1985_LFModel
@@ -117,11 +114,30 @@ Copy `templates/papers-gitignore` content into your `.gitignore` to exclude PDFs
 
 ## Usage
 
+### Claude Code
+
+After install:
+
 ```
 /research-papers:paper-process https://arxiv.org/abs/2104.01005
 /research-papers:research screen reader accessibility
 /research-papers:paper-reader papers/Mack_2021_AccessibilityResearch/paper.pdf
 ```
+
+### Codex CLI
+
+Run Codex from the project repo that contains your `papers/` directory, then invoke the skills explicitly:
+
+```bash
+$paper-process https://arxiv.org/abs/2104.01005
+$research screen-reader accessibility
+$paper-reader papers/Mack_2021_AccessibilityResearch/paper.pdf
+$extract-claims papers/Author_2024_Title
+```
+
+Some skill command examples use `scripts/...` paths. Those are skill-local paths relative to the installed skill directory, not paths relative to the user's project repo.
+
+Codex can also auto-select these skills from a natural-language prompt, but explicit `$skill-name` invocation is the most reliable way to verify the install.
 
 ## Requirements
 

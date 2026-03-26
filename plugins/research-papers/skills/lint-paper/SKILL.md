@@ -3,6 +3,7 @@ name: lint-paper
 description: Check paper directories for completeness, format compliance, and index consistency. Run on a single paper or --all for the entire collection.
 argument-hint: "<papers/Author_Year_Title> or --all"
 disable-model-invocation: false
+compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Lint Paper: $ARGUMENTS

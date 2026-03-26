@@ -3,6 +3,7 @@ name: reconcile-vocabulary
 description: Normalize concept vocabulary across a paper collection. Identifies collision groups (same concept, different names), proposes canonical names, and optionally rewrites claims files.
 argument-hint: "<papers-directory> [--fix] [--vocabulary <path>]"
 disable-model-invocation: false
+compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Reconcile Vocabulary: $ARGUMENTS
