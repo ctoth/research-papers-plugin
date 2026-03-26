@@ -37,7 +37,8 @@ def main() -> None:
                sci-hub. If browser automation succeeds, create `./papers/<dirname>/paper.pdf`,
                then run `uv run "{p(fetch_script)}" "<identifier>" --papers-dir papers/ --output-dir "<dirname>" --metadata-only`
                so `metadata.json` is written only after the PDF exists. If browser automation is
-               unavailable, stop and ask the user for a manual PDF.
+               unavailable, stop and ask the user for a manual PDF. Treat this as a real blocker
+               only when that browser-automation branch is actually unavailable.
             6. Verify success using platform-appropriate commands. Confirm:
                - `./papers/<dirname>/paper.pdf` exists and is a real PDF
                - `./papers/<dirname>/metadata.json` exists
