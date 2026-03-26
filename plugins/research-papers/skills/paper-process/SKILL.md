@@ -14,10 +14,15 @@ Download a scientific paper and extract structured notes in one shot.
 
 This skill is a checklist, not an outcome sketch.
 
+**CRITICAL:**
+This skill does NOT authorize creating any new scripts, automation, temp programs, or alternate workflows.
+If the listed commands or nested skills cannot complete a step, stop immediately and report the blocker.
+
 - Follow the steps in order.
 - Do not substitute unlisted scripts, tools, or custom workflows for retrieval, reading, or claim extraction.
 - If you can invoke the named nested skill, do that. If you cannot, use the fallback helper below and follow its stdout literally.
 - If you are blocked on a specific step, stop there and report the exact blocker instead of inventing a workaround.
+- Do not report progress from intermediate artifacts not named in this procedure.
 
 ## Codex / No-Nested-Skill Fallback
 

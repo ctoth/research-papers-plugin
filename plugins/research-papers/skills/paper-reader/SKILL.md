@@ -18,6 +18,7 @@ This skill is a checklist, not an outcome sketch.
 - Do not substitute alternate text-extraction or summarization workflows for the required page-image reading flow unless this skill explicitly tells you to.
 - Do not add unlisted probes or "better" preprocessing steps.
 - If you are blocked on a specific step, stop there and report the exact blocker instead of inventing a workaround.
+- Do not report progress from intermediate artifacts not named in this procedure.
 - Do not declare yourself blocked merely because this skill does not name a platform-specific image-view tool. Use the platform's native local-image inspection capability for `pngs/page-*.png`; that is the intended page-image workflow, not an alternate extraction method.
 - Only report an image-reading blocker after you have actually attempted to inspect a local page image such as `page-000.png` and the platform refused or failed.
 
