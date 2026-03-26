@@ -73,7 +73,10 @@ def main() -> None:
                `python "{p(reconcile_helper)}"`
                Read its full stdout and follow it exactly on the current paper directory.
             11. Update `papers/index.md` for the new paper.
-            12. Report the paper directory and a short usefulness assessment.
+            12. Reading is complete only when these artifacts exist:
+               `notes.md`, `metadata.json`, `description.md`, `abstract.md`, `citations.md`,
+               and the `papers/index.md` entry.
+            13. Report the paper directory and a short usefulness assessment.
 
             Do not partially open `paper-reader/SKILL.md` after running this helper. Follow this
             procedure directly.
