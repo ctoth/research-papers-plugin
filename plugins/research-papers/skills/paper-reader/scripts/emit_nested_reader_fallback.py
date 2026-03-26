@@ -50,9 +50,9 @@ def main() -> None:
                  from the existing `paper.pdf`.
             5. Determine the working PDF path, then determine page count:
                `pdfinfo "<working-pdf>" 2>/dev/null | grep Pages || echo "pdfinfo not available"`
-            6. If `pngs/page-000.png` does not already exist, render page 0 first to recover
-               author, year, and title, determine the canonical directory name
-               `LastName_Year_ShortTitle`, and render all page images.
+            6. If `pngs/page-000.png` does not already exist, use the exact `magick` rendering
+               commands from `paper-reader/SKILL.md`: render page 0 first to recover author,
+               year, and title, then render all page images as `pngs/page-*.png`.
             7. Before long extraction, inspect `page-000.png` using the platform's native
                local-image inspection capability. Do not stop just because the exact tool name is
                unspecified. Only stop if the platform actually prevents local image inspection.
