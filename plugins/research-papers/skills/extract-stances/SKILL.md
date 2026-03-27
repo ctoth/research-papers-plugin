@@ -141,6 +141,8 @@ Add stances to the source claim's entry in claims.yaml:
 - **Same paper:** use the bare claim ID (e.g., `"claim3"`)
 - **Different paper:** use `PaperDirName:claimID` (e.g., `"Bowman_2018_EffectsAspirinPrimaryPrevention:claim11"`). The paper directory name is the folder name under `papers/`. The colon-prefixed format is preserved through `pks import-papers` and resolved in the compiled sidecar.
 
+**Do NOT** add a separate `target_paper` field. The paper name goes inside the `target` value, before the colon. `target_paper` is not a valid field and will be ignored.
+
 ## Step 6: Validate
 
 ```bash
