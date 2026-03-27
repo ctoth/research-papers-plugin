@@ -82,6 +82,16 @@ Then classify each lead:
 
 For each lead, build a search query from the parsed author, year, and title components.
 
+Before dispatching a lead, normalize it to one concrete intended paper. Prefer the strongest identity-preserving input available:
+
+1. DOI
+2. ACL Anthology ID/URL
+3. arXiv ID/URL
+4. S2 paper ID
+5. exact paper title
+
+Do not dispatch weak landing-page URLs when the paper title or a stronger identifier is already available. One dispatch must correspond to one intended paper.
+
 ### Always Use Subagents
 
 **Every paper-process invocation should run as a subagent when subagent dispatch is available**, even in sequential mode. This protects the foreman's context window from the large volume of page-reading output that paper-process generates. Use the strongest available full-size model for every such worker. Never use a mini/small/flash tier model for workers that will retrieve or read papers. If subagents are unavailable, process leads yourself one at a time and keep external notes so you do not lose state.
@@ -91,10 +101,11 @@ For each lead, build a search query from the parsed author, year, and title comp
 Read the sibling paper-process SKILL.md once (`../paper-process/SKILL.md`, relative to this skill) and use it as the base prompt for all subagents. Each subagent prompt should include:
 
 1. The paper-process SKILL.md instructions
-2. The specific search query for that lead
+2. The exact intended paper for that lead, plus the normalized identifier or exact title the worker should use
 3. Instructions to write a per-paper report to `./reports/paper-<safe-name>.md`
 4. **Instructions to SKIP reconcile (Step 7) and index.md update (Step 8)** — the foreman handles these after each agent completes
 5. A reminder that any nested paper-reading delegation must stay on the strongest available full-size model and must not downgrade to a mini/small tier
+6. A reminder that if retrieval resolves to a different paper than the intended lead, the worker must stop and report mismatch instead of continuing
 
 **Do NOT use worktree isolation.** Paper-process writes to shared state (papers/index.md, cross-references in existing papers' notes.md via reconcile). Worktrees strand all of that with no clean merge path.
 

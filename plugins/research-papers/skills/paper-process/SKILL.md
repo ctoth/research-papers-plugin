@@ -19,10 +19,13 @@ This skill does NOT authorize creating any new scripts, automation, temp program
 If the listed commands or nested skills cannot complete a step, stop immediately and report the blocker.
 
 - Follow the steps in order.
+- `$ARGUMENTS` names exactly one intended paper. Preserve that paper's identity through retrieval, reading, claim extraction, and reporting.
 - Do not substitute unlisted scripts, tools, or custom workflows for retrieval, reading, or claim extraction.
 - If you can invoke the named nested skill, do that. If you cannot, use the fallback helper below and follow its stdout literally.
 - If you are blocked on a specific step, stop there and report the exact blocker instead of inventing a workaround.
 - Do not report progress from intermediate artifacts not named in this procedure.
+- If the input is a weak locator (for example, a publisher landing page or other generic article URL), first infer which paper it denotes and continue with the strongest identity-preserving input available (title, DOI, ACL ID/URL, arXiv ID/URL, S2 ID, or direct PDF URL).
+- If retrieval resolves to a materially different paper than the one named by `$ARGUMENTS`, stop and report the mismatch instead of continuing.
 
 ## Codex / No-Nested-Skill Fallback
 
@@ -41,6 +44,9 @@ If your platform cannot reliably invoke one skill from inside another skill:
 Invoke the **paper-retriever** skill with: `$ARGUMENTS`
 
 If explicit skill invocation is available (for example `$paper-retriever` or a platform-specific slash command), use it. Otherwise, follow the paper-retriever SKILL.md instructions directly.
+
+Treat retrieval as successful only when it is clearly for the same intended paper and has produced the required output path. Do not treat "some related paper was found" as success.
+The success criterion for retrieval is: the intended paper's PDF exists at the output path. Metadata resolution is helpful, but it is not the point of the step.
 
 When retrieval completes, note the output path (e.g., `papers/Author_Year_ShortTitle/paper.pdf`).
 
