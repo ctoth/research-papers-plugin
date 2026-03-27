@@ -19,7 +19,7 @@ This skill is a checklist, not an outcome sketch.
 - Do not add unlisted probes or "better" preprocessing steps.
 - If you are blocked on a specific step, stop there and report the exact blocker instead of inventing a workaround.
 - Do not report progress from intermediate artifacts not named in this procedure.
-- Do not declare yourself blocked merely because this skill does not name a platform-specific image-view tool. Use the platform's native local-image inspection capability for `pngs/page-*.png`; that is the intended page-image workflow, not an alternate extraction method.
+- Do not declare yourself blocked merely because this skill does not name a platform-specific image-view tool. Use the platform's local image-reading capability (for example, `Read Image` in Claude Code or `view_image` in Codex) to inspect `pngs/page-*.png`.
 - Only report an image-reading blocker after you have actually attempted to inspect a local page image such as `page-000.png` and the platform refused or failed.
 
 ## Extraction Objective
@@ -154,7 +154,7 @@ ls "$paper_dir"/pngs/page-*.png | wc -l
 
 ## Step 1.5: Prove the Page-Image Lane Works
 
-Before long extraction, inspect `page-000.png` from the paper's `pngs/` directory using the platform's native local-image inspection capability.
+Before long extraction, inspect `page-000.png` from the paper's `pngs/` directory using the platform's local image-reading capability (for example, `Read Image` in Claude Code or `view_image` in Codex).
 
 - This is the intended workflow. It is **not** an OCR/text-extraction fallback.
 - Do not stop just because the exact tool name is unspecified in this skill.
