@@ -217,8 +217,6 @@ For acknowledged scope boundaries, failure modes, unsolved problems:
 ```yaml
 source:
   paper: <paper_dir_name>
-  extraction_model: "<your model name>"
-  extraction_date: "<today's date>"
 
 claims:
   - id: claim1
@@ -237,6 +235,16 @@ pks claim validate-file "$paper_dir"/claims.yaml
 ```
 
 If validation fails, fix and re-validate. **Do not consider extraction complete until validation passes.**
+
+## Step 5: Stamp Provenance
+
+```bash
+uv run plugins/research-papers/scripts/stamp_provenance.py \
+  "<paper_dir>/claims.yaml" \
+  --agent "<your model name>" --skill extract-claims
+```
+
+This records which model extracted claims, when, and which plugin version was used. Plugin version is autodetected.
 
 ---
 

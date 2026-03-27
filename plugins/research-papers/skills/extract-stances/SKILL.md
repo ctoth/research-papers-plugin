@@ -153,6 +153,16 @@ Stance validation checks:
 - `type` is one of the valid stance types
 - `target` references an existing claim ID (bare IDs checked locally; colon-prefixed cross-paper targets are deferred to import time)
 
+## Step 7: Stamp Provenance
+
+```bash
+uv run plugins/research-papers/scripts/stamp_provenance.py \
+  "<paper_dir>/claims.yaml" \
+  --agent "<your model name>" --skill extract-stances
+```
+
+This records which model extracted stances, when, and which plugin version was used. Plugin version is autodetected.
+
 ## Output
 
 When done with each paper:

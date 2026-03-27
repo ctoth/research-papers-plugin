@@ -527,6 +527,18 @@ Append:
 
 ---
 
+## Step 9: Stamp Provenance
+
+```bash
+uv run plugins/research-papers/scripts/stamp_provenance.py \
+  "papers/<Author_Year_ShortTitle>/notes.md" \
+  --agent "<your model name>" --skill paper-reader
+```
+
+This records which model read the paper, when, and which plugin version was used. Plugin version is autodetected.
+
+---
+
 ## Quality Checklist
 
 - [ ] All equations with variable definitions and page citations
@@ -542,6 +554,7 @@ Append:
 - [ ] metadata.json written
 - [ ] Reconcile skill invoked
 - [ ] papers/index.md updated
+- [ ] Provenance stamped on notes.md
 - [ ] No temp files left behind
 
 ---

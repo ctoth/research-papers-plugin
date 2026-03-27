@@ -158,6 +158,16 @@ pks claim validate-file "$paper_dir"/claims.yaml
 
 If validation fails, fix and re-validate. **Do not consider enrichment complete until validation passes.**
 
+## Step 5: Stamp Provenance
+
+```bash
+uv run plugins/research-papers/scripts/stamp_provenance.py \
+  "<paper_dir>/claims.yaml" \
+  --agent "<your model name>" --skill enrich-claims
+```
+
+This records which model enriched claims, when, and which plugin version was used. Plugin version is autodetected.
+
 ## Provenance Rules
 
 - `paper`: paper directory name
