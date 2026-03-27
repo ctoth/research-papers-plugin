@@ -62,5 +62,18 @@ Key findings from propstore codebase:
 - **aspic.py is fully implemented** (948 lines, Defs 1-22) but **has no bridge** to propstore's claim/stance data model. Standalone formal engine.
 - **LinkML schema has no Justification class.**
 
-### Next step
-Write proposal to ../propstore/proposals/ for first-class justification entity type.
+### 2026-03-27: Proposal committed to propstore (dec9a0f)
+
+`propstore/proposals/first-class-justifications.md` covers:
+- Justification as stored entity (SQLite table + LinkML schema)
+- 12 rule_kinds (7 original + reported_claim, support, explanation, expert_testimony, abductive_inference)
+- rule_strength: strict vs defeasible (ASPIC+ Rs/Rd)
+- Targeted undercutting via justification IDs
+- premise_kind on claims: necessary vs ordinary (ASPIC+ Kn/Kp)
+- Import pipeline extension to read justifications.yaml
+- 7-step implementation order
+
+### Still open
+- Update extract-justifications skill to emit rule_strength
+- Broader knowledge-shape research (prescriptive/procedural knowledge beyond papers)
+- ASPIC+ bridge from stored justifications to aspic.py
