@@ -52,5 +52,15 @@ Read 11 papers. Key findings:
 5. Do NOT add practical reasoning yet
 6. Do NOT attempt full ASPIC+ implementation
 
+### 2026-03-27: Propstore internals scouted (reports/scout-propstore-justification-internals.md)
+
+Key findings from propstore codebase:
+- **No justification table** in SQLite. Justifications are ephemeral, derived in-memory.
+- **import_papers reads only claims.yaml** per paper. No stance files, no justification files.
+- **Undercuts can't target specific justifications** — resolves by claim_id, hits all inference-rule arguments for a claim.
+- **Multi-premise justifications structurally supported** in the builder (Cartesian product over premise groups) but **never created** by existing code.
+- **aspic.py is fully implemented** (948 lines, Defs 1-22) but **has no bridge** to propstore's claim/stance data model. Standalone formal engine.
+- **LinkML schema has no Justification class.**
+
 ### Next step
-Decide which of these to act on. The strict/defeasible distinction and necessary/ordinary premises are foundational — they change propstore's data model, not just extraction. Need Q's input on scope.
+Write proposal to ../propstore/proposals/ for first-class justification entity type.
