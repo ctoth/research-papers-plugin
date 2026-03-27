@@ -64,40 +64,9 @@ Read:
 - `<paper_dir>/claims.yaml` — the claim IDs you will reference as premises and conclusions
 - `<paper_dir>/paper.pdf` or page images in `<paper_dir>/pngs/` — for page numbers and verification
 
-### Where to Find Justifications in notes.md
+Read all of notes.md. Identify where the paper connects its own claims through reasoning — where one or more claims serve as evidence or justification for another claim. Do not limit your search to specific sections or linguistic patterns; reasoning structure can appear anywhere and take any form.
 
-Justification structure lives in how the paper connects its own findings. Focus on:
-
-1. **Results Summary** — Where empirical findings are stated. Each result is typically the conclusion of an empirical_support or statistical_inference justification.
-2. **Methodology** — Where design choices are justified. Methodological claims are premises for methodological_inference justifications.
-3. **Key Equations / Statistical Models** — Where formal derivations happen. Equation premises lead to statistical_inference or definition_application conclusions.
-4. **Design Rationale** — Where the authors explain *why* they made choices. These map to causal_explanation or methodological_inference justifications.
-5. **Arguments Against Prior Work** — Where critiques live. These produce justifications with `attack_target` fields.
-6. **Limitations** — Where the authors narrow their own claims. These map to scope_limitation justifications.
-7. **Open Questions** — May contain implicit justification gaps — places where the paper acknowledges missing inferential steps.
-
-### What to Look For
-
-Linguistic markers of inferential structure:
-- "therefore", "thus", "consequently", "we conclude" — conclusion follows
-- "because", "since", "given that" — premise precedes
-- "this suggests", "this indicates" — weaker inference
-- "however", "in contrast", "unlike" — potential attack
-- "assuming", "provided that" — conditional premises
-- "based on [method/result]" — explicit premise reference
-
-## Step 2: Map Claims to Justification Roles
-
-For each claim in claims.yaml, determine its role in the paper's reasoning:
-
-- **Pure premise** — Supports other claims but is not itself justified within this paper (e.g., background facts, methodological choices, raw measurements)
-- **Pure conclusion** — Justified by other claims but does not itself serve as a premise
-- **Intermediate** — Both justified by some claims and serves as a premise for others (these create subargument chains)
-- **Isolated** — Neither premises nor conclusion of any justification (standalone observations)
-
-Not every claim needs to participate in a justification. A claim that states a standalone fact without connecting it to other claims in the paper is simply isolated — do not force connections.
-
-## Step 3: Assemble Justifications
+## Step 2: Assemble Justifications
 
 For each identified inferential step:
 
@@ -165,11 +134,11 @@ justifications:
 5. **Quote fragments must come from the paper.** Do not paraphrase or synthesize — use actual text.
 6. **Attack justifications need both attack_target and standard fields.** A critique still has premises (the evidence for the attack) and a conclusion (what the attacker concludes).
 
-## Step 4: Write
+## Step 3: Write
 
 Write to `<paper_dir>/justifications.yaml`.
 
-## Step 5: Validate
+## Step 4: Validate
 
 Check:
 - Every `conclusion` and every entry in `premises` references a valid claim ID in `<paper_dir>/claims.yaml`
@@ -182,7 +151,7 @@ Check:
 
 If validation fails, fix and re-validate.
 
-## Step 6: Stamp Provenance
+## Step 5: Stamp Provenance
 
 ```bash
 uv run plugins/research-papers/scripts/stamp_provenance.py \
