@@ -824,6 +824,9 @@ This extracts parameters from tables, equations from `$$...$$` blocks, and obser
 After writing claims.yaml, validate it:
 
 ```bash
+if [ ! -d knowledge ]; then
+  uv run pks init
+fi
 uv run pks claim validate-file <paper_dir>/claims.yaml
 ```
 

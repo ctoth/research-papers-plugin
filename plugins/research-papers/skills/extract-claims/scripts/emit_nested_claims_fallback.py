@@ -38,9 +38,11 @@ def main() -> None:
                - CEL conditions only when the paper supports them
                - notes/stances only when the paper supports them
             6. Write the final `<paper_dir>/claims.yaml`.
-            7. Validate it and keep fixing until clean:
+            7. If no `knowledge/` directory exists yet, initialize it first:
+               `uv run pks init`
+            8. Validate it and keep fixing until clean:
                `uv run pks claim validate-file "<paper_dir>/claims.yaml"`
-            8. Report mode used (`enrich` or `create`), validation result, and claim count.
+            9. Report mode used (`enrich` or `create`), validation result, and claim count.
 
             Do not partially open `extract-claims/SKILL.md` after running this helper. Follow this
             procedure directly.
