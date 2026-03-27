@@ -123,21 +123,23 @@ Add stances to the source claim's entry in claims.yaml:
   # ... existing fields ...
   stances:
     - type: supports
-      target: "claim11"  # from another paper's claims.yaml — use the claim ID
+      target: "Bowman_2018_EffectsAspirinPrimaryPrevention:claim11"
       strength: "strong"
       note: "Independent replication of null primary prevention result"
     - type: undermines
-      target: "claim7"
+      target: "Unknown_2009_AspirinPrimarySecondaryPrevention:claim7"
       strength: "moderate"
       conditions_differ: "Modern background therapy (43% statins) vs pre-statin era"
       note: "Low observed event rates undermine older risk estimates"
 ```
 
-**Required fields:** `type` (one of: rebuts, undercuts, undermines, supports, explains, supersedes), `target` (claim ID from any paper in the collection).
+**Required fields:** `type` (one of: rebuts, undercuts, undermines, supports, explains, supersedes), `target` (claim ID — see targeting rules below).
 
 **Optional fields:** `strength` (strong/moderate/weak), `note` (textual justification — always include this), `conditions_differ` (when the stance is specifically about differing conditions).
 
-**Cross-paper claim ID targeting:** After `pks import-papers`, claim IDs get prefixed with the paper name. For now, use the raw claim IDs as they appear in each paper's claims.yaml. The import step handles prefixing. Target claims in the same file by bare ID; target claims in other files by bare ID too — `pks import-papers` resolves cross-references.
+**Claim ID targeting:**
+- **Same paper:** use the bare claim ID (e.g., `"claim3"`)
+- **Different paper:** use `PaperDirName:claimID` (e.g., `"Bowman_2018_EffectsAspirinPrimaryPrevention:claim11"`). The paper directory name is the folder name under `papers/`. The colon-prefixed format is preserved through `pks import-papers` and resolved in the compiled sidecar.
 
 ## Step 6: Validate
 
@@ -147,7 +149,7 @@ pks claim validate-file <paper_dir>/claims.yaml
 
 Stance validation checks:
 - `type` is one of the valid stance types
-- `target` references an existing claim ID
+- `target` references an existing claim ID (bare IDs checked locally; colon-prefixed cross-paper targets are deferred to import time)
 
 ## Output
 
