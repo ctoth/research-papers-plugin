@@ -24,7 +24,7 @@ If the listed commands or nested skills cannot complete a step, stop immediately
 - If you can invoke the named nested skill, do that. If you cannot, use the fallback helper below and follow its stdout literally.
 - If you are blocked on a specific step, stop there and report the exact blocker instead of inventing a workaround.
 - Do not report progress from intermediate artifacts not named in this procedure.
-- If the input is a weak locator (for example, a publisher landing page or other generic article URL), first infer which paper it denotes and continue with the strongest identity-preserving input available (title, DOI, ACL ID/URL, arXiv ID/URL, S2 ID, or direct PDF URL).
+- If the input is a weak locator, first infer the intended paper and continue with the strongest identity-preserving input available (DOI, ACL ID/URL, arXiv ID/URL, S2 ID, exact title, or direct PDF URL).
 - If retrieval resolves to a materially different paper than the one named by `$ARGUMENTS`, stop and report the mismatch instead of continuing.
 
 ## Codex / No-Nested-Skill Fallback
@@ -45,8 +45,7 @@ Invoke the **paper-retriever** skill with: `$ARGUMENTS`
 
 If explicit skill invocation is available (for example `$paper-retriever` or a platform-specific slash command), use it. Otherwise, follow the paper-retriever SKILL.md instructions directly.
 
-Treat retrieval as successful only when it is clearly for the same intended paper and has produced the required output path. Do not treat "some related paper was found" as success.
-The success criterion for retrieval is: the intended paper's PDF exists at the output path. Metadata resolution is helpful, but it is not the point of the step.
+Retrieval succeeds only when the intended paper's PDF exists at the output path. Do not treat "some related paper was found" as success.
 
 When retrieval completes, note the output path (e.g., `papers/Author_Year_ShortTitle/paper.pdf`).
 

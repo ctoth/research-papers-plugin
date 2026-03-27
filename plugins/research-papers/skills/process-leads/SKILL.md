@@ -82,7 +82,7 @@ Then classify each lead:
 
 For each lead, build a search query from the parsed author, year, and title components.
 
-Before dispatching a lead, normalize it to one concrete intended paper. Prefer the strongest identity-preserving input available:
+Before dispatching a lead, normalize it to one concrete intended paper. Prefer:
 
 1. DOI
 2. ACL Anthology ID/URL
@@ -90,7 +90,7 @@ Before dispatching a lead, normalize it to one concrete intended paper. Prefer t
 4. S2 paper ID
 5. exact paper title
 
-Do not dispatch weak landing-page URLs when the paper title or a stronger identifier is already available. One dispatch must correspond to one intended paper.
+Do not dispatch weak landing-page URLs when the title or a stronger identifier is already available. One dispatch must correspond to one intended paper.
 
 ### Always Use Subagents
 
@@ -105,7 +105,7 @@ Read the sibling paper-process SKILL.md once (`../paper-process/SKILL.md`, relat
 3. Instructions to write a per-paper report to `./reports/paper-<safe-name>.md`
 4. **Instructions to SKIP reconcile (Step 7) and index.md update (Step 8)** — the foreman handles these after each agent completes
 5. A reminder that any nested paper-reading delegation must stay on the strongest available full-size model and must not downgrade to a mini/small tier
-6. A reminder that if retrieval resolves to a different paper than the intended lead, the worker must stop and report mismatch instead of continuing
+6. A reminder that if retrieval resolves to a different paper than the intended lead, the worker must stop and report mismatch
 
 **Do NOT use worktree isolation.** Paper-process writes to shared state (papers/index.md, cross-references in existing papers' notes.md via reconcile). Worktrees strand all of that with no clean merge path.
 

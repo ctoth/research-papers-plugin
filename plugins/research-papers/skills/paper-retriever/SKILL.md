@@ -23,9 +23,9 @@ The argument can be:
 - An AAAI URL: `https://ojs.aaai.org/...`
 - A paper title (will search)
 
-`$ARGUMENTS` names exactly one intended paper. Preserve that identity throughout retrieval. Do not silently switch to a different paper just because search or metadata lookup returned something plausible.
+`$ARGUMENTS` names exactly one intended paper. Preserve that identity throughout retrieval.
 
-The goal of this skill is to obtain the intended paper's PDF. Metadata resolution and canonical naming are supporting steps, not the definition of success.
+The goal of this skill is to obtain the intended paper's PDF. Metadata resolution and canonical naming support that goal; they are not the definition of success.
 
 ## Step 1.5: Normalize to an Identity-Preserving Input
 
@@ -43,7 +43,7 @@ If the input is weak, first infer the intended paper and continue with the stron
 5. exact paper title
 6. the original weak URL only if it is still the clearest remaining identifier
 
-Do not keep retrying a weak URL mechanically when the paper title or a stronger identifier is already apparent from the page or surrounding context.
+Do not keep retrying a weak URL mechanically when a stronger identifier is already apparent.
 
 ## Step 2: Search (title input only)
 
@@ -53,9 +53,9 @@ If the input is a paper title (not a URL or DOI), search for it first:
 uv run scripts/search_papers.py "PAPER TITLE" --source all --max-results 5 --json
 ```
 
-Review the results. If there's a clear match, extract the arxiv ID or DOI and continue to Step 3. If ambiguous, present the top results to the user and ask which one.
+Review the results. If there's a clear match, extract the strongest available identifier and continue to Step 3. If ambiguous, present the top results to the user and ask which one.
 
-For weak URL input, use the intended paper title or other metadata you inferred in Step 1.5 and perform the same search/normalization before Step 3.
+For weak URL input, use the inferred title or metadata from Step 1.5 and perform the same search/normalization before Step 3.
 
 ## Step 3: Download
 
@@ -69,7 +69,7 @@ Where `<identifier>` is the arxiv ID/URL, DOI, ACL URL, or S2 paper ID from the 
 
 If you had to normalize a weak input first, use the normalized identifier here rather than the original weak URL.
 
-Use `fetch_paper.py` as the first download path, not as the definition of whether retrieval is possible. If one metadata-resolution path fails, that does not by itself mean the paper is unretrievable.
+Use `fetch_paper.py` as the first download path, not as the definition of whether retrieval is possible. One metadata-resolution failure does not by itself mean the paper is unretrievable.
 
 The script will:
 1. Resolve metadata (title, authors, year, abstract) from arxiv or Semantic Scholar
@@ -77,7 +77,7 @@ The script will:
 3. Only after a real PDF is downloaded, create the canonical paper directory (`Author_Year_ShortTitle`)
 4. Only after a real PDF is downloaded, write `metadata.json` alongside `paper.pdf`
 
-Before treating Step 3 as successful, verify that the resolved metadata still matches the intended paper. If title/authorship/year indicate a materially different paper, stop and report an identity mismatch instead of continuing.
+Before treating Step 3 as successful, verify that the resolved metadata still matches the intended paper. If not, stop on mismatch.
 
 If `fetch_paper.py` obtains the intended paper's PDF through an allowed path, Step 3 succeeded even if metadata had to be materialized afterward.
 
@@ -108,7 +108,7 @@ If you have browser automation available, use it to:
 7. Materialize `metadata.json` only after `paper.pdf` exists:
    `uv run scripts/fetch_paper.py "<identifier>" --papers-dir papers/ --output-dir "<dirname>" --metadata-only`
 
-If browser automation or a direct PDF URL yields the intended paper's PDF, retrieval succeeded. Treat metadata completion and verification as follow-up work after the PDF exists.
+If browser automation or a direct PDF URL yields the intended paper's PDF, retrieval succeeded. Finalize metadata afterward.
 
 ### Option 2: No browser automation
 
@@ -126,7 +126,7 @@ Confirm:
 - File size is reasonable (>100KB for a real paper)
 - `metadata.json` exists with title, authors, year
 
-The core success condition is that the intended paper's PDF exists at `./papers/<dirname>/paper.pdf`. `metadata.json` should also exist by the end of the step, but failure of an earlier metadata resolver does not by itself negate successful retrieval if the correct PDF and final metadata are in place.
+The core success condition is that the intended paper's PDF exists at `./papers/<dirname>/paper.pdf`. `metadata.json` should also exist by the end of the step, but earlier metadata-resolution failures do not negate successful retrieval if the correct PDF and final metadata are in place.
 
 ## Output
 
@@ -140,7 +140,7 @@ Size: [file size]
 ## Error Handling
 
 - If fetch_paper.py fails metadata resolution: try the other source (arxiv vs S2)
-- If metadata resolution or search yields a different paper than the intended one: stop and report the mismatch; do not continue with the wrong paper
+- If metadata resolution or search yields a different paper than the intended one: stop and report the mismatch
 - If all download methods fail: report failure, provide the URL for manual download
 - ALWAYS clean up temp files on failure: `rm -f ./papers/temp_*.pdf`
 
