@@ -266,10 +266,21 @@ doi_url: "[If available]"
 - [Contribution 1]
 - [Contribution 2]
 
-## Methodology
-[High-level description]
+## Study Design (empirical papers)
+- **Type:** [RCT / cohort / case-control / meta-analysis / systematic review / cross-sectional / etc.]
+- **Population:** [N, demographics, inclusion/exclusion criteria] *(p.N)*
+- **Intervention(s):** [what was administered, dosage, duration, route] *(p.N)*
+- **Comparator(s):** [placebo, active control, standard of care] *(p.N)*
+- **Primary endpoint(s):** [what was measured as the main outcome] *(p.N)*
+- **Secondary endpoint(s):** [additional outcomes] *(p.N)*
+- **Follow-up:** [duration, completeness, dropout rates] *(p.N)*
 
-## Key Equations
+*Leave this section empty for non-empirical papers (pure theory, algorithms, proofs).*
+
+## Methodology
+[High-level description of approach — experimental design, computational method, analytical framework, etc.]
+
+## Key Equations / Statistical Models
 
 $$
 [equation in LaTeX]
@@ -277,22 +288,36 @@ $$
 Where: [variable definitions with units]
 *(p.N)*
 
+*Include statistical models (regression specifications, survival models, Bayesian priors) alongside mathematical equations. For clinical papers, capture the primary analysis model even if not presented in formal notation.*
+
 ## Parameters
 
 | Name | Symbol | Units | Default | Range | Page | Notes |
 |------|--------|-------|---------|-------|------|-------|
 
-## Implementation Details
-- Data structures needed *(p.N)*
-- Initialization procedures *(p.N)*
-- Edge cases *(p.N)*
+*Capture every measurable quantity: physical constants, algorithm thresholds, dosages, sample sizes, hazard ratios, odds ratios, confidence intervals, p-value thresholds, effect sizes — whatever the paper's domain uses.*
+
+## Effect Sizes / Key Quantitative Results
+
+| Outcome | Measure | Value | CI | p | Population/Context | Page |
+|---------|---------|-------|----|---|--------------------|------|
+
+*One row per reported effect. Use for any empirical paper — clinical trials, A/B tests, benchmarks, ablation studies. Measure column: HR, OR, RR, RD, ATE, Cohen's d, accuracy, F1, BLEU, etc. Include both primary and subgroup results.*
+
+## Methods & Implementation Details
+- Study protocol / experimental setup *(p.N)*
+- Statistical methods and software used *(p.N)*
+- Data structures / algorithms needed *(p.N)*
+- Initialization procedures / calibration *(p.N)*
+- Edge cases / sensitivity analyses *(p.N)*
 - Pseudo-code if provided *(p.N)*
+- Adverse events / safety monitoring (clinical papers) *(p.N)*
 
 ## Figures of Interest
 - **Fig N (p.X):** [What it shows]
 
 ## Results Summary
-[Key performance characteristics] *(p.N)*
+[Key findings — performance characteristics, clinical outcomes, effect magnitudes, statistical significance] *(p.N)*
 
 ## Limitations
 [What authors acknowledge doesn't work] *(p.N)*
@@ -310,7 +335,9 @@ Where: [variable definitions with units]
 ## Testable Properties
 - [Property 1: e.g., "Parameter X must be in [low, high]"] *(p.N)*
 - [Property 2: e.g., "Increasing A must increase B"] *(p.N)*
-- [Property 3: e.g., "Output of algorithm must satisfy constraint C"] *(p.N)*
+- [Property 3: e.g., "Treatment effect HR < 1.0 for primary endpoint"] *(p.N)*
+- [Property 4: e.g., "NNT for outcome Y = Z over N years"] *(p.N)*
+- [Property 5: e.g., "Subgroup analysis shows effect modification by age"] *(p.N)*
 
 ## Relevance to Project
 [How this paper applies to the project's research domain]
@@ -364,19 +391,22 @@ Rules:
 | Name | Symbol | Units | Default | Range | Notes |
 |------|--------|-------|---------|-------|-------|
 | Fundamental frequency | F0 | Hz | 120 | 60-500 | Male speaker baseline |
+| Aspirin dose | — | mg/day | 100 | 75-325 | Low-dose range |
+| Hazard ratio (MACE) | HR | — | 0.89 | 0.77-1.03 | Primary composite endpoint |
+| Learning rate | α | — | 0.001 | 1e-5–0.1 | Adam optimizer |
 
 **Rules:**
-- **One row per parameter.** Each row is one measurable quantity.
+- **One row per parameter.** Each row is one measurable quantity — physical constants, algorithm thresholds, dosages, effect sizes, confidence bounds.
 - **Name column required.** Full descriptive name.
-- **Units column required.** SI or standard acoustic units. `-` for dimensionless.
-- **Default/Range**: At least one must be populated. `X-Y` for ranges.
-- **Notes**: Source table/figure, conditions, caveats.
+- **Units column required.** SI, standard domain units, or `-` for dimensionless ratios/rates.
+- **Default/Range**: At least one must be populated. `X-Y` for ranges. For effect sizes, the point estimate goes in Default, the CI goes in Range.
+- **Notes**: Source table/figure, conditions, caveats, subgroup.
 
-**If a parameter varies by context**, create **one table per context** (e.g., "Modal Voice Parameters", "Breathy Voice Parameters").
+**If a parameter varies by context**, create **one table per context** (e.g., "Modal Voice Parameters", "Breathy Voice Parameters", "Age ≥75 Subgroup", "Intention-to-Treat Analysis").
 
 **DO NOT use matrix format** (parameters as columns, contexts as rows). The extractor expects parameters as rows.
 
-**Measurement/data tables** use descriptive headers with units in parentheses: `F1 (Hz)`, `Duration (ms)`.
+**Measurement/data tables** use descriptive headers with units in parentheses: `F1 (Hz)`, `Duration (ms)`, `HR (95% CI)`.
 
 ### Equation Format (MANDATORY)
 
@@ -398,10 +428,11 @@ Rules:
 
 ### Extraction Targets
 
-- **Equations**: Every equation with all variables defined and units given, with page citation
-- **Parameters**: Every parameter, constant, and threshold — values, ranges, defaults, source, page
-- **Algorithms**: Numbered steps with inputs, outputs, state, page citation
-- **Testable Properties**: Bounds, monotonic relationships, invariants — with page citation
+- **Equations / Statistical Models**: Every equation and model specification with all variables defined and units given, with page citation. Includes regression models, survival models, Bayesian specifications — not just pure math.
+- **Parameters**: Every parameter, constant, threshold, dosage, effect size, and confidence interval — values, ranges, defaults, source, page
+- **Effect Sizes**: Every reported effect with measure type (HR, OR, RR, RD, Cohen's d, accuracy, etc.), point estimate, CI, p-value, and population context — with page citation
+- **Algorithms / Protocols**: Numbered steps with inputs, outputs, state, page citation. For clinical studies: treatment protocols, randomization procedures, endpoint adjudication criteria.
+- **Testable Properties**: Bounds, monotonic relationships, invariants, clinical thresholds, NNT/NNH, subgroup interactions — with page citation
 
 ---
 
