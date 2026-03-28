@@ -67,6 +67,7 @@ def resolve_metadata_s2(s2_query: str) -> dict | None:
             fields=[
                 'title', 'authors', 'year', 'externalIds',
                 'url', 'abstract', 'openAccessPdf',
+                'citationStyles', 'venue', 'publicationVenue', 'journal',
             ],
         )
     except Exception as exc:
@@ -82,6 +83,25 @@ def resolve_metadata_s2(s2_query: str) -> dict | None:
     oa_pdf = None
     if paper.openAccessPdf:
         oa_pdf = paper.openAccessPdf.get('url')
+    # Extract BibTeX and structured venue/journal metadata
+    bibtex = None
+    if hasattr(paper, 'citationStyles') and paper.citationStyles:
+        bibtex = paper.citationStyles.get('bibtex')
+    venue = getattr(paper, 'venue', None) or None
+    journal_obj = getattr(paper, 'journal', None)
+    journal_name = None
+    journal_volume = None
+    journal_pages = None
+    if journal_obj:
+        journal_name = getattr(journal_obj, 'name', None)
+        journal_volume = getattr(journal_obj, 'volume', None)
+        journal_pages = getattr(journal_obj, 'pages', None)
+    pub_venue = getattr(paper, 'publicationVenue', None)
+    pub_venue_name = None
+    pub_venue_type = None
+    if pub_venue:
+        pub_venue_name = getattr(pub_venue, 'name', None)
+        pub_venue_type = getattr(pub_venue, 'type', None)
     return {
         'title': paper.title,
         'authors': [a.name for a in (paper.authors or [])],
@@ -92,6 +112,11 @@ def resolve_metadata_s2(s2_query: str) -> dict | None:
         'url': paper.url,
         'pdf_url': oa_pdf,
         'first_author_surname': first_author,
+        'bibtex': bibtex,
+        'venue': pub_venue_name or venue or journal_name,
+        'venue_type': pub_venue_type,
+        'volume': journal_volume,
+        'pages': journal_pages,
     }
 
 
@@ -182,7 +207,7 @@ def fetch_paper(identifier: str, papers_dir: Path, output_dir: str | None = None
         dirname = f"paper_{value.replace('/', '_')}"
 
     meta_out = {k: v for k, v in metadata.items()
-                if k != 'first_author_surname'}
+                if k != 'first_author_surname' and v is not None}
     paper_dir = papers_dir / dirname
 
     result = {
