@@ -98,27 +98,41 @@ Do not dispatch weak landing-page URLs when the title or a stronger identifier i
 
 ### Subagent Prompt Template
 
-Read the sibling paper-process SKILL.md once (`../paper-process/SKILL.md`, relative to this skill) and use it as the base prompt for all subagents. Each subagent prompt should include:
+Each subagent receives a prompt that tells it to **invoke the paper-process skill**. The foreman does NOT summarize, paraphrase, or re-explain paper-process instructions. The subagent runs the skill itself.
 
-1. The paper-process SKILL.md instructions
-2. The exact intended paper for that lead, plus the normalized identifier or exact title the worker should use
-3. Instructions to write a per-paper report to `./reports/paper-<safe-name>.md`
-4. **Instructions to SKIP reconcile (Step 7) and index.md update (Step 8)** — the foreman handles these after each agent completes
-5. A reminder that any nested paper-reading delegation must stay on the strongest available full-size model and must not downgrade to a mini/small tier
-6. A reminder that if retrieval resolves to a different paper than the intended lead, the worker must stop and report mismatch
+**On platforms with skill invocation (Claude Code):**
 
-**Do NOT use worktree isolation.** Paper-process writes to shared state (papers/index.md, cross-references in existing papers' notes.md via reconcile). Worktrees strand all of that with no clean merge path.
+Each subagent prompt is exactly:
 
-If nested skill invocation is unavailable or unreliable on this platform, do not rely on
-paper-process dispatch. Instead, derive this skill's installed directory from the injected
-`<path>`, then run:
+```
+Process this paper using the paper-process skill:
+
+/research-papers:paper-process <IDENTIFIER>
+
+Additional instructions:
+- SKIP reconcile (Step 7) and index.md update (Step 8) — the foreman handles these.
+- Use the strongest available full-size model for all work. Never use mini/small/flash tiers.
+- If retrieval resolves to a different paper than intended, STOP and report mismatch.
+- Write a per-paper report to ./reports/paper-<safe-name>.md
+```
+
+Where `<IDENTIFIER>` is the normalized identifier (DOI, arXiv URL, exact title, etc.) from the triage step. That is the entire prompt. Do not add anything else.
+
+**On platforms WITHOUT skill invocation (Codex CLI, Gemini CLI):**
+
+Derive this skill's installed directory from the injected `<path>`, then run:
 
 ```bash
 python "<skill-dir>/../paper-process/scripts/emit_nested_process_fallback.py"
 ```
 
-Read the FULL stdout and follow it exactly for each lead instead of opening
-`paper-process/SKILL.md` piecemeal.
+Read the FULL stdout. For each lead, create the subagent prompt by taking that output verbatim and replacing `$ARGUMENTS` with the normalized identifier. Append the same additional instructions listed above (skip reconcile/index.md, strongest model, mismatch stop, report path).
+
+**Do NOT:**
+- Summarize, abbreviate, or paraphrase the paper-process instructions
+- Write your own version of the retrieval/reading/extraction steps
+- Add extra steps, heuristics, or "improvements" to the subagent prompt
+- Use worktree isolation (paper-process writes to shared state)
 
 ### Sequential Mode (default)
 
