@@ -92,21 +92,24 @@ def build_sync_commands(
     source_name = infer_source_name(paper_dir)
     metadata = load_metadata(paper_dir)
     origin_type, origin_value = infer_origin(paper_dir, metadata)
+    paper_pdf = paper_dir / "paper.pdf"
 
-    commands: list[list[str]] = [
-        [
-            "pks",
-            "source",
-            "init",
-            source_name,
-            "--kind",
-            "academic_paper",
-            "--origin-type",
-            origin_type,
-            "--origin-value",
-            origin_value,
-        ]
+    init_command = [
+        "pks",
+        "source",
+        "init",
+        source_name,
+        "--kind",
+        "academic_paper",
+        "--origin-type",
+        origin_type,
+        "--origin-value",
+        origin_value,
     ]
+    if paper_pdf.exists():
+        init_command.extend(["--content-file", str(paper_pdf)])
+
+    commands: list[list[str]] = [init_command]
 
     notes_path = paper_dir / "notes.md"
     if notes_path.exists():
