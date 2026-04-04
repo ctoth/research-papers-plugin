@@ -16,9 +16,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-import yaml
-
-
 def infer_source_name(paper_dir: Path) -> str:
     """Use the paper directory name as the propstore source name."""
     return paper_dir.resolve().name
@@ -51,34 +48,6 @@ def infer_origin(paper_dir: Path, metadata: dict[str, Any]) -> tuple[str, str]:
     if paper_pdf.exists():
         return "file", str(paper_pdf.resolve())
     return "manual", infer_source_name(paper_dir)
-
-
-def load_concept_inventory(paper_dir: Path) -> list[dict[str, str]]:
-    """Load paper-local concept proposals from concepts.yaml when present."""
-    concepts_path = paper_dir / "concepts.yaml"
-    if not concepts_path.exists():
-        return []
-    loaded = yaml.safe_load(concepts_path.read_text(encoding="utf-8")) or {}
-    concepts = loaded.get("concepts", [])
-    if not isinstance(concepts, list):
-        raise ValueError(f"{concepts_path} has non-list 'concepts'")
-    result: list[dict[str, str]] = []
-    for index, entry in enumerate(concepts, start=1):
-        if not isinstance(entry, dict):
-            raise ValueError(f"{concepts_path} concept #{index} must be a mapping")
-        local_name = entry.get("local_name") or entry.get("proposed_name")
-        definition = entry.get("definition")
-        form = entry.get("form")
-        if not all(isinstance(value, str) and value.strip() for value in (local_name, definition, form)):
-            raise ValueError(f"{concepts_path} concept #{index} is missing local_name/definition/form")
-        result.append(
-            {
-                "local_name": str(local_name).strip(),
-                "definition": str(definition).strip(),
-                "form": str(form).strip(),
-            }
-        )
-    return result
 
 
 def build_sync_commands(
@@ -123,20 +92,10 @@ def build_sync_commands(
             ["pks", "source", "write-metadata", source_name, "--file", str(metadata_path)]
         )
 
-    for concept in load_concept_inventory(paper_dir):
+    concepts_path = paper_dir / "concepts.yaml"
+    if concepts_path.exists():
         commands.append(
-            [
-                "pks",
-                "source",
-                "propose-concept",
-                source_name,
-                "--name",
-                concept["local_name"],
-                "--definition",
-                concept["definition"],
-                "--form",
-                concept["form"],
-            ]
+            ["pks", "source", "add-concepts", source_name, "--batch", str(concepts_path)]
         )
 
     claims_path = paper_dir / "claims.yaml"

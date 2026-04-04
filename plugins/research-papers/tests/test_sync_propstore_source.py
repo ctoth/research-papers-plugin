@@ -89,7 +89,7 @@ class TestBuildSyncCommands(unittest.TestCase):
             self.assertIn("--content-file", commands[0])
             self.assertTrue(any(command[:3] == ["pks", "source", "write-notes"] for command in commands))
             self.assertTrue(any(command[:3] == ["pks", "source", "write-metadata"] for command in commands))
-            self.assertTrue(any(command[:3] == ["pks", "source", "propose-concept"] for command in commands))
+            self.assertTrue(any(command[:3] == ["pks", "source", "add-concepts"] for command in commands))
             self.assertTrue(any(command[:3] == ["pks", "source", "add-claim"] for command in commands))
             self.assertTrue(any(command[:3] == ["pks", "source", "add-justification"] for command in commands))
             self.assertTrue(any(command[:3] == ["pks", "source", "add-stance"] for command in commands))
