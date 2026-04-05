@@ -19,6 +19,7 @@ This skill is a checklist, not an outcome sketch.
 - Do not add unlisted probes or "better" preprocessing steps.
 - If you are blocked on a specific step, stop there and report the exact blocker instead of inventing a workaround.
 - Do not report progress from intermediate artifacts not named in this procedure.
+- This skill stops at paper artifacts and collection cross-references. It does not initialize or mutate propstore source branches.
 - Do not declare yourself blocked merely because this skill does not name a platform-specific image-view tool. Use the platform's local image-reading capability (for example, `Read Image` in Claude Code or `view_image` in Codex) to inspect `pngs/page-*.png`.
 - Only report an image-reading blocker after you have actually attempted to inspect a local page image such as `page-000.png` and the platform refused or failed.
 
@@ -505,7 +506,7 @@ If nested skill invocation is unavailable or unreliable on this platform, derive
 installed directory from the injected `<path>`, then run:
 
 ```bash
-python "<skill-dir>/../reconcile/scripts/emit_nested_reconcile_fallback.py"
+uv run "<skill-dir>/../reconcile/scripts/emit_nested_reconcile_fallback.py"
 ```
 
 Read the FULL stdout and follow it exactly on the current paper directory instead of opening

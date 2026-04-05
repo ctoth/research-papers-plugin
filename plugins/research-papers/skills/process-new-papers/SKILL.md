@@ -14,6 +14,8 @@ Default execution mode:
 - If subagents are available, parallelize across papers.
 - Only process sequentially if subagents are unavailable.
 
+This skill is a batch wrapper around `paper-reader`. It does not initialize or mutate propstore source branches.
+
 ## Execution Discipline
 
 This skill is a checklist, not an outcome sketch.
@@ -77,7 +79,7 @@ If nested skill invocation is unavailable or unreliable on this platform, derive
 installed directory from the injected `<path>`, then ensure the subagent (or you if subagents are unavailable) runs:
 
 ```bash
-python "<skill-dir>/../paper-reader/scripts/emit_nested_reader_fallback.py"
+uv run "<skill-dir>/../paper-reader/scripts/emit_nested_reader_fallback.py"
 ```
 
 Read the FULL stdout and follow it exactly for the current PDF instead of opening

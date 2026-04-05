@@ -10,6 +10,8 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 Download a scientific paper, extract structured notes, register concepts, extract claims and justifications, and ingest everything into a propstore source branch.
 
+This is the per-paper propstore ingestion orchestrator. `paper-reader` remains a paper-artifact skill; collection-wide stance extraction belongs to `ingest-collection`.
+
 ## Execution Discipline
 
 This skill is a checklist, not an outcome sketch.
@@ -46,7 +48,7 @@ When retrieval completes, note the output path (e.g., `papers/Author_Year_ShortT
 Use this skill's injected `<path>` to locate the installed `paper-process` skill directory, then run:
 
 ```bash
-python "<skill-dir>/scripts/emit_nested_process_fallback.py"
+uv run "<skill-dir>/scripts/emit_nested_process_fallback.py"
 ```
 
 Read the FULL stdout and follow it exactly instead of opening sibling `SKILL.md` files piecemeal.
@@ -177,7 +179,7 @@ When all steps have completed, write a summary to `./reports/paper-$SAFE_NAME.md
 - Whether retrieval succeeded (and source: arxiv/sci-hub/etc.)
 - Whether reading succeeded
 - Whether claim extraction succeeded (claim count by type)
-- Whether concept registration succeeded (N registry-linked, N newly proposed)
+- Whether concept registration succeeded (N exact-match links, N newly proposed)
 - Whether justification extraction succeeded (justification count)
 - Whether finalize succeeded (status: ready/blocked)
 - Usefulness rating for this project

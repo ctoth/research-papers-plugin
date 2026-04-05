@@ -11,6 +11,8 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 Systematically adjudicate disagreements across the paper collection. Not summaries — *judgments*.
 
+This skill writes verdict documents and may acquire missing evidence through `paper-process`. It does not mutate propstore source branches directly.
+
 ## Step 0: Parse Arguments
 
 - If `$ARGUMENTS` is `--all`: full collection sweep — discover topics, assign papers, produce all verdicts
@@ -165,7 +167,7 @@ If nested skill invocation is unavailable or unreliable on this platform, derive
 installed directory from the injected `<path>`, then run:
 
 ```bash
-python "<skill-dir>/../paper-process/scripts/emit_nested_process_fallback.py"
+uv run "<skill-dir>/../paper-process/scripts/emit_nested_process_fallback.py"
 ```
 
 Read the FULL stdout and follow it exactly instead of opening `paper-process/SKILL.md` piecemeal.
