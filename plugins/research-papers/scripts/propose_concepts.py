@@ -65,6 +65,22 @@ def extract_concepts(papers_dir: Path) -> dict[str, dict[str, Any]]:
                     for item in cs:
                         if isinstance(item, str):
                             names.append(item)
+                # equation claims: variables[].concept
+                variables = claim.get("variables")
+                if isinstance(variables, list):
+                    for entry in variables:
+                        if isinstance(entry, dict):
+                            vc = entry.get("concept")
+                            if isinstance(vc, str) and vc:
+                                names.append(vc)
+                # model claims: parameters[].concept
+                parameters = claim.get("parameters")
+                if isinstance(parameters, list):
+                    for entry in parameters:
+                        if isinstance(entry, dict):
+                            pc = entry.get("concept")
+                            if isinstance(pc, str) and pc:
+                                names.append(pc)
 
                 unit = claim.get("unit", "")
 
@@ -143,6 +159,22 @@ def _extract_concepts_single_paper(paper_dir: Path) -> dict[str, dict[str, Any]]
             for item in cs:
                 if isinstance(item, str):
                     names.append(item)
+        # equation claims: variables[].concept
+        variables = claim.get("variables")
+        if isinstance(variables, list):
+            for entry in variables:
+                if isinstance(entry, dict):
+                    vc = entry.get("concept")
+                    if isinstance(vc, str) and vc:
+                        names.append(vc)
+        # model claims: parameters[].concept
+        parameters = claim.get("parameters")
+        if isinstance(parameters, list):
+            for entry in parameters:
+                if isinstance(entry, dict):
+                    pc = entry.get("concept")
+                    if isinstance(pc, str) and pc:
+                        names.append(pc)
 
         unit = claim.get("unit", "")
 

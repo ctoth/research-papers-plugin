@@ -3,3 +3,9 @@ __pycache__/
 *.log
 .venv/
 .hypothesis
+reports
+notes
+*.pdf
+*.png
+knowledge
+prompts

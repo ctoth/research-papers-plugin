@@ -69,6 +69,36 @@ claims:
     unit: "%"
 """
 
+SAMPLE_CLAIMS_YAML_EQUATION = """\
+source:
+  paper: Model_2020_EquationExample
+claims:
+  - id: claim1
+    type: equation
+    concept: risk_model
+    expression: "HR = exp(beta * X)"
+    sympy: "Eq(HR, exp(beta * X))"
+    variables:
+      - symbol: HR
+        concept: hazard_ratio
+        role: dependent
+      - symbol: beta
+        concept: log_hazard_coefficient
+        role: parameter
+      - symbol: X
+        concept: covariate_value
+        role: independent
+  - id: claim2
+    type: model
+    name: "Cox proportional hazards"
+    concept: survival_model
+    parameters:
+      - name: baseline_hazard
+        concept: baseline_hazard_rate
+      - name: treatment_effect
+        concept: treatment_hazard_ratio
+"""
+
 
 def _make_papers_dir(root: Path) -> Path:
     """Create a directory with sample claims.yaml files."""
@@ -129,6 +159,31 @@ class TestExtractConcepts(unittest.TestCase):
             concepts = PROPOSE_MODULE.extract_concepts(papers)
             self.assertEqual(concepts["event_rate"]["count"], 2)
             self.assertEqual(len(concepts["event_rate"]["papers"]), 2)
+
+    def test_extracts_variables_concept_field(self) -> None:
+        """Equation claims: variables[].concept should be extracted."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            paper_dir = Path(tmpdir) / "Model_2020_EquationExample"
+            paper_dir.mkdir()
+            (paper_dir / "claims.yaml").write_text(
+                SAMPLE_CLAIMS_YAML_EQUATION, encoding="utf-8"
+            )
+            concepts = PROPOSE_MODULE.extract_concepts(Path(tmpdir))
+            self.assertIn("hazard_ratio", concepts)
+            self.assertIn("log_hazard_coefficient", concepts)
+            self.assertIn("covariate_value", concepts)
+
+    def test_extracts_parameters_concept_field(self) -> None:
+        """Model claims: parameters[].concept should be extracted."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            paper_dir = Path(tmpdir) / "Model_2020_EquationExample"
+            paper_dir.mkdir()
+            (paper_dir / "claims.yaml").write_text(
+                SAMPLE_CLAIMS_YAML_EQUATION, encoding="utf-8"
+            )
+            concepts = PROPOSE_MODULE.extract_concepts(Path(tmpdir))
+            self.assertIn("baseline_hazard_rate", concepts)
+            self.assertIn("treatment_hazard_ratio", concepts)
 
     def test_collects_units(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:

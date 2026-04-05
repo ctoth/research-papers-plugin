@@ -109,7 +109,7 @@ pks source write-metadata "$source_name" --file "$paper_dir/metadata.json"
 
 If `pks` is not available or `knowledge/` doesn't exist, STOP and report: "No propstore found. Run `pks init` on the knowledge directory first."
 
-## Step 5: Extract Claims
+## Step 5: Extract Claims (File Only)
 
 ### Primary: Skill Invocation
 
@@ -117,11 +117,11 @@ If `pks` is not available or `knowledge/` doesn't exist, STOP and report: "No pr
 /research-papers:extract-claims <paper-directory-path>
 ```
 
-The skill will use canonical concept names from any existing concepts.yaml and ingest claims via `pks source add-claim`.
+The skill writes `claims.yaml` and may attempt `pks source add-claim`. **That ingestion step will fail** because concepts are not registered yet — this is expected. The important output is the `claims.yaml` file on disk. Claim ingestion happens in Step 7 after concepts are registered.
 
 ### Fallback
 
-Follow the extract-claims SKILL.md instructions directly on the paper directory.
+Follow the extract-claims SKILL.md instructions through Step 3 (write claims.yaml). Steps 4-5 (validate + ingest) can be skipped here — they happen later.
 
 ## Step 6: Register Concepts
 
@@ -137,9 +137,20 @@ This runs `propose_concepts.py pks-batch` to extract concept names from claims.y
 
 Follow the register-concepts SKILL.md instructions directly.
 
-**Note:** register-concepts runs AFTER extract-claims because it derives the concept inventory from claims.yaml. The pipeline is: extract claims first (using descriptive names), then register concepts (deriving from what claims actually reference), then the pks source branch links concepts to claims during finalize.
+**Why this order:** register-concepts runs AFTER extract-claims because it derives the concept inventory from claims.yaml. Claims use human-readable concept names; register-concepts extracts those names and registers them on the source branch.
 
-## Step 7: Extract Justifications
+## Step 7: Ingest Claims
+
+Now that concepts are registered on the source branch, ingest claims:
+
+```bash
+source_name=$(basename "$paper_dir")
+pks source add-claim "$source_name" --batch "$paper_dir/claims.yaml"
+```
+
+**If this fails with "unknown concept reference(s)":** the error lists specific missing names. Add those concepts to `concepts.yaml`, re-run `pks source add-concepts`, and retry `add-claim`. Iterate until `add-claim` succeeds — the unknown set is finite and shrinks each iteration.
+
+## Step 8: Extract Justifications
 
 ### Primary: Skill Invocation
 
@@ -153,25 +164,20 @@ The skill writes justifications.yaml and ingests via `pks source add-justificati
 
 Follow the extract-justifications SKILL.md instructions directly.
 
-## Step 8: Finalize Source Branch
+## Step 9: Finalize Source Branch
 
 ```bash
 pks source finalize "$source_name"
 ```
 
-Read the finalize report:
-```bash
-cat "$paper_dir/finalize_report.json" 2>/dev/null || echo "Check pks source branch for report"
-```
+If status is "blocked", fix the reported errors and re-finalize. Common issues:
+- Unknown concept references → iterate Step 7
+- Missing claim artifact IDs → re-run Step 7
+- Justification references unresolved claims → check claim IDs in justifications.yaml match claims.yaml
 
-If status is "blocked", report the errors. Common issues:
-- Unknown concept references → re-run register-concepts
-- Missing claim artifact IDs → re-run add-claim
-- Unlinked concepts → alignment needed (resolved at collection level)
+**Note:** Stances are NOT extracted here. Cross-paper stance extraction happens at collection level via the ingest-collection skill, after all papers have claims on master. This is because stances require visibility into other papers' promoted claims.
 
-**Note:** Stances are NOT extracted here. Cross-paper stance extraction happens at collection level via the ingest-collection skill, after all papers have claims. This is because stances require visibility into other papers' claims.
-
-## Step 9: Report
+## Step 10: Report
 
 When all steps have completed, write a summary to `./reports/paper-$SAFE_NAME.md` where $SAFE_NAME is derived from the paper directory name. Include:
 
@@ -180,6 +186,7 @@ When all steps have completed, write a summary to `./reports/paper-$SAFE_NAME.md
 - Whether reading succeeded
 - Whether claim extraction succeeded (claim count by type)
 - Whether concept registration succeeded (N exact-match links, N newly proposed)
+- Whether claim ingestion succeeded (iterate-to-fixed-point cycles needed)
 - Whether justification extraction succeeded (justification count)
 - Whether finalize succeeded (status: ready/blocked)
 - Usefulness rating for this project
