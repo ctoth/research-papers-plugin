@@ -1,14 +1,14 @@
 ---
 name: extract-stances
-description: Extract inter-claim stances from a paper collection. Reads each paper's notes.md and claims.yaml, identifies argumentative relationships between claims across papers, and writes stance files. Requires claims to already exist.
-argument-hint: "<papers/Author_Year_Title> or --all"
+description: Extract inter-claim stances from a paper collection. Reads each paper's notes.md and claims.yaml, identifies argumentative relationships between claims across papers, and writes standalone stances.yaml files. Requires claims to already exist.
+argument-hint: "<papers/Author_Year_Title> [--cluster paper1,paper2,...] or --all"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Extract Stances: $ARGUMENTS
 
-Extract argumentative relationships (stances) between claims across a paper collection.
+Extract argumentative relationships (stances) between claims across a paper collection. Writes a standalone `stances.yaml` file per paper (not embedded in claims.yaml).
 
 ## What Stances Are
 
@@ -52,7 +52,7 @@ Stances live in the *argumentative structure* of papers, not the results tables.
 
 ### What NOT to Stance
 
-- Do not create stances between claims in the *same* paper. Intra-paper structure is captured by the claim types themselves (mechanism explains observation, limitation scopes parameter).
+- Do not create stances between claims in the *same* paper. Intra-paper structure is captured by justifications (extract-justifications skill).
 - Do not speculate. Every stance must be traceable to something the paper says or to a verifiable structural relationship (same cohort = supersedes, same endpoint + different result = rebuts).
 - Do not create rebuts between claims that have different conditions and don't actually conflict. Two HR values for different endpoints are not in tension.
 
@@ -68,9 +68,11 @@ else
 fi
 ```
 
+If `--cluster paper1,paper2,...` is provided, only consider stances between papers in the specified cluster. This is used by the ingest-collection skill for cluster-based dispatch.
+
 ## Step 1: Load All Claims
 
-Read every `claims.yaml` in the collection. Build a mental index: which paper has which claims, what concepts they reference, what values they assert.
+Read every `claims.yaml` in the collection (or the cluster). Build a mental index: which paper has which claims, what concepts they reference, what values they assert.
 
 ```bash
 for d in papers/*/; do
@@ -111,64 +113,60 @@ For each candidate, determine the stance type using the precise semantics above.
 - Is it corroboration (supports) or explanation (explains)?
 - Does it attack a premise (undermines) or the conclusion (rebuts)?
 
-## Step 5: Write Stance Blocks
+## Step 5: Write Standalone stances.yaml
 
-Add stances to the source claim's entry in claims.yaml:
+Write stances to a **separate** `stances.yaml` file (do NOT embed in claims.yaml):
 
 ```yaml
-- id: claim3
-  type: parameter
-  concept: primary_endpoint_hazard_ratio
-  value: 0.96
-  # ... existing fields ...
-  stances:
-    - type: supports
-      target: "Bowman_2018_EffectsAspirinPrimaryPrevention:claim11"
-      strength: "strong"
-      note: "Independent replication of null primary prevention result"
-    - type: undermines
-      target: "Unknown_2009_AspirinPrimarySecondaryPrevention:claim7"
-      strength: "moderate"
-      conditions_differ: "Modern background therapy (43% statins) vs pre-statin era"
-      note: "Low observed event rates undermine older risk estimates"
+source:
+  paper: <paper_dir_name>
+
+stances:
+  - source_claim: "claim3"
+    target: "Bowman_2018_EffectsAspirinPrimaryPrevention:claim11"
+    type: supports
+    strength: "strong"
+    note: "Independent replication of null primary prevention result"
+  - source_claim: "claim7"
+    target: "Unknown_2009_AspirinPrimarySecondaryPrevention:claim7"
+    type: undermines
+    strength: "moderate"
+    note: "Low observed event rates undermine older risk estimates"
 ```
 
-**Required fields:** `type` (one of: rebuts, undercuts, undermines, supports, explains, supersedes), `target` (claim ID — see targeting rules below).
+**Required fields per stance:** `source_claim` (claim ID from this paper), `type` (one of: rebuts, undercuts, undermines, supports, explains, supersedes), `target` (claim ID — see targeting rules below).
 
-**Optional fields:** `strength` (strong/moderate/weak), `note` (textual justification — always include this), `conditions_differ` (when the stance is specifically about differing conditions).
+**Optional fields:** `strength` (strong/moderate/weak), `note` (textual justification — always include this).
 
 **Claim ID targeting:**
 - **Same paper:** use the bare claim ID (e.g., `"claim3"`)
-- **Different paper:** use `PaperDirName:claimID` (e.g., `"Bowman_2018_EffectsAspirinPrimaryPrevention:claim11"`). The paper directory name is the folder name under `papers/`. The colon-prefixed format is preserved through `pks import-papers` and resolved in the compiled sidecar.
+- **Different paper:** use `PaperDirName:claimID` (e.g., `"Bowman_2018_EffectsAspirinPrimaryPrevention:claim11"`). The paper directory name is the folder name under `papers/`.
 
-**Do NOT** add a separate `target_paper` field. The paper name goes inside the `target` value, before the colon. `target_paper` is not a valid field and will be ignored.
+Write to `<paper_dir>/stances.yaml`.
 
-## Step 6: Validate
+## Step 6: Ingest into Propstore
 
 ```bash
-pks claim validate-file <paper_dir>/claims.yaml
+source_name=$(basename "$paper_dir")
+pks source add-stance "$source_name" --batch "$paper_dir/stances.yaml"
 ```
 
-Stance validation checks:
-- `type` is one of the valid stance types
-- `target` references an existing claim ID (bare IDs checked locally; colon-prefixed cross-paper targets are deferred to import time)
+If this fails with claim reference errors, the referenced claim IDs don't match the source branch's claims.yaml. Fix the references and retry.
 
 ## Step 7: Stamp Provenance
 
 ```bash
 uv run plugins/research-papers/scripts/stamp_provenance.py \
-  "<paper_dir>/claims.yaml" \
+  "<paper_dir>/stances.yaml" \
   --agent "<your model name>" --skill extract-stances
 ```
-
-This records which model extracted stances, when, and which plugin version was used. Plugin version is autodetected.
 
 ## Output
 
 When done with each paper:
 ```
-Stances extracted: papers/[dirname]/claims.yaml
-  Stances added: N total
+Stances extracted: papers/[dirname]/stances.yaml
+  Stances written: N total
     supports: X
     rebuts: X
     undercuts: X
