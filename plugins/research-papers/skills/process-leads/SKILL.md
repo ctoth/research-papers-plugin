@@ -123,7 +123,7 @@ Where `<IDENTIFIER>` is the normalized identifier (DOI, arXiv URL, exact title, 
 Derive this skill's installed directory from the injected `<path>`, then run:
 
 ```bash
-python "<skill-dir>/../paper-process/scripts/emit_nested_process_fallback.py"
+uv run "<skill-dir>/../paper-process/scripts/emit_nested_process_fallback.py"
 ```
 
 Read the FULL stdout. For each lead, create the subagent prompt by taking that output verbatim and replacing `$ARGUMENTS` with the normalized identifier. Append the same additional instructions listed above (skip reconcile/index.md, strongest model, mismatch stop, report path).

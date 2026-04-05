@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -105,11 +106,16 @@ class StampYamlTests(unittest.TestCase):
 
 class FindPluginVersionTests(unittest.TestCase):
     def test_finds_version_from_plugin_json(self) -> None:
+        plugin_manifest = (
+            Path(__file__).resolve().parent.parent / ".claude-plugin" / "plugin.json"
+        )
+        expected = json.loads(plugin_manifest.read_text(encoding="utf-8"))["version"]
+
         # The script itself lives under plugins/research-papers/scripts/,
         # so walking up from it should find .claude-plugin/plugin.json.
         version = MODULE.find_plugin_version(SCRIPT_PATH)
         self.assertIsNotNone(version)
-        self.assertEqual(version, "4.0")
+        self.assertEqual(version, expected)
 
 
 if __name__ == "__main__":

@@ -44,6 +44,7 @@ class TestSourceWorkflowContracts(unittest.TestCase):
             ("skills", "paper-process", "SKILL.md"),
             ("skills", "paper-reader", "SKILL.md"),
             ("skills", "process-new-papers", "SKILL.md"),
+            ("skills", "process-leads", "SKILL.md"),
             ("skills", "adjudicate", "SKILL.md"),
         ):
             skill = (PLUGIN_ROOT.joinpath(*rel_path)).read_text(encoding="utf-8")
