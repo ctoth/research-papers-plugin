@@ -24,19 +24,16 @@ ls "$paper_dir"/claims.yaml 2>/dev/null && echo "EXISTS: claims.yaml — use enr
 Check for concept inventory:
 ```bash
 ls "$paper_dir"/concepts.yaml 2>/dev/null
-ls knowledge/concepts/*.yaml 2>/dev/null | head -5
 ```
 
-If `<paper_dir>/concepts.yaml` exists (from register-concepts), read it and use those `local_name` values as canonical concept references in claims. If no concepts exist, use descriptive `lowercase_underscore` names — claims are still valid.
+If `<paper_dir>/concepts.yaml` exists (from register-concepts), read it and use those `local_name` values as concept references in claims. If no concept inventory exists yet, use descriptive `lowercase_underscore` names and keep them consistent across the file.
 
 ## Step 1: Read Source Material
 
 Read:
 - `<paper_dir>/notes.md` — primary source
 - `<paper_dir>/paper.pdf` or page images in `<paper_dir>/pngs/` — for page numbers and verification
-- `<paper_dir>/concepts.yaml` — if it exists, this is the paper's concept inventory from register-concepts. Use `local_name` values as canonical concept references in all claims.
-- Concept registry (`knowledge/concepts/*.yaml`) — for concept ID resolution
-- Existing claims in `knowledge/claims/*.yaml` — to detect duplicate equations (see Duplicate Detection below)
+- `<paper_dir>/concepts.yaml` — if it exists, this is the paper's source-local concept inventory from register-concepts. Use `local_name` values as concept references in all claims.
 
 ## Step 2: Extract Claims by Type
 
@@ -47,7 +44,7 @@ For each parameter, constant, or threshold mentioned in the paper:
 ```yaml
 - id: claim1
   type: parameter
-  concept: <concept_id or descriptive_name>
+  concept: <local_concept_name or descriptive_name>
   value: <number>
   unit: <unit string>
   conditions:
@@ -64,7 +61,7 @@ Rules:
 - Every parameter needs at minimum: id, type, concept, provenance
 - Include `value` OR `lower_bound`+`upper_bound` (at least one)
 - Always include `unit` when known
-- Use concept IDs from the registry when available; otherwise use lowercase_underscore names
+- Use names from the paper's `concepts.yaml` inventory when available; otherwise use descriptive lowercase_underscore names
 
 ### 2.2: Equation Claims
 
@@ -230,11 +227,11 @@ Write to `<paper_dir>/claims.yaml`.
 ## Step 4: Validate
 
 ```bash
-if [ ! -d knowledge ]; then
-  uv run pks init
-fi
+ls knowledge/.git 2>/dev/null || echo "MISSING: knowledge/.git"
 pks claim validate-file "$paper_dir"/claims.yaml
 ```
+
+If `knowledge/.git` is missing → STOP. Run `pks init` or use `paper-process`, which initializes the source branch first.
 
 If validation fails, fix and re-validate. **Do not consider extraction complete until validation passes.**
 
@@ -322,10 +319,7 @@ When a paper introduces a formal definition, create one `observation` claim for 
 
 ## Duplicate Detection
 
-Before creating an equation claim, check if the same equation exists in `knowledge/claims/`. If it does:
-- Do NOT create a duplicate
-- Instead, create a `supports` stance referencing the existing claim ID
-- Reuse the existing concept IDs
+Do not query master-branch claims from this skill. Create the local equation claim for this source and let propstore deduplicate or reconcile at finalize/promotion time.
 
 ## Quality Checklist
 
@@ -340,7 +334,7 @@ Before creating an equation claim, check if the same equation exists in `knowled
 - [ ] Comparison claims name both subject and comparand with evidence
 - [ ] Limitation claims specify the scope boundary
 - [ ] Conditions use consistent CEL vocabulary across the file
-- [ ] Concept IDs match the registry where possible
+- [ ] Concept names match the paper's concept inventory where one exists
 - [ ] Context assigned if identified during register-concepts — or explicitly universal
 
 ## Output

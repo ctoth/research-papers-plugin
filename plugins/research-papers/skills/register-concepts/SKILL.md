@@ -24,8 +24,8 @@ If `claims.yaml` is missing → STOP, run extract-claims first.
 ## Step 1: Check Propstore State
 
 ```bash
-ls knowledge/concepts/*.yaml 2>/dev/null | head -20
-pks form list 2>/dev/null
+ls knowledge/.git 2>/dev/null
+pks source --help 2>/dev/null | head -20
 ```
 
 If no `knowledge/` directory exists → STOP. Report: "No propstore found. Run `pks init` first."
@@ -37,8 +37,6 @@ Run the concept proposer to extract all concept names from this paper's claims.y
 ```bash
 uv run scripts/propose_concepts.py pks-batch "$paper_dir" \
   --registry-dir knowledge/concepts \
-  --forms-dir knowledge/forms \
-  --domain cvd \
   --output "$paper_dir/concepts.yaml"
 ```
 
@@ -48,7 +46,7 @@ concepts:
   - local_name: "hazard_ratio"
     proposed_name: "hazard_ratio"
     definition: "Auto-proposed from 5 claim(s)."
-    form: "ratio"
+    form: "structural"
 ```
 
 ## Step 3: Enrich Definitions
@@ -89,11 +87,11 @@ pks source init "$source_name" --kind academic_paper --origin-type doi --origin-
 
 ## Step 5: Report Alignment
 
-After add-concepts, check which concepts linked to existing registry entries vs which are newly proposed:
+After add-concepts, check which concepts exact-matched existing canonical names vs which remain newly proposed:
 
 ```
 Concepts registered for: papers/[dirname]
-  Registry-linked (exact match): N (list names)
+  Exact-match links: N (list names)
   Newly proposed: N (list names)
   Total in concepts.yaml: N
 ```

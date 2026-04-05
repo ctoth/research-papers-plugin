@@ -1,8 +1,10 @@
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["pyyaml>=6.0"]
 # ///
-"""Sync a paper directory into propstore's source-oriented CLI surface.
+"""Sync one extracted paper directory into propstore's source-oriented CLI surface.
+
+This is a narrow helper for already-extracted paper directories. The primary
+repo-wide orchestration path is the `ingest-collection` skill.
 
 Usage:
     uv run scripts/sync_propstore_source.py <paper-dir> [--finalize] [--promote] [--dry-run]
