@@ -1,6 +1,6 @@
 ---
 name: register-concepts
-description: Register concepts needed by a paper into the propstore concept registry. Reads notes.md, identifies concepts, checks the registry for existing matches, and registers missing ones via pks. Also identifies and creates the paper's context if needed.
+description: Register concepts needed by a paper into a propstore source branch. Runs propose_concepts.py to extract concept inventory from claims, then enriches definitions via notes.md, and calls pks source add-concepts.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI."
@@ -8,153 +8,94 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 # Register Concepts: $ARGUMENTS
 
-Register all concepts needed by a paper into the propstore concept registry, and identify the paper's context. This must run before extract-claims or enrich-claims.
+Register all concepts needed by a paper into its propstore source branch. This must run after extract-claims (needs claims.yaml) and after `pks source init` has created the source branch.
 
 ## Step 0: Validate
 
 ```bash
 paper_dir="$ARGUMENTS"
 ls "$paper_dir"/notes.md 2>/dev/null || echo "MISSING: notes.md"
+ls "$paper_dir"/claims.yaml 2>/dev/null || echo "MISSING: claims.yaml"
 ```
 
-If `notes.md` is missing, STOP. Run paper-reader first.
+If `notes.md` is missing → STOP, run paper-reader first.
+If `claims.yaml` is missing → STOP, run extract-claims first.
 
-## Step 1: Check for Propstore
+## Step 1: Check Propstore State
 
 ```bash
-ls concepts/*.yaml 2>/dev/null || ls knowledge/concepts/*.yaml 2>/dev/null
+ls knowledge/concepts/*.yaml 2>/dev/null | head -20
+pks form list 2>/dev/null
 ```
 
-If no concepts directory exists → STOP. Report: "No propstore found. Run `pks init` first, or skip concept registration — claims can use descriptive lowercase_underscore names without a registry."
+If no `knowledge/` directory exists → STOP. Report: "No propstore found. Run `pks init` first."
 
-## Step 2: Read the Registry
+## Step 2: Mechanical Concept Extraction
+
+Run the concept proposer to extract all concept names from this paper's claims.yaml:
 
 ```bash
-ls knowledge/concepts/*.yaml 2>/dev/null | head -100
+uv run scripts/propose_concepts.py pks-batch "$paper_dir" \
+  --registry-dir knowledge/concepts \
+  --forms-dir knowledge/forms \
+  --domain cvd \
+  --output "$paper_dir/concepts.yaml"
 ```
 
-Read several concept files to understand what's already registered — their names, aliases, definitions, and forms. Build a mental model of the existing vocabulary before proceeding.
+Read the output `concepts.yaml`. It will have entries like:
+```yaml
+concepts:
+  - local_name: "hazard_ratio"
+    proposed_name: "hazard_ratio"
+    definition: "Auto-proposed from 5 claim(s)."
+    form: "ratio"
+```
 
-### Step 2a: Read form definitions
+## Step 3: Enrich Definitions
+
+The auto-generated definitions are placeholders. For each concept in `concepts.yaml`:
+
+1. Read the paper's `notes.md` to find how this concept is described
+2. Replace the placeholder definition with a 1-2 sentence definition that:
+   - Distinguishes this concept from near-neighbors
+   - Would make sense to someone unfamiliar with this specific paper
+   - Is specific enough to match against similar concepts in other papers
+
+Good: "Ratio of hazard rates between treatment and control arms, measuring the relative risk of an event occurring in the intervention group."
+Bad: "A ratio."
+
+3. Verify the `form` is correct:
+   - `ratio` for dimensionless ratios (hazard ratio, odds ratio, rate ratio, relative risk)
+   - `rate` for event rates (events per person-year, incidence rate)
+   - `score` for evaluation metrics, p-values, absolute risk differences
+   - `count` for discrete quantities (person-years, sample size)
+   - `structural` for methods, architectures, abstract concepts
+   - `category` for condition variables with enumerated values
+
+4. Write the enriched `concepts.yaml` back to disk.
+
+## Step 4: Ingest into Propstore
 
 ```bash
-pks form list
+source_name=$(basename "$paper_dir")
+pks source add-concepts "$source_name" --batch "$paper_dir/concepts.yaml"
 ```
 
-This shows all forms with their units. For each concept you plan to register, the form must match the physical quantity. Example: if concept22 has form "charge" with unit "C", do NOT reuse it for a position variable "q" which should have form "distance" with unit "m". A symbol match is not a concept match — dimensional consistency is what matters.
-
-### Step 2b: Load category vocabulary
-
+If this fails with "unknown source branch", the source branch hasn't been initialized. Run:
 ```bash
-pks concept categories
+# See paper-process skill for full init sequence
+pks source init "$source_name" --kind academic_paper --origin-type doi --origin-value "<doi>"
 ```
 
-This lists registered category concepts and their allowed values. When the paper uses a value not in an existing set, register it:
+## Step 5: Report Alignment
 
-```bash
-pks concept add-value <concept_name> --value "<new_value>"
-```
-
-If no category concepts exist yet, skip — vocabulary will be free-form.
-
-### Step 2c: Read existing claims for context
-
-```bash
-ls knowledge/claims/*.yaml 2>/dev/null | head -100
-```
-
-Skim existing claim files to understand what concepts are already in use. This prevents duplicate concept registration and helps reuse existing vocabulary.
-
-## Step 3: Identify Concepts This Paper Needs
-
-Read the paper's `notes.md`. List every distinct concept the paper discusses:
-- Methods and algorithms (e.g., "dense video captioning", "MapReduce decomposition")
-- Metrics and evaluation criteria (e.g., "CIDEr score", "caption quality")
-- Architectures and components (e.g., "temporal tokenizer", "memory bank")
-- Phenomena and properties (e.g., "temporal bias", "frame redundancy")
-- CEL condition variables (e.g., "dataset", "model", "task") — these need category concepts
-
-For each concept, check: does it already exist in the registry (by canonical_name or alias)?
-
-## Step 4: Register Missing Concepts
-
-For each concept NOT already in the registry:
-
-```bash
-pks concept add --name <lowercase_underscore_name> \
-  --domain <project-domain> \
-  --form structural \
-  --definition "<1-2 sentence definition>"
-```
-
-**Definition quality is critical.** Definitions are used for concept embeddings and deduplication. Write a definition that:
-- Distinguishes this concept from near-neighbors
-- Would make sense to someone unfamiliar with this specific paper
-- Is specific enough to match against similar concepts in other papers
-
-Good: "The task of generating natural language descriptions for all events in a video, each anchored to a temporal interval"
-Bad: "Video captioning method"
-
-**Form selection:**
-- `structural` for methods, architectures, phenomena, abstract concepts (most things)
-- `category` for condition variables that take enumerated values (dataset, model, task, metric)
-- `score` for evaluation metrics with numeric values (CIDEr, BLEU, mAP)
-- `count` for discrete quantities (frame counts, segment counts)
-- `rate` for rates (fps, words per minute)
-- `time` for durations
-- `ratio` for dimensionless ratios (hazard ratios, odds ratios, relative risks)
-
-**CEL condition concepts** — commonly needed:
-```bash
-# Only create if they don't already exist
-pks concept add --name dataset --domain general --form category \
-  --values "value1,value2" \
-  --definition "The benchmark dataset a result was evaluated on"
-```
-
-### Concept disambiguation
-
-When a name could match multiple existing concepts, check:
-- What are the dimensions/units this concept needs?
-- Does the definition match?
-- If unsure, register a NEW concept — deduplication happens later via embedding similarity
-
-### Reusing existing concepts
-
-- Search by name AND by reading definitions — a paper might call something "temporally-grounded captioning" but the registry has "dense_video_captioning" with a matching definition
-- If you find a match, do NOT create a duplicate
-- If unsure, create the new one
-
-## Step 5: Context Identification
-
-Identify which theoretical tradition or framework this paper belongs to.
-
-1. Read the paper's "Arguments Against Prior Work" and "Design Rationale" sections in notes.md
-2. Check existing contexts:
-   ```bash
-   ls knowledge/contexts/*.yaml 2>/dev/null
-   ```
-3. If the tradition matches an existing context, note it for claim extraction
-4. If the tradition is NEW and clearly distinct:
-   ```bash
-   pks context add --name ctx_<tradition> --description "<1-2 sentence description>"
-   ```
-   If it refines an existing tradition:
-   ```bash
-   pks context add --name ctx_<tradition> --description "<description>" --inherits ctx_<parent>
-   ```
-5. If the paper is cross-cutting or the tradition is unclear: no context. Claims without a context are universal — visible in all contexts. This is the conservative default.
-
-**Context naming:** `ctx_` prefix + lowercase_underscore (e.g., `ctx_atms_tradition`, `ctx_aspirin_primary_prevention`).
-
-**Expected frequency:** ~1 new context per 3-4 papers. Most papers slot into existing traditions.
-
-## Output
+After add-concepts, check which concepts linked to existing registry entries vs which are newly proposed:
 
 ```
 Concepts registered for: papers/[dirname]
-  Existing concepts reused: N
-  New concepts registered: N (list names)
-  Category values added: N
-  Context: [context_id or "universal (no context assigned)"]
+  Registry-linked (exact match): N (list names)
+  Newly proposed: N (list names)
+  Total in concepts.yaml: N
 ```
+
+Newly proposed concepts will need alignment decisions after all papers are finalized.
