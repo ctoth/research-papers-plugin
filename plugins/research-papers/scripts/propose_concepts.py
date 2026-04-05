@@ -347,36 +347,187 @@ def propose(
     return stats
 
 
+def _load_registry_names(registry_dir: Path | None) -> set[str]:
+    """Load canonical concept names from a registry directory."""
+    if not registry_dir or not registry_dir.exists():
+        return set()
+    names: set[str] = set()
+    for entry in registry_dir.iterdir():
+        if entry.is_file() and entry.suffix == ".yaml":
+            try:
+                data = yaml.safe_load(entry.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if data and isinstance(data, dict):
+                cn = data.get("canonical_name")
+                if cn:
+                    names.add(cn)
+    return names
+
+
+def _extract_concepts_single_paper(paper_dir: Path) -> dict[str, dict[str, Any]]:
+    """Extract concepts from a single paper's claims.yaml."""
+    concepts: dict[str, dict[str, Any]] = {}
+    claims_path = paper_dir / "claims.yaml"
+    if not claims_path.exists():
+        return concepts
+
+    try:
+        with open(claims_path, encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+    except Exception:
+        return concepts
+
+    if not data or "claims" not in data:
+        return concepts
+
+    for claim in data["claims"]:
+        if not isinstance(claim, dict):
+            continue
+
+        names: list[str] = []
+        c = claim.get("concept")
+        if c and isinstance(c, str):
+            names.append(c)
+        tc = claim.get("target_concept")
+        if tc and isinstance(tc, str):
+            names.append(tc)
+        cs = claim.get("concepts")
+        if isinstance(cs, list):
+            for item in cs:
+                if isinstance(item, str):
+                    names.append(item)
+
+        unit = claim.get("unit", "")
+
+        for name in names:
+            if name not in concepts:
+                concepts[name] = {"units": {}, "count": 0}
+            concepts[name]["count"] += 1
+            if unit:
+                concepts[name]["units"][unit] = concepts[name]["units"].get(unit, 0) + 1
+
+    return concepts
+
+
+def propose_pks_batch(
+    paper_dir: Path,
+    domain: str = "general",
+    registry_dir: Path | None = None,
+    forms_dir: Path | None = None,
+    output_path: Path | None = None,
+) -> dict[str, Any]:
+    """Produce a pks-batch-format concepts.yaml for a single paper.
+
+    Returns the batch dict with a 'concepts' list. If output_path is given,
+    also writes it to disk.
+    """
+    raw_concepts = _extract_concepts_single_paper(paper_dir)
+    registry_names = _load_registry_names(registry_dir)
+    available_forms = load_available_forms(forms_dir)
+
+    concepts_list: list[dict[str, str]] = []
+    for name in sorted(raw_concepts.keys()):
+        if is_junk_name(name):
+            continue
+
+        meta = raw_concepts[name]
+        form = infer_form(name, meta["units"])
+        if form and available_forms and form not in available_forms:
+            form = None
+        if not form:
+            form = "structural"  # default fallback for pks batch
+
+        entry: dict[str, str] = {
+            "local_name": name,
+            "proposed_name": name,
+            "definition": f"Auto-proposed from {meta['count']} claim(s).",
+            "form": form,
+        }
+
+        concepts_list.append(entry)
+
+    result: dict[str, Any] = {"concepts": concepts_list}
+
+    if output_path:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            yaml.dump(result, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+
+    return result
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Propose concept definitions from claims.yaml files"
     )
-    parser.add_argument("papers_dir", type=Path,
-                        help="Directory containing paper subdirs with claims.yaml")
-    parser.add_argument("--output-dir", "-o", type=Path, required=True,
-                        help="Output directory for concept YAML files")
-    parser.add_argument("--forms-dir", type=Path, default=None,
-                        help="Forms directory to validate form references")
-    parser.add_argument("--domain", default="general",
-                        help="Domain prefix for all concepts (default: general)")
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Show what would be created without writing")
+    subparsers = parser.add_subparsers(dest="command")
+
+    # Original multi-paper mode
+    multi = subparsers.add_parser("multi", help="Process all papers in a directory")
+    multi.add_argument("papers_dir", type=Path,
+                       help="Directory containing paper subdirs with claims.yaml")
+    multi.add_argument("--output-dir", "-o", type=Path, required=True,
+                       help="Output directory for concept YAML files")
+    multi.add_argument("--forms-dir", type=Path, default=None,
+                       help="Forms directory to validate form references")
+    multi.add_argument("--domain", default="general",
+                       help="Domain prefix for all concepts (default: general)")
+    multi.add_argument("--dry-run", action="store_true",
+                       help="Show what would be created without writing")
+
+    # New pks-batch mode
+    batch = subparsers.add_parser("pks-batch", help="Produce pks-batch concepts.yaml for one paper")
+    batch.add_argument("paper_dir", type=Path,
+                       help="Single paper directory with claims.yaml")
+    batch.add_argument("--registry-dir", type=Path, default=None,
+                       help="Existing concept registry for dedup")
+    batch.add_argument("--forms-dir", type=Path, default=None,
+                       help="Forms directory to validate form references")
+    batch.add_argument("--domain", default="general",
+                       help="Domain prefix for all concepts (default: general)")
+    batch.add_argument("--output", "-o", type=Path, default=None,
+                       help="Output path (default: <paper_dir>/concepts.yaml)")
+
+    # Keep backward compat: if no subcommand, treat positional as papers_dir
+    parser.add_argument("papers_dir", type=Path, nargs="?",
+                        help="(legacy) Directory containing paper subdirs")
+    parser.add_argument("--output-dir", "-o", type=Path, default=None)
+    parser.add_argument("--forms-dir", type=Path, default=None)
+    parser.add_argument("--domain", default="general")
+    parser.add_argument("--dry-run", action="store_true")
+
     args = parser.parse_args()
 
-    stats = propose(
-        papers_dir=args.papers_dir.resolve(),
-        output_dir=args.output_dir.resolve(),
-        forms_dir=args.forms_dir.resolve() if args.forms_dir else None,
-        domain=args.domain,
-        dry_run=args.dry_run,
-    )
-
-    print(f"\nResults:")
-    print(f"  Total raw concept names: {stats['total_raw']}")
-    print(f"  Skipped (junk names):    {stats['skipped_junk']}")
-    print(f"  Skipped (existing):      {stats['skipped_existing']}")
-    print(f"  Skipped (no form match): {stats['skipped_no_form']}")
-    print(f"  Created:                 {stats['created']}")
+    if args.command == "pks-batch":
+        paper_dir = args.paper_dir.resolve()
+        output_path = args.output.resolve() if args.output else paper_dir / "concepts.yaml"
+        result = propose_pks_batch(
+            paper_dir=paper_dir,
+            domain=args.domain,
+            registry_dir=args.registry_dir.resolve() if args.registry_dir else None,
+            forms_dir=args.forms_dir.resolve() if args.forms_dir else None,
+            output_path=output_path,
+        )
+        print(f"Wrote {len(result['concepts'])} concepts to {output_path}")
+    elif args.command == "multi" or (args.papers_dir and args.output_dir):
+        papers_dir = (args.papers_dir if args.command != "multi" else args.papers_dir).resolve()
+        output_dir = (args.output_dir if args.command != "multi" else args.output_dir).resolve()
+        stats = propose(
+            papers_dir=papers_dir,
+            output_dir=output_dir,
+            forms_dir=args.forms_dir.resolve() if args.forms_dir else None,
+            domain=args.domain,
+            dry_run=args.dry_run,
+        )
+        print(f"\nResults:")
+        print(f"  Total raw concept names: {stats['total_raw']}")
+        print(f"  Skipped (junk names):    {stats['skipped_junk']}")
+        print(f"  Skipped (existing):      {stats['skipped_existing']}")
+        print(f"  Skipped (no form match): {stats['skipped_no_form']}")
+        print(f"  Created:                 {stats['created']}")
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":

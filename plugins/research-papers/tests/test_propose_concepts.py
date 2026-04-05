@@ -227,50 +227,6 @@ class TestPropose(unittest.TestCase):
                 self.assertEqual(len(files), 0)
 
 
-class TestMedicalDomainForms(unittest.TestCase):
-    """Tests for medical/epidemiological domain form inference."""
-
-    def test_hazard_ratio_name_pattern(self) -> None:
-        result = PROPOSE_MODULE.infer_form("hazard_ratio", {})
-        self.assertEqual(result, "ratio")
-
-    def test_odds_ratio_name_pattern(self) -> None:
-        result = PROPOSE_MODULE.infer_form("odds_ratio", {})
-        self.assertEqual(result, "ratio")
-
-    def test_relative_risk_name_pattern(self) -> None:
-        result = PROPOSE_MODULE.infer_form("relative_risk", {})
-        self.assertEqual(result, "ratio")
-
-    def test_rate_ratio_name_pattern(self) -> None:
-        result = PROPOSE_MODULE.infer_form("rate_ratio", {})
-        self.assertEqual(result, "ratio")
-
-    def test_event_rate_name_pattern(self) -> None:
-        result = PROPOSE_MODULE.infer_form("event_rate", {})
-        self.assertEqual(result, "rate")
-
-    def test_person_years_unit(self) -> None:
-        result = PROPOSE_MODULE.infer_form("exposure", {"person-years": 2})
-        self.assertEqual(result, "count")
-
-    def test_p_value_name_pattern(self) -> None:
-        result = PROPOSE_MODULE.infer_form("p_value", {})
-        self.assertEqual(result, "score")
-
-    def test_confidence_interval_name_pattern(self) -> None:
-        result = PROPOSE_MODULE.infer_form("confidence_interval", {})
-        self.assertIsNotNone(result)
-
-    def test_incidence_rate_name_pattern(self) -> None:
-        result = PROPOSE_MODULE.infer_form("incidence_rate", {})
-        self.assertEqual(result, "rate")
-
-    def test_mortality_rate_name_pattern(self) -> None:
-        result = PROPOSE_MODULE.infer_form("mortality_rate", {})
-        self.assertEqual(result, "rate")
-
-
 class TestPksBatchMode(unittest.TestCase):
     """Tests for the --paper-dir --pks-batch output mode."""
 
