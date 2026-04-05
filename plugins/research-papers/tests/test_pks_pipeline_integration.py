@@ -164,7 +164,6 @@ class TestConceptsYamlMatchesSyncSchema(unittest.TestCase):
             # Produce concepts.yaml via propose_pks_batch
             PROPOSE_MODULE.propose_pks_batch(
                 paper_dir=paper_dir,
-                domain="cvd",
                 output_path=paper_dir / "concepts.yaml",
             )
 
@@ -271,7 +270,7 @@ class TestConceptNamesRoundtrip(unittest.TestCase):
                 yaml.dump(claims, default_flow_style=False), encoding="utf-8"
             )
 
-            result = PROPOSE_MODULE.propose_pks_batch(paper_dir=paper_dir, domain="cvd")
+            result = PROPOSE_MODULE.propose_pks_batch(paper_dir=paper_dir)
             concept_names = {c["local_name"] for c in result["concepts"]}
 
             # Every concept referenced in claims should appear in concepts.yaml

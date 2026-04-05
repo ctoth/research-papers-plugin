@@ -83,42 +83,6 @@ def _make_papers_dir(root: Path) -> Path:
     return root
 
 
-class TestInferForm(unittest.TestCase):
-    """Tests for infer_form."""
-
-    def test_infer_form_from_units_hz(self) -> None:
-        self.assertEqual(PROPOSE_MODULE.infer_form("anything", {"Hz": 3}), "frequency")
-
-    def test_infer_form_from_units_ratio(self) -> None:
-        self.assertEqual(PROPOSE_MODULE.infer_form("anything", {"ratio": 2}), "ratio")
-
-    def test_infer_form_from_units_percent(self) -> None:
-        self.assertEqual(PROPOSE_MODULE.infer_form("anything", {"%": 5}), "score")
-
-    def test_infer_form_from_units_db(self) -> None:
-        self.assertEqual(PROPOSE_MODULE.infer_form("anything", {"dB": 1}), "level")
-
-    def test_infer_form_from_units_count(self) -> None:
-        self.assertEqual(PROPOSE_MODULE.infer_form("anything", {"count": 1}), "count")
-
-    def test_infer_form_from_name_f0(self) -> None:
-        self.assertEqual(PROPOSE_MODULE.infer_form("f0_frequency", {}), "frequency")
-
-    def test_infer_form_from_name_duration(self) -> None:
-        self.assertEqual(PROPOSE_MODULE.infer_form("duration_ms", {}), "time")
-
-    def test_infer_form_from_name_accuracy(self) -> None:
-        self.assertEqual(PROPOSE_MODULE.infer_form("accuracy_score", {}), "score")
-
-    def test_infer_form_unit_priority_over_name(self) -> None:
-        """Unit-based inference takes priority over name-based."""
-        result = PROPOSE_MODULE.infer_form("some_frequency", {"dB": 3})
-        self.assertEqual(result, "level")
-
-    def test_infer_form_no_match(self) -> None:
-        self.assertIsNone(PROPOSE_MODULE.infer_form("xyzzy_concept", {}))
-
-
 class TestIsJunkName(unittest.TestCase):
     """Tests for is_junk_name."""
 
@@ -128,11 +92,6 @@ class TestIsJunkName(unittest.TestCase):
 
     def test_single_char_is_junk(self) -> None:
         self.assertTrue(PROPOSE_MODULE.is_junk_name("x"))
-
-    def test_known_short_names_pass(self) -> None:
-        self.assertFalse(PROPOSE_MODULE.is_junk_name("f0"))
-        self.assertFalse(PROPOSE_MODULE.is_junk_name("oq"))
-        self.assertFalse(PROPOSE_MODULE.is_junk_name("iou"))
 
     def test_normal_names_pass(self) -> None:
         self.assertFalse(PROPOSE_MODULE.is_junk_name("hazard_ratio"))
@@ -178,62 +137,11 @@ class TestExtractConcepts(unittest.TestCase):
             self.assertIn("%", concepts["event_rate"]["units"])
 
 
-class TestPropose(unittest.TestCase):
-    """Tests for propose (the main pipeline)."""
-
-    def test_skips_existing_concepts(self) -> None:
-        """Concepts already in output_dir are not recreated."""
-        with tempfile.TemporaryDirectory() as tmpdir:
-            papers = _make_papers_dir(Path(tmpdir) / "papers")
-            output = Path(tmpdir) / "concepts"
-            output.mkdir()
-
-            # Pre-create a concept file
-            import yaml
-            existing = {
-                "id": "concept1",
-                "canonical_name": "event_rate",
-                "status": "proposed",
-                "definition": "Existing concept.",
-                "domain": "cvd",
-                "form": "rate",
-            }
-            (output / "event_rate.yaml").write_text(
-                yaml.dump(existing, default_flow_style=False),
-                encoding="utf-8",
-            )
-
-            stats = PROPOSE_MODULE.propose(
-                papers_dir=papers,
-                output_dir=output,
-                domain="cvd",
-            )
-            self.assertGreaterEqual(stats["skipped_existing"], 1)
-
-    def test_dry_run_writes_nothing(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            papers = _make_papers_dir(Path(tmpdir) / "papers")
-            output = Path(tmpdir) / "concepts"
-
-            PROPOSE_MODULE.propose(
-                papers_dir=papers,
-                output_dir=output,
-                domain="cvd",
-                dry_run=True,
-            )
-            # Output dir should not be created in dry run
-            if output.exists():
-                files = list(output.glob("*.yaml"))
-                self.assertEqual(len(files), 0)
-
-
 class TestPksBatchMode(unittest.TestCase):
-    """Tests for the --paper-dir --pks-batch output mode."""
+    """Tests for the pks-batch output mode."""
 
     def test_pks_batch_single_paper(self) -> None:
         """Produces concepts.yaml in pks batch format."""
-        import yaml
-
         with tempfile.TemporaryDirectory() as tmpdir:
             paper_dir = Path(tmpdir) / "Bowman_2018_EffectsAspirinPrimaryPrevention"
             paper_dir.mkdir()
@@ -243,7 +151,6 @@ class TestPksBatchMode(unittest.TestCase):
 
             result = PROPOSE_MODULE.propose_pks_batch(
                 paper_dir=paper_dir,
-                domain="cvd",
             )
 
             self.assertIsInstance(result, dict)
@@ -265,17 +172,15 @@ class TestPksBatchMode(unittest.TestCase):
 
             result = PROPOSE_MODULE.propose_pks_batch(
                 paper_dir=paper_dir,
-                domain="cvd",
             )
 
             names = {c["local_name"] for c in result["concepts"]}
-            # These come from our sample claims
             self.assertIn("rate_ratio", names)
             self.assertIn("event_rate", names)
             self.assertIn("blood_pressure", names)
 
     def test_pks_batch_reuses_existing_registry(self) -> None:
-        """When registry has a concept, proposed_name matches canonical."""
+        """When registry has a concept, in_registry is True."""
         import yaml
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -303,13 +208,12 @@ class TestPksBatchMode(unittest.TestCase):
             result = PROPOSE_MODULE.propose_pks_batch(
                 paper_dir=paper_dir,
                 registry_dir=registry_dir,
-                domain="cvd",
             )
 
             rr = next(
                 c for c in result["concepts"] if c["local_name"] == "rate_ratio"
             )
-            self.assertEqual(rr["proposed_name"], "rate_ratio")
+            self.assertTrue(rr["in_registry"])
 
     def test_pks_batch_writes_file(self) -> None:
         """When output_path given, writes concepts.yaml to disk."""
@@ -325,7 +229,6 @@ class TestPksBatchMode(unittest.TestCase):
             output_path = paper_dir / "concepts.yaml"
             PROPOSE_MODULE.propose_pks_batch(
                 paper_dir=paper_dir,
-                domain="cvd",
                 output_path=output_path,
             )
 
@@ -333,16 +236,47 @@ class TestPksBatchMode(unittest.TestCase):
             data = yaml.safe_load(output_path.read_text(encoding="utf-8"))
             self.assertIn("concepts", data)
 
+    def test_pks_batch_includes_observed_units(self) -> None:
+        """Each concept entry includes the units observed in claims."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            paper_dir = Path(tmpdir) / "Bowman_2018"
+            paper_dir.mkdir()
+            (paper_dir / "claims.yaml").write_text(
+                SAMPLE_CLAIMS_YAML, encoding="utf-8"
+            )
+
+            result = PROPOSE_MODULE.propose_pks_batch(paper_dir=paper_dir)
+
+            er = next(c for c in result["concepts"] if c["local_name"] == "event_rate")
+            self.assertIn("units_observed", er)
+            self.assertIn("%", er["units_observed"])
+
+    def test_pks_batch_filters_junk(self) -> None:
+        """Junk names are not included in output."""
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            paper_dir = Path(tmpdir) / "TestPaper"
+            paper_dir.mkdir()
+            claims = {
+                "source": {"paper": "TestPaper"},
+                "claims": [
+                    {"id": "c1", "type": "parameter", "concept": "x", "value": 1},
+                    {"id": "c2", "type": "parameter", "concept": "real_concept", "value": 2},
+                ],
+            }
+            (paper_dir / "claims.yaml").write_text(
+                yaml.dump(claims, default_flow_style=False), encoding="utf-8"
+            )
+
+            result = PROPOSE_MODULE.propose_pks_batch(paper_dir=paper_dir)
+            names = {c["local_name"] for c in result["concepts"]}
+            self.assertNotIn("x", names)
+            self.assertIn("real_concept", names)
+
 
 class TestHypothesisProperties(unittest.TestCase):
     """Property-based tests."""
-
-    @given(name=st.from_regex(r"[a-z][a-z_]{2,30}", fullmatch=True))
-    @settings(max_examples=100)
-    def test_infer_form_never_crashes(self, name: str) -> None:
-        """infer_form never raises on arbitrary concept names."""
-        result = PROPOSE_MODULE.infer_form(name, {})
-        self.assertIsInstance(result, (str, type(None)))
 
     @given(name=st.text(min_size=0, max_size=50))
     @settings(max_examples=100)

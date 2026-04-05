@@ -2,13 +2,15 @@
 # requires-python = ">=3.10"
 # dependencies = ["pyyaml>=6.0"]
 # ///
-"""Propose concept definitions from claims.yaml files.
+"""Extract concept names from claims.yaml files.
 
-Extracts unique concept names from paper claims, infers form and domain,
-and creates propstore concept YAML files.
+Collects unique concept references from paper claims. Does NOT infer forms
+or assign domain knowledge — that is the LLM agent's job during
+register-concepts. This script is mechanical extraction only.
 
 Usage:
-    uv run propose_concepts.py <papers-dir> --output-dir <concepts-dir> [--forms-dir <forms-dir>]
+    uv run propose_concepts.py multi <papers-dir> --output-dir <concepts-dir>
+    uv run propose_concepts.py pks-batch <paper-dir> [--registry-dir <dir>] [--output <path>]
 """
 from __future__ import annotations
 
@@ -16,7 +18,6 @@ import argparse
 import logging
 import os
 import re
-from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -25,120 +26,10 @@ logger = logging.getLogger(__name__)
 import yaml
 
 
-# ── Unit → form inference ────────────────────────────────────────────
-
-_UNIT_TO_FORM: dict[str, str] = {
-    # Frequency
-    "Hz": "frequency",
-    "kHz": "frequency",
-    # Time
-    "s": "time",
-    "ms": "time",
-    "msec": "time",
-    "sec": "time",
-    # Pressure
-    "Pa": "pressure",
-    "kPa": "pressure",
-    "cmH2O": "pressure",
-    "hPa": "pressure",
-    # Flow / volume
-    "cm3/s": "flow",
-    "L/s": "flow",
-    "mL": "structural",  # volume, not flow rate
-    "cm3/s2": "flow_derivative",
-    # Level
-    "dB": "level",
-    "dB SPL": "level",
-    "dB/oct": "level",
-    "dB/octave": "level",
-    "SD": "level",
-    # Dimensionless
-    "ratio": "ratio",
-    "dimensionless": "dimensionless_compound",
-    "%": "score",
-    # Length → structural (no dedicated length form)
-    "cm": "structural",
-    "mm": "structural",
-    "m": "structural",
-    "mm²": "structural",
-    # Counts
-    "count": "count",
-    "samples": "count",
-    "bits": "structural",
-    "frames": "count",
-    "points": "score",
-    "degrees": "structural",
-    # Rates
-    "FPS": "rate",
-    "fps": "rate",
-    "words/min": "rate",
-    "tokens/sec": "rate",
-    "items/sec": "rate",
-    # Scores / evaluation metrics
-    "mAP": "score",
-    "BLEU": "score",
-    "CIDEr": "score",
-    "METEOR": "score",
-    "ROUGE": "score",
-    "IoU": "score",
-    "F1": "score",
-    # Resolution
-    "px": "count",
-}
-
-# Concept name patterns → form
-_NAME_PATTERNS: list[tuple[re.Pattern, str]] = [
-    # Exact matches for common short names
-    (re.compile(r"^(f[0-6]|b[1-6]|bandwidth_[0-9]+)$", re.I), "frequency"),
-    (re.compile(r"^(h[1-4]|oq|sq|cq)$", re.I), "amplitude_ratio"),
-    # Pattern matches
-    (re.compile(r"(^|_)(f[0-9]+|frequency|f0|pitch|bandwidth|formant)(_|$)", re.I), "frequency"),
-    (re.compile(r"(^|_)(duration|time|period|onset|offset|latency|vot|closure)(_|$)", re.I), "time"),
-    (re.compile(r"(^|_)(pressure|subglottal|psub)(_|$)", re.I), "pressure"),
-    (re.compile(r"(^|_)(flow|airflow|ug)(_|$)", re.I), "flow"),
-    (re.compile(r"(^|_)(level|intensity|spl|loudness|amplitude_of)(_|$)", re.I), "level"),
-    (re.compile(r"(^|_)(ratio|quotient|oq|sq|cq|naq)(_|$)", re.I), "amplitude_ratio"),
-    (re.compile(r"(^|_)(jitter|shimmer|hnr|snr|h1.*h2|spectral_tilt)(_|$)", re.I), "level"),
-    (re.compile(r"(^|_)(rate|speed|velocity|speaking_rate)(_|$)", re.I), "frequency"),
-    (re.compile(r"(^|_)(area|cross_section)(_|$)", re.I), "structural"),
-    (re.compile(r"(^|_)(length|width|height|depth|radius|diameter|distance|thickness|volume|mass|density|stiffness)(_|$)", re.I), "structural"),
-    (re.compile(r"(^|_)(coefficient|asymmetry|quotient|efficiency|factor)(_|$)", re.I), "amplitude_ratio"),
-    (re.compile(r"(^|_)(number|count|num_|n_|size|samples)(_|$)", re.I), "count"),
-    (re.compile(r"(^|_)(resolution|width|height|pixels)(_|$)", re.I), "count"),
-    (re.compile(r"(^|_)(accuracy|precision|recall|f1|map|bleu|cider|meteor|rouge|iou|score)(_|$)", re.I), "score"),
-    (re.compile(r"(^|_)(fps|framerate|throughput|bitrate|words_per)(_|$)", re.I), "rate"),
-]
-
-
-def infer_form(concept_name: str, units: dict[str, int]) -> str | None:
-    """Infer a form from unit strings and concept name patterns.
-
-    Args:
-        concept_name: The concept's canonical name.
-        units: Mapping of unit string -> occurrence count.
-    """
-    # Try unit-based inference, preferring the most common unit
-    form_votes: dict[str, int] = {}
-    for unit, count in units.items():
-        form = _UNIT_TO_FORM.get(unit)
-        if form:
-            form_votes[form] = form_votes.get(form, 0) + count
-
-    if form_votes:
-        return max(form_votes, key=lambda f: form_votes[f])
-
-    # Try name pattern matching
-    for pattern, form_name in _NAME_PATTERNS:
-        if pattern.search(concept_name):
-            return form_name
-
-    return None
-
-
 def extract_concepts(papers_dir: Path) -> dict[str, dict[str, Any]]:
     """Extract unique concept names with metadata from claims.yaml files.
 
-    Returns {concept_name: {"units": set, "count": int, "papers": set}}.
+    Returns {concept_name: {"units": {unit: count}, "count": int, "papers": set}}.
     """
     concepts: dict[str, dict[str, Any]] = {}
 
@@ -162,7 +53,6 @@ def extract_concepts(papers_dir: Path) -> dict[str, dict[str, Any]]:
                 if not isinstance(claim, dict):
                     continue
 
-                # Collect concept references
                 names: list[str] = []
                 c = claim.get("concept")
                 if c and isinstance(c, str):
@@ -189,23 +79,8 @@ def extract_concepts(papers_dir: Path) -> dict[str, dict[str, Any]]:
     return concepts
 
 
-_KNOWN_SHORT_NAMES = frozenset({
-    # Phonetics (existing)
-    "f0", "f1", "f2", "f3", "f4", "f5", "f6",
-    "b1", "b2", "b3", "b4", "b5", "b6",
-    "h1", "h2", "h4",
-    "oq", "sq", "cq",
-    # ML / general (new)
-    "lr", "bs", "bn", "iou", "ad", "qa",
-    "fp", "fn", "tp", "tn",
-    "f1", "k1", "k2",
-})
-
-
 def is_junk_name(name: str) -> bool:
     """Filter out names that are clearly not real concept names."""
-    if name in _KNOWN_SHORT_NAMES:
-        return False
     # Pure numbers
     if re.match(r'^[\d._]+$', name):
         return True
@@ -216,135 +91,6 @@ def is_junk_name(name: str) -> bool:
     if len(name) <= 2 and re.match(r'^[a-z]?\d+$', name):
         return True
     return False
-
-
-def load_available_forms(forms_dir: Path | None) -> set[str]:
-    """Load available form names from a forms directory."""
-    if not forms_dir or not forms_dir.exists():
-        return set()
-    return {f.stem for f in forms_dir.iterdir() if f.suffix == ".yaml"}
-
-
-def propose(
-    papers_dir: Path,
-    output_dir: Path,
-    forms_dir: Path | None = None,
-    domain: str = "general",
-    dry_run: bool = False,
-) -> dict[str, Any]:
-    """Generate proposed concept YAML files from claims.
-
-    Returns stats dict.
-    """
-    raw_concepts = extract_concepts(papers_dir)
-    available_forms = load_available_forms(forms_dir)
-
-    # Filter junk
-    concepts = {
-        name: meta for name, meta in raw_concepts.items()
-        if not is_junk_name(name)
-    }
-
-    # Read existing concepts to avoid duplicates
-    existing_names: set[str] = set()
-    existing_aliases: set[str] = set()
-    next_counter = 1
-
-    if output_dir.exists():
-        for entry in sorted(output_dir.iterdir()):
-            if entry.is_file() and entry.suffix == ".yaml":
-                try:
-                    data = yaml.safe_load(entry.read_text(encoding="utf-8"))
-                except Exception as exc:
-                    logger.warning("Failed to load %s: %s", entry, exc)
-                    continue
-                if not data:
-                    continue
-                cn = data.get("canonical_name")
-                if cn:
-                    existing_names.add(cn)
-                for alias in data.get("aliases", []) or []:
-                    if isinstance(alias, dict) and alias.get("name"):
-                        existing_aliases.add(alias["name"])
-                cid = data.get("id", "")
-                if isinstance(cid, str) and cid.startswith("concept"):
-                    try:
-                        num = int(cid[len("concept"):])
-                        next_counter = max(next_counter, num + 1)
-                    except ValueError:
-                        pass
-
-    # Also check counter file
-    counters_dir = output_dir.parent / "counters"
-    counter_file = counters_dir / "global.next"
-    if counter_file.exists():
-        try:
-            file_counter = int(counter_file.read_text().strip())
-            next_counter = max(next_counter, file_counter)
-        except ValueError:
-            pass
-
-    stats = {"created": 0, "skipped_existing": 0, "skipped_junk": 0,
-             "skipped_no_form": 0, "total_raw": len(raw_concepts)}
-
-    stats["skipped_junk"] = len(raw_concepts) - len(concepts)
-
-    if dry_run:
-        for name in sorted(concepts.keys()):
-            if name in existing_names:
-                stats["skipped_existing"] += 1
-                continue
-            form = infer_form(name, concepts[name]["units"])
-            if form and form not in available_forms and available_forms:
-                form = None
-            if not form:
-                stats["skipped_no_form"] += 1
-                continue
-            print(f"  Would create: {name} (form={form}, refs={concepts[name]['count']})")
-            stats["created"] += 1
-        return stats
-
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    for name in sorted(concepts.keys()):
-        if name in existing_names:
-            stats["skipped_existing"] += 1
-            continue
-
-        meta = concepts[name]
-        form = infer_form(name, meta["units"])
-
-        # Validate form exists
-        if form and form not in available_forms and available_forms:
-            form = None
-        if not form:
-            stats["skipped_no_form"] += 1
-            continue
-
-        cid = f"concept{next_counter}"
-        next_counter += 1
-
-        data = {
-            "id": cid,
-            "canonical_name": name,
-            "status": "proposed",
-            "definition": f"Auto-proposed from {meta['count']} claim(s) across {len(meta['papers'])} paper(s).",
-            "domain": domain,
-            "created_date": str(date.today()),
-            "form": form,
-        }
-
-        filepath = output_dir / f"{name}.yaml"
-        with open(filepath, "w", encoding="utf-8") as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-
-        stats["created"] += 1
-
-    # Update counter file
-    counters_dir.mkdir(parents=True, exist_ok=True)
-    counter_file.write_text(f"{next_counter}\n")
-
-    return stats
 
 
 def _load_registry_names(registry_dir: Path | None) -> set[str]:
@@ -412,37 +158,34 @@ def _extract_concepts_single_paper(paper_dir: Path) -> dict[str, dict[str, Any]]
 
 def propose_pks_batch(
     paper_dir: Path,
-    domain: str = "general",
     registry_dir: Path | None = None,
-    forms_dir: Path | None = None,
     output_path: Path | None = None,
 ) -> dict[str, Any]:
     """Produce a pks-batch-format concepts.yaml for a single paper.
+
+    Extracts concept names and units from claims.yaml. Does NOT assign forms —
+    the LLM agent does that during register-concepts enrichment.
 
     Returns the batch dict with a 'concepts' list. If output_path is given,
     also writes it to disk.
     """
     raw_concepts = _extract_concepts_single_paper(paper_dir)
     registry_names = _load_registry_names(registry_dir)
-    available_forms = load_available_forms(forms_dir)
 
-    concepts_list: list[dict[str, str]] = []
+    concepts_list: list[dict[str, Any]] = []
     for name in sorted(raw_concepts.keys()):
         if is_junk_name(name):
             continue
 
         meta = raw_concepts[name]
-        form = infer_form(name, meta["units"])
-        if form and available_forms and form not in available_forms:
-            form = None
-        if not form:
-            form = "structural"  # default fallback for pks batch
 
-        entry: dict[str, str] = {
+        entry: dict[str, Any] = {
             "local_name": name,
             "proposed_name": name,
             "definition": f"Auto-proposed from {meta['count']} claim(s).",
-            "form": form,
+            "form": "structural",  # placeholder — agent enriches this
+            "units_observed": dict(meta["units"]) if meta["units"] else {},
+            "in_registry": name in registry_names,
         }
 
         concepts_list.append(entry)
@@ -459,43 +202,23 @@ def propose_pks_batch(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Propose concept definitions from claims.yaml files"
+        description="Extract concept names from claims.yaml files"
     )
     subparsers = parser.add_subparsers(dest="command")
 
-    # Original multi-paper mode
-    multi = subparsers.add_parser("multi", help="Process all papers in a directory")
+    # Multi-paper mode (list all concepts across a collection)
+    multi = subparsers.add_parser("multi", help="List concepts across all papers")
     multi.add_argument("papers_dir", type=Path,
                        help="Directory containing paper subdirs with claims.yaml")
-    multi.add_argument("--output-dir", "-o", type=Path, required=True,
-                       help="Output directory for concept YAML files")
-    multi.add_argument("--forms-dir", type=Path, default=None,
-                       help="Forms directory to validate form references")
-    multi.add_argument("--domain", default="general",
-                       help="Domain prefix for all concepts (default: general)")
-    multi.add_argument("--dry-run", action="store_true",
-                       help="Show what would be created without writing")
 
-    # New pks-batch mode
+    # Single-paper pks-batch mode
     batch = subparsers.add_parser("pks-batch", help="Produce pks-batch concepts.yaml for one paper")
     batch.add_argument("paper_dir", type=Path,
                        help="Single paper directory with claims.yaml")
     batch.add_argument("--registry-dir", type=Path, default=None,
-                       help="Existing concept registry for dedup")
-    batch.add_argument("--forms-dir", type=Path, default=None,
-                       help="Forms directory to validate form references")
-    batch.add_argument("--domain", default="general",
-                       help="Domain prefix for all concepts (default: general)")
+                       help="Existing concept registry for dedup checking")
     batch.add_argument("--output", "-o", type=Path, default=None,
                        help="Output path (default: <paper_dir>/concepts.yaml)")
-
-    # Keep backward compat: if no subcommand, treat positional as papers_dir
-    parser.add_argument("papers_dir", type=Path, nargs="?",
-                        help="(legacy) Directory containing paper subdirs")
-    parser.add_argument("--output-dir", "-o", type=Path, default=None)
-    parser.add_argument("--forms-dir", type=Path, default=None)
-    parser.add_argument("--domain", default="general")
-    parser.add_argument("--dry-run", action="store_true")
 
     args = parser.parse_args()
 
@@ -504,28 +227,19 @@ def main() -> None:
         output_path = args.output.resolve() if args.output else paper_dir / "concepts.yaml"
         result = propose_pks_batch(
             paper_dir=paper_dir,
-            domain=args.domain,
             registry_dir=args.registry_dir.resolve() if args.registry_dir else None,
-            forms_dir=args.forms_dir.resolve() if args.forms_dir else None,
             output_path=output_path,
         )
         print(f"Wrote {len(result['concepts'])} concepts to {output_path}")
-    elif args.command == "multi" or (args.papers_dir and args.output_dir):
-        papers_dir = (args.papers_dir if args.command != "multi" else args.papers_dir).resolve()
-        output_dir = (args.output_dir if args.command != "multi" else args.output_dir).resolve()
-        stats = propose(
-            papers_dir=papers_dir,
-            output_dir=output_dir,
-            forms_dir=args.forms_dir.resolve() if args.forms_dir else None,
-            domain=args.domain,
-            dry_run=args.dry_run,
-        )
-        print(f"\nResults:")
-        print(f"  Total raw concept names: {stats['total_raw']}")
-        print(f"  Skipped (junk names):    {stats['skipped_junk']}")
-        print(f"  Skipped (existing):      {stats['skipped_existing']}")
-        print(f"  Skipped (no form match): {stats['skipped_no_form']}")
-        print(f"  Created:                 {stats['created']}")
+    elif args.command == "multi":
+        concepts = extract_concepts(args.papers_dir.resolve())
+        for name in sorted(concepts.keys()):
+            if is_junk_name(name):
+                continue
+            meta = concepts[name]
+            units_str = ", ".join(f"{u}({c})" for u, c in meta["units"].items()) if meta["units"] else "none"
+            print(f"  {name}: {meta['count']} refs across {len(meta['papers'])} papers, units: {units_str}")
+        print(f"\nTotal: {len(concepts)} unique concept names")
     else:
         parser.print_help()
 
