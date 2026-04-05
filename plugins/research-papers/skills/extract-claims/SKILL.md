@@ -1,6 +1,6 @@
 ---
 name: extract-claims
-description: Extract propositional claims from a paper directory, building claims.yaml from scratch using notes.md. Produces machine-readable claims conforming to the propstore claim schema. Assumes concepts are already registered (run register-concepts first).
+description: Extract propositional claims from a paper directory, building claims.yaml from scratch using notes.md. Produces machine-readable claims conforming to the propstore claim schema. If a concepts.yaml exists (from register-concepts), uses canonical concept names.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI."
@@ -21,18 +21,20 @@ ls "$paper_dir"/claims.yaml 2>/dev/null && echo "EXISTS: claims.yaml — use enr
 - `notes.md` missing → STOP. Run paper-reader first.
 - `claims.yaml` already exists → report and ask whether to overwrite or use enrich-claims instead.
 
-Check that concepts are registered:
+Check for concept inventory:
 ```bash
+ls "$paper_dir"/concepts.yaml 2>/dev/null
 ls knowledge/concepts/*.yaml 2>/dev/null | head -5
 ```
 
-If no concepts directory → use descriptive `lowercase_underscore` names. Claims are still valid without registry-backed concepts.
+If `<paper_dir>/concepts.yaml` exists (from register-concepts), read it and use those `local_name` values as canonical concept references in claims. If no concepts exist, use descriptive `lowercase_underscore` names — claims are still valid.
 
 ## Step 1: Read Source Material
 
 Read:
 - `<paper_dir>/notes.md` — primary source
 - `<paper_dir>/paper.pdf` or page images in `<paper_dir>/pngs/` — for page numbers and verification
+- `<paper_dir>/concepts.yaml` — if it exists, this is the paper's concept inventory from register-concepts. Use `local_name` values as canonical concept references in all claims.
 - Concept registry (`knowledge/concepts/*.yaml`) — for concept ID resolution
 - Existing claims in `knowledge/claims/*.yaml` — to detect duplicate equations (see Duplicate Detection below)
 
@@ -236,7 +238,18 @@ pks claim validate-file "$paper_dir"/claims.yaml
 
 If validation fails, fix and re-validate. **Do not consider extraction complete until validation passes.**
 
-## Step 5: Stamp Provenance
+## Step 5: Ingest into Propstore
+
+If a propstore source branch exists for this paper, ingest the claims:
+
+```bash
+source_name=$(basename "$paper_dir")
+pks source add-claim "$source_name" --batch "$paper_dir/claims.yaml"
+```
+
+If this fails with concept validation errors, the claims reference concepts not in the source branch's concepts.yaml. Fix the concept names to match what register-concepts produced, then retry.
+
+## Step 6: Stamp Provenance
 
 ```bash
 uv run plugins/research-papers/scripts/stamp_provenance.py \
