@@ -10,6 +10,8 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 Cross-reference a paper (or all papers) against the collection, ensuring every citation link is bidirectional and accurate.
 
+This is a notes-layer skill. It updates paper notes and collection cross-references only; it does not initialize or mutate propstore source branches.
+
 ## Step 0: Determine Mode
 
 Parse `$ARGUMENTS`:

@@ -65,6 +65,30 @@ class TestSourceWorkflowContracts(unittest.TestCase):
         self.assertIn("paper-process", skill)
         self.assertNotIn("pks source", skill)
 
+    def test_enrich_claims_does_not_require_legacy_registry_mutation(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "enrich-claims" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertNotIn("knowledge/concepts/*.yaml", skill)
+        self.assertNotIn("pks concept add-value", skill)
+        self.assertNotIn('python3 scripts/generate_claims.py', skill)
+
+    def test_reconcile_vocabulary_operates_on_concept_inventories(self) -> None:
+        skill = (
+            PLUGIN_ROOT / "skills" / "reconcile-vocabulary" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("concepts.yaml", skill)
+        self.assertNotIn("rewrite all claims.yaml files", skill)
+
+    def test_reconcile_stays_notes_layer_only(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "reconcile" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertNotIn("pks source", skill)
+
 
 if __name__ == "__main__":
     unittest.main()
