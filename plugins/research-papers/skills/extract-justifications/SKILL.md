@@ -151,7 +151,18 @@ Check:
 
 If validation fails, fix and re-validate.
 
-## Step 5: Stamp Provenance
+## Step 5: Ingest into Propstore
+
+If a propstore source branch exists for this paper, ingest the justifications:
+
+```bash
+source_name=$(basename "$paper_dir")
+pks source add-justification "$source_name" --batch "$paper_dir/justifications.yaml"
+```
+
+If this fails with claim reference errors, the referenced claim IDs don't match the source branch's claims. Fix and retry.
+
+## Step 6: Stamp Provenance
 
 ```bash
 uv run plugins/research-papers/scripts/stamp_provenance.py \
