@@ -1,0 +1,15 @@
+{
+  "title": "Automating Biomedical Evidence Synthesis: RobotReviewer",
+  "authors": [
+    "I. Marshall",
+    "J. Kuiper",
+    "Edward Banner",
+    "Byron C. Wallace"
+  ],
+  "year": "2017",
+  "arxiv_id": null,
+  "doi": "10.18653/v1/P17-4002",
+  "abstract": "We present RobotReviewer, an open-source web-based system that uses machine learning and NLP to semi-automate biomedical evidence synthesis, to aid the practice of Evidence-Based Medicine. RobotReviewer processes full-text journal articles (PDFs) describing randomized controlled trials (RCTs). It appraises the reliability of RCTs and extracts text describing key trial characteristics (e.g., descriptions of the population) using novel NLP methods. RobotReviewer then automatically generates a report synthesising this information. Our goal is for RobotReviewer to automatically extract and synthesise the full-range of structured data needed to inform evidence-based practice.",
+  "url": "https://www.semanticscholar.org/paper/12d6706a3539a5c7d3d310785548debc6b6124e1",
+  "pdf_url": "https://www.aclweb.org/anthology/P17-4002.pdf"
+}

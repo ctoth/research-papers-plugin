@@ -1,0 +1,48 @@
+stage: draft
+source:
+  paper: Jonnalagadda_2015_AutomatingDataExtractionSystematic
+claims:
+- id: claim1
+  type: observation
+  statement: The review screened 1,190 unique citations and included 26 published
+    reports on automatic extraction of at least one systematic-review data element.
+    *(pp.4-5)*
+  concepts: []
+  provenance:
+    paper: Jonnalagadda_2015_AutomatingDataExtractionSystematic
+    page: 4
+- id: claim2
+  type: observation
+  statement: Among more than 52 potential data elements used in systematic reviews,
+    25 had at least one published extraction attempt, 14 were completely extracted
+    in at least one study, and the best single study covered 7 elements. *(pp.1,
+    12-14)*
+  concepts: []
+  provenance:
+    paper: Jonnalagadda_2015_AutomatingDataExtractionSystematic
+    page: 12
+- id: claim3
+  type: observation
+  statement: Participant, intervention, and outcome extraction were the most frequently
+    studied targets, while interpretation, objective, and method-related fields were
+    much less explored. *(pp.3-4, 12)*
+  concepts: []
+  provenance:
+    paper: Jonnalagadda_2015_AutomatingDataExtractionSystematic
+    page: 12
+- id: claim4
+  type: observation
+  statement: No unified information extraction framework tailored to the systematic-review
+    process was identified in the literature covered by the review. *(pp.1, 13-14)*
+  concepts: []
+  provenance:
+    paper: Jonnalagadda_2015_AutomatingDataExtractionSystematic
+    page: 13
+- id: claim5
+  type: observation
+  statement: The field lacked shared gold standards and common datasets, which made
+    it impossible to compare reported accuracies cleanly across studies. *(p.13)*
+  concepts: []
+  provenance:
+    paper: Jonnalagadda_2015_AutomatingDataExtractionSystematic
+    page: 13

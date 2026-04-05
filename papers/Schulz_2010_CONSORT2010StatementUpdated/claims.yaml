@@ -1,0 +1,46 @@
+stage: draft
+source:
+  paper: Schulz_2010_CONSORT2010StatementUpdated
+claims:
+  - id: claim1
+    type: observation
+    statement: CONSORT 2010 packages its guidance as a 25-item checklist plus a participant-flow diagram for the reporting of individually randomized, two-group, parallel trials. *(pp.1-3)*
+    concepts: []
+    provenance:
+      paper: Schulz_2010_CONSORT2010StatementUpdated
+      page: 1
+  - id: claim2
+    type: observation
+    statement: The statement is intended as a reporting standard rather than a prescription for trial design, conduct, or statistical analysis. *(p.1)*
+    concepts: []
+    provenance:
+      paper: Schulz_2010_CONSORT2010StatementUpdated
+      page: 1
+  - id: claim3
+    type: observation
+    statement: The 2010 revision was motivated by both new methodological evidence and accumulated operational experience since the 2001 CONSORT update, with more than 700 relevant studies already catalogued on the CONSORT website. *(pp.1, 3)*
+    concepts: []
+    provenance:
+      paper: Schulz_2010_CONSORT2010StatementUpdated
+      page: 3
+  - id: claim4
+    type: observation
+    statement: The revision process combined evidence review with consensus editing, including a January 2007 meeting of 31 CONSORT Group members in Montebello, Canada, followed by wider circulation and comment on drafts. *(p.4)*
+    concepts: []
+    provenance:
+      paper: Schulz_2010_CONSORT2010StatementUpdated
+      page: 4
+  - id: claim5
+    type: observation
+    statement: CONSORT 2010 adds or sharpens explicit reporting requirements for outcome changes after trial start, allocation concealment, blinding details, trial registration, protocol access, and funding disclosure. *(pp.4-5)*
+    concepts: []
+    provenance:
+      paper: Schulz_2010_CONSORT2010StatementUpdated
+      page: 5
+  - id: claim6
+    type: observation
+    statement: The authors argue that the checklist should improve transparency but should not be turned into a mechanical trial quality score without careful judgment about the importance of different deficiencies. *(pp.4-5)*
+    concepts: []
+    provenance:
+      paper: Schulz_2010_CONSORT2010StatementUpdated
+      page: 4

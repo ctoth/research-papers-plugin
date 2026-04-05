@@ -1,0 +1,14 @@
+{
+  "title": "Automating data extraction in systematic reviews: a systematic review",
+  "authors": [
+    "Siddhartha R. Jonnalagadda",
+    "Pawan Goyal",
+    "Mark D. Huffman"
+  ],
+  "year": "2015",
+  "arxiv_id": null,
+  "doi": "10.1186/s13643-015-0066-7",
+  "abstract": "Automation of the data-extraction step of systematic reviews may reduce review time, but the state of the science had not been well described. The authors systematically searched PubMed, IEEE Xplore, and ACM Digital Library for papers that described review-relevant entities and reported at least one automatically extracted entity with evaluation. Among 1,190 unique citations, they found 26 published reports covering more than 52 potential data elements; 25 data elements had at least one extraction attempt, 14 were completely extracted in at least one study, and the best single study covered 7 elements. The literature showed useful partial results, often with F-scores above 70%, but no unified information extraction framework tailored to the full systematic-review process.",
+  "url": "https://doi.org/10.1186/s13643-015-0066-7",
+  "pdf_url": "https://systematicreviewsjournal.biomedcentral.com/track/pdf/10.1186/s13643-015-0066-7"
+}

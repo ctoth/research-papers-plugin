@@ -1,0 +1,16 @@
+{
+  "title": "Automatic recognition of conceptualization zones in scientific articles and two life science applications",
+  "authors": [
+    "Maria Liakata",
+    "Shyamasree Saha",
+    "Simon Dobnik",
+    "Colin R. Batchelor",
+    "Dietrich Rebholz-Schuhmann"
+  ],
+  "year": "2012",
+  "arxiv_id": null,
+  "doi": "10.1093/bioinformatics/bts071",
+  "abstract": "Motivation: Scholarly biomedical publications report on the findings of a research investigation. Scientists use a well-established discourse structure to relate their work to the state of the art, express their own motivation and hypotheses and report on their methods, results and conclusions. In previous work, we have proposed ways to explicitly annotate the structure of scientific investigations in scholarly publications. Here we present the means to facilitate automatic access to the scientific discourse of articles by automating the recognition of 11 categories at the sentence level, which we call Core Scientific Concepts (CoreSCs). These include: Hypothesis, Motivation, Goal, Object, Background, Method, Experiment, Model, Observation, Result and Conclusion. CoreSCs provide the structure and context to all statements and relations within an article and their automatic recognition can greatly facilitate biomedical information extraction by characterizing the different types of facts, hypotheses and evidence available in a scientific publication. Results: We have trained and compared machine learning classifiers (support vector machines and conditional random fields) on a corpus of 265 full articles in biochemistry and chemistry to automatically recognize CoreSCs. We have evaluated our automatic classifications against a manually annotated gold standard, and have achieved promising accuracies with ‘Experiment’, ‘Background’ and ‘Model’ being the categories with the highest F1-scores (76%, 62% and 53%, respectively). We have analysed the task of CoreSC annotation both from a sentence classification as well as sequence labelling perspective and we present a detailed feature evaluation. The most discriminative features are local sentence features such as unigrams, bigrams and grammatical dependencies while features encoding the document structure, such as section headings, also play an important role for some of the categories. We discuss the usefulness of automatically generated CoreSCs in two biomedical applications as well as work in progress. Availability: A web-based tool for the automatic annotation of articles with CoreSCs and corresponding documentation is available online at http://www.sapientaproject.com/software http://www.sapientaproject.com also contains detailed information pertaining to CoreSC annotation and links to annotation guidelines as well as a corpus of manually annotated articles, which served as our training data. Contact: liakata@ebi.ac.uk Supplementary information: Supplementary data are available at Bioinformatics online.",
+  "url": "https://www.semanticscholar.org/paper/97b5f69b084784fea5e6bb64ddd55dfcb52889b6",
+  "pdf_url": "https://academic.oup.com/bioinformatics/article-pdf/28/7/991/48880902/bioinformatics_28_7_991.pdf"
+}

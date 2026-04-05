@@ -1,0 +1,53 @@
+stage: draft
+source:
+  paper: Teufel_1999_AnnotationSchemeDiscourse-levelArgumentation
+claims:
+- id: claim1
+  type: observation
+  statement: The three-way basic scheme is more reproducible than the full seven-way
+    scheme, with trained-annotator inter-annotator agreement reported around kappa
+    0.78 for the basic scheme and around 0.71 for the full scheme. *(p.4)*
+  concepts: []
+  provenance:
+    paper: Teufel_1999_AnnotationSchemeDiscourse-levelArgumentation
+    page: 4
+- id: claim2
+  type: observation
+  statement: AIM sentences are the easiest category to identify reliably and are especially
+    promising as summary-bearing material for automatic abstracting. *(pp.4-5)*
+  concepts: []
+  provenance:
+    paper: Teufel_1999_AnnotationSchemeDiscourse-levelArgumentation
+    page: 4
+- id: claim3
+  type: observation
+  statement: Most reproducibility failures come from separating OWN from BASIS and
+    CONTRAST, and from separating OWN from BACKGROUND in ambiguous cases. *(pp.4-5)*
+  concepts: []
+  provenance:
+    paper: Teufel_1999_AnnotationSchemeDiscourse-levelArgumentation
+    page: 4
+- id: claim4
+  type: observation
+  statement: Papers with more self-citations are harder to annotate because the difference
+    between the current paper and the authors' prior work becomes less clear. *(p.4)*
+  concepts: []
+  provenance:
+    paper: Teufel_1999_AnnotationSchemeDiscourse-levelArgumentation
+    page: 4
+- id: claim5
+  type: observation
+  statement: Conference papers are easier to annotate reproducibly than journal papers
+    because they are shorter and structurally more standardized. *(pp.4-5)*
+  concepts: []
+  provenance:
+    paper: Teufel_1999_AnnotationSchemeDiscourse-levelArgumentation
+    page: 4
+- id: claim6
+  type: observation
+  statement: Minimal instructions without extended training do not by themselves guarantee
+    reliable annotation; paper-specific difficulty remains a dominant factor. *(p.5)*
+  concepts: []
+  provenance:
+    paper: Teufel_1999_AnnotationSchemeDiscourse-levelArgumentation
+    page: 5

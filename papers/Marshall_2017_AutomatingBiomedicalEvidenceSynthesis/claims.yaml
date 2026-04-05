@@ -1,0 +1,78 @@
+stage: final
+source:
+  paper: Marshall_2017_AutomatingBiomedicalEvidenceSynthesis
+claims:
+- id: claim1
+  type: parameter
+  concept: rationale_linked_risk_of_bias_assessment
+  provenance:
+    paper: Marshall_2017_AutomatingBiomedicalEvidenceSynthesis
+    page: 8
+  lower_bound: 5
+  upper_bound: 10
+  unit: percentage points
+- id: claim2
+  type: parameter
+  concept: rationale_augmented_cnn_document_classification
+  provenance:
+    paper: Marshall_2017_AutomatingBiomedicalEvidenceSynthesis
+    page: 8
+  lower_bound: 1
+  upper_bound: 2
+  unit: percentage points
+- id: claim3
+  type: parameter
+  concept: rct_study_design_classification
+  provenance:
+    paper: Marshall_2017_AutomatingBiomedicalEvidenceSynthesis
+    page: 11
+  value: 0.987
+  unit: dimensionless
+- id: claim4
+  type: observation
+  statement: The supervised-distant-supervision stage maps DS-derived noisy labels to a higher-precision label set that is then used to train the final full-text PICO sentence classifier.
+  concepts:
+  - pico_sentence_extraction
+  provenance:
+    paper: Marshall_2017_AutomatingBiomedicalEvidenceSynthesis
+    page: 10
+- id: claim5
+  type: observation
+  statement: RR emits both a risk-of-bias judgment and linked supporting rationale sentences that can bring the user back to the source PDF location.
+  concepts:
+  - rationale_linked_risk_of_bias_assessment
+  provenance:
+    paper: Marshall_2017_AutomatingBiomedicalEvidenceSynthesis
+    page: 9
+- id: claim6
+  type: observation
+  statement: A PICO extractor trained with the supervised-distant-supervision setup improves over the raw distant-supervision heuristic baseline for full-text PICO sentence extraction.
+  concepts:
+  - pico_sentence_extraction
+  provenance:
+    paper: Marshall_2017_AutomatingBiomedicalEvidenceSynthesis
+    page: 10
+- id: claim7
+  type: observation
+  statement: PICO embeddings trained from abstract and aspect-summary pairs improve retrieval of RCTs relevant to a target systematic review versus less aspect-aware baselines.
+  concepts:
+  - pico_embeddings
+  provenance:
+    paper: Marshall_2017_AutomatingBiomedicalEvidenceSynthesis
+    page: 11
+- id: claim8
+  type: observation
+  statement: The study-design ensemble achieves very high discrimination on RCT identification, reported here as AUC 0.987 on an independent dataset.
+  concepts:
+  - rct_study_design_classification
+  provenance:
+    paper: Marshall_2017_AutomatingBiomedicalEvidenceSynthesis
+    page: 11
+- id: claim9
+  type: observation
+  statement: A fully automatic RR workflow without manual checks may be useful in low-attention clinical settings, but the paper treats this as a hypothesis for real-world evaluation rather than an established deployment result.
+  concepts:
+  - robotreviewer_automatic_workflow
+  provenance:
+    paper: Marshall_2017_AutomatingBiomedicalEvidenceSynthesis
+    page: 11

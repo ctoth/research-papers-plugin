@@ -1,0 +1,36 @@
+stage: draft
+source:
+  paper: Liakata_2012_AutomaticRecognitionConceptualizationZones
+claims:
+- id: claim1
+  type: observation
+  statement: Frequent CoreSC labels are materially easier to classify than sparse
+    labels in the same corpus. *(pp.994-996)*
+  concepts: []
+  provenance:
+    paper: Liakata_2012_AutomaticRecognitionConceptualizationZones
+    page: 994
+- id: claim2
+  type: observation
+  statement: Local lexical n-grams and grammatical relations contribute more to performance
+    than document-global features alone. *(pp.991, 996-997)*
+  concepts: []
+  provenance:
+    paper: Liakata_2012_AutomaticRecognitionConceptualizationZones
+    page: 996
+- id: claim3
+  type: observation
+  statement: Sequence labeling with CRFs is competitive with sentence-wise classifiers
+    but does not dominate the task across all categories. *(pp.994-995)*
+  concepts: []
+  provenance:
+    paper: Liakata_2012_AutomaticRecognitionConceptualizationZones
+    page: 996
+- id: claim4
+  type: observation
+  statement: Coarsening the label inventory improves predictive performance and supports
+    a hierarchical classifier design. *(p.996)*
+  concepts: []
+  provenance:
+    paper: Liakata_2012_AutomaticRecognitionConceptualizationZones
+    page: 996

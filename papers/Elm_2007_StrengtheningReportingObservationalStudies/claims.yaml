@@ -1,0 +1,46 @@
+stage: draft
+source:
+  paper: Elm_2007_StrengtheningReportingObservationalStudies
+claims:
+  - id: claim1
+    type: observation
+    statement: STROBE packages its guidance as a 22-item checklist for reporting observational studies, with 18 items shared across cohort, case-control, and cross-sectional designs and 4 items containing design-specific guidance. *(p.1)*
+    concepts: []
+    provenance:
+      paper: Elm_2007_StrengtheningReportingObservationalStudies
+      page: 1
+  - id: claim2
+    type: observation
+    statement: The statement is intended as a reporting standard to improve transparency and completeness, not as a prescription for how observational studies must be designed or analyzed. *(pp.1, 3)*
+    concepts: []
+    provenance:
+      paper: Elm_2007_StrengtheningReportingObservationalStudies
+      page: 1
+  - id: claim3
+    type: observation
+    statement: The checklist was developed through a 2-day Bristol workshop in September 2004 followed by repeated drafting, meetings, conference calls, and e-mail discussions among methodologists, researchers, and journal editors. *(pp.1-2)*
+    concepts: []
+    provenance:
+      paper: Elm_2007_StrengtheningReportingObservationalStudies
+      page: 2
+  - id: claim4
+    type: observation
+    statement: STROBE requires explicit reporting of participant selection, variables, measurement methods, bias mitigation, study size, quantitative-variable handling, and statistical methods, with additional design-specific instructions for follow-up, case/control selection, matching, and sampling strategy. *(p.2)*
+    concepts: []
+    provenance:
+      paper: Elm_2007_StrengtheningReportingObservationalStudies
+      page: 2
+  - id: claim5
+    type: observation
+    statement: The authors explicitly warn against using STROBE as a methodological-quality score or forcing papers into a rigid manuscript template; the goal is transparent reporting that lets readers judge strengths, weaknesses, bias, and generalisability. *(p.3)*
+    concepts: []
+    provenance:
+      paper: Elm_2007_StrengtheningReportingObservationalStudies
+      page: 3
+  - id: claim6
+    type: observation
+    statement: Operational use of the statement depends on a separate Explanation and Elaboration document and design-specific checklist variants available on the STROBE website, and the checklist is expected to be revised as evidence and criticism accumulate. *(pp.1-3)*
+    concepts: []
+    provenance:
+      paper: Elm_2007_StrengtheningReportingObservationalStudies
+      page: 3

@@ -1,0 +1,14 @@
+{
+  "title": "An annotation scheme for discourse-level argumentation in research articles",
+  "authors": [
+    "Simone Teufel",
+    "Jean Carletta",
+    "Marc Moens"
+  ],
+  "year": "1999",
+  "arxiv_id": null,
+  "doi": "10.3115/977035.977051",
+  "abstract": "In order to build robust automatic abstracting systems, there is a need for better training resources than are currently available. In this paper, we introduce an annotation scheme for scientific articles which can be used to build such a resource in a consistent way. The seven categories of the scheme are based on rhetorical moves of argumentation. Our experimental results show that the scheme is stable, reproducible and intuitive to use.",
+  "url": "https://aclanthology.org/E99-1015/",
+  "pdf_url": "https://aclanthology.org/E99-1015.pdf"
+}
