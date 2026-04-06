@@ -8,11 +8,11 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 # Ingest Collection: $ARGUMENTS
 
-Rebuild a propstore knowledge store from a paper collection using incremental per-paper processing.
+Ingest a paper collection into a propstore knowledge store using incremental per-paper processing.
 
-This skill no longer treats concept alignment and cross-paper stances as a mandatory multi-phase gate before promotion. The default path is:
+The default path is:
 
-1. initialize the knowledge store
+1. ensure the knowledge store exists
 2. run `paper-process` for each paper
 3. optionally do one enrichment pass such as `extract-stances`
 4. run one final `pks build`
@@ -27,14 +27,16 @@ ls "$papers_dir"/*/notes.md | head -20
 
 List candidate paper directories and stop if none are present.
 
-## Step 1: Initialize A Fresh Knowledge Store
+## Step 1: Ensure The Knowledge Store Exists
 
 ```bash
-rm -rf "$knowledge_dir"
-pks init "$knowledge_dir"
+if [ ! -d "$knowledge_dir/.git" ]; then
+  pks init "$knowledge_dir"
+fi
 ```
 
-Verify that the knowledge store exists before processing papers.
+If the knowledge store already exists, reuse it.
+If it does not exist yet, initialize it before processing papers.
 
 ## Step 2: Run Paper-Process For Each Paper
 

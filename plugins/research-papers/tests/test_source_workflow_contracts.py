@@ -124,8 +124,11 @@ class TestSourceWorkflowContracts(unittest.TestCase):
         self.assertIn("pks build", skill)
         self.assertIn("optional", skill.lower())
         self.assertIn("extract-stances", skill)
+        self.assertIn('if [ ! -d "$knowledge_dir/.git" ]', skill)
         self.assertNotIn("PHASE 2: Concept Alignment", skill)
         self.assertNotIn("pks concept align", skill)
+        self.assertNotIn('rm -rf "$knowledge_dir"', skill)
+        self.assertNotIn("This skill no longer treats", skill)
 
     def test_adjudicate_acquires_missing_inputs_through_paper_process_only(self) -> None:
         skill = (PLUGIN_ROOT / "skills" / "adjudicate" / "SKILL.md").read_text(
