@@ -7,6 +7,22 @@ PLUGIN_ROOT = REPO_ROOT / "plugins" / "research-papers"
 
 
 class TestSourceWorkflowContracts(unittest.TestCase):
+    def test_source_bootstrap_skill_exists_for_propstore_init_writes(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "source-bootstrap" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("pks source init", skill)
+        self.assertIn("pks source write-notes", skill)
+        self.assertIn("pks source write-metadata", skill)
+
+    def test_source_promote_skill_exists_for_final_promotion(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "source-promote" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("pks source promote", skill)
+
     def test_register_concepts_does_not_document_removed_propose_flags(self) -> None:
         skill = (PLUGIN_ROOT / "skills" / "register-concepts" / "SKILL.md").read_text(
             encoding="utf-8"
