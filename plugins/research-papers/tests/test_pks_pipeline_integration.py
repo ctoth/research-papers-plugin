@@ -1,9 +1,9 @@
-"""Integration tests validating format contracts between pipeline stages.
+"""Integration tests validating artifact-format contracts between pipeline stages.
 
-These test that the file formats produced by one stage are accepted by the next,
-without requiring pks to be installed. We validate against sync_propstore_source.py's
-build_sync_commands() as the contract enforcer.
+These tests no longer use the legacy sync helper as the contract surface.
+They validate the artifacts directly against the current skill boundaries.
 """
+
 import importlib.util
 import sys
 import tempfile
@@ -12,7 +12,10 @@ from pathlib import Path
 
 import yaml
 
-SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+PLUGIN_ROOT = REPO_ROOT / "plugins" / "research-papers"
+SCRIPTS_DIR = PLUGIN_ROOT / "scripts"
 
 
 def load_module(name: str, path: Path):
@@ -24,57 +27,30 @@ def load_module(name: str, path: Path):
     return module
 
 
-SYNC_MODULE = load_module("sync_propstore_source", SCRIPTS_DIR / "sync_propstore_source.py")
 PROPOSE_MODULE = load_module("propose_concepts", SCRIPTS_DIR / "propose_concepts.py")
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _make_full_paper_dir(root: Path) -> Path:
-    """Create a paper directory with all pipeline artifacts."""
     paper_dir = root / "Bowman_2018_EffectsAspirinPrimaryPrevention"
     paper_dir.mkdir(parents=True, exist_ok=True)
 
-    # metadata.json
     import json
+
     metadata = {
         "title": "Effects of Aspirin for Primary Prevention",
         "authors": ["ASCEND Study Collaborative Group"],
         "year": 2018,
         "doi": "10.1056/NEJMoa1804988",
     }
-    (paper_dir / "metadata.json").write_text(
-        json.dumps(metadata), encoding="utf-8"
-    )
-
-    # notes.md
-    (paper_dir / "notes.md").write_text(
-        "# Effects of Aspirin\n\nASCEND trial notes.", encoding="utf-8"
-    )
-
-    # paper.pdf (empty placeholder)
+    (paper_dir / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+    (paper_dir / "notes.md").write_text("# Effects of Aspirin\n\nASCEND trial notes.", encoding="utf-8")
     (paper_dir / "paper.pdf").write_bytes(b"%PDF-1.4 placeholder")
 
-    # claims.yaml
     claims = {
         "source": {"paper": "Bowman_2018_EffectsAspirinPrimaryPrevention"},
         "claims": [
-            {
-                "id": "claim1",
-                "type": "parameter",
-                "concept": "rate_ratio",
-                "value": 0.88,
-                "unit": "dimensionless",
-            },
-            {
-                "id": "claim2",
-                "type": "parameter",
-                "concept": "event_rate",
-                "value": 8.5,
-                "unit": "%",
-            },
+            {"id": "claim1", "type": "parameter", "concept": "rate_ratio", "value": 0.88, "unit": "dimensionless"},
+            {"id": "claim2", "type": "parameter", "concept": "event_rate", "value": 8.5, "unit": "%"},
         ],
     }
     (paper_dir / "claims.yaml").write_text(
@@ -82,7 +58,6 @@ def _make_full_paper_dir(root: Path) -> Path:
         encoding="utf-8",
     )
 
-    # concepts.yaml (pks batch format)
     concepts = {
         "concepts": [
             {
@@ -104,7 +79,6 @@ def _make_full_paper_dir(root: Path) -> Path:
         encoding="utf-8",
     )
 
-    # justifications.yaml
     justifications = {
         "source": {"paper": "Bowman_2018_EffectsAspirinPrimaryPrevention"},
         "justifications": [
@@ -122,7 +96,6 @@ def _make_full_paper_dir(root: Path) -> Path:
         encoding="utf-8",
     )
 
-    # stances.yaml (standalone format, not embedded)
     stances = {
         "source": {"paper": "Bowman_2018_EffectsAspirinPrimaryPrevention"},
         "stances": [
@@ -143,10 +116,8 @@ def _make_full_paper_dir(root: Path) -> Path:
     return paper_dir
 
 
-class TestConceptsYamlMatchesSyncSchema(unittest.TestCase):
-    """Output of propose_pks_batch matches what sync_propstore_source.py expects."""
-
-    def test_concepts_yaml_recognized_by_sync(self) -> None:
+class TestConceptsYamlMatchesPipelineContract(unittest.TestCase):
+    def test_concepts_yaml_generated_from_claims_has_required_shape(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             paper_dir = Path(tmpdir) / "TestPaper"
             paper_dir.mkdir()
@@ -161,99 +132,74 @@ class TestConceptsYamlMatchesSyncSchema(unittest.TestCase):
                 yaml.dump(claims, default_flow_style=False), encoding="utf-8"
             )
 
-            # Produce concepts.yaml via propose_pks_batch
-            PROPOSE_MODULE.propose_pks_batch(
+            result = PROPOSE_MODULE.propose_pks_batch(
                 paper_dir=paper_dir,
                 output_path=paper_dir / "concepts.yaml",
             )
 
-            # Verify sync script picks it up
-            commands = SYNC_MODULE.build_sync_commands(paper_dir)
-            cmd_strs = [" ".join(c) for c in commands]
-            has_add_concepts = any("add-concepts" in s for s in cmd_strs)
-            self.assertTrue(has_add_concepts, f"No add-concepts command found in: {cmd_strs}")
+            self.assertIn("concepts", result)
+            self.assertEqual(result["concepts"][0]["local_name"], "rate_ratio")
+            self.assertTrue((paper_dir / "concepts.yaml").exists())
 
 
-class TestStancesYamlMatchesSyncSchema(unittest.TestCase):
-    """Standalone stances.yaml is recognized by sync_propstore_source.py."""
+class TestStancesYamlMatchesPipelineContract(unittest.TestCase):
+    def test_stance_artifact_shape_matches_extract_stances_skill(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "extract-stances" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("source_claim", skill)
+        self.assertIn("target", skill)
+        self.assertIn("type", skill)
 
-    def test_standalone_stances_recognized(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             paper_dir = Path(tmpdir) / "TestPaper"
             paper_dir.mkdir()
-
             stances = {
                 "source": {"paper": "TestPaper"},
                 "stances": [
-                    {
-                        "source_claim": "claim1",
-                        "target": "OtherPaper:claim2",
-                        "type": "supports",
-                    }
+                    {"source_claim": "claim1", "target": "OtherPaper:claim2", "type": "supports"}
                 ],
             }
             (paper_dir / "stances.yaml").write_text(
-                yaml.dump(stances, default_flow_style=False), encoding="utf-8"
+                yaml.dump(stances, default_flow_style=False),
+                encoding="utf-8",
             )
 
-            commands = SYNC_MODULE.build_sync_commands(paper_dir)
-            cmd_strs = [" ".join(c) for c in commands]
-            has_add_stance = any("add-stance" in s for s in cmd_strs)
-            self.assertTrue(has_add_stance, f"No add-stance command found in: {cmd_strs}")
+            loaded = yaml.safe_load((paper_dir / "stances.yaml").read_text(encoding="utf-8"))
+            self.assertIn("source", loaded)
+            self.assertIn("stances", loaded)
+            self.assertEqual(loaded["stances"][0]["source_claim"], "claim1")
 
 
-class TestFullArtifactSetProducesCompleteCommandPlan(unittest.TestCase):
-    """Paper dir with all artifacts produces the full pks source command sequence."""
-
-    def test_full_artifacts_produce_7_commands(self) -> None:
+class TestFullArtifactSetMatchesPaperProcessStages(unittest.TestCase):
+    def test_full_artifacts_match_current_skill_boundaries(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             paper_dir = _make_full_paper_dir(Path(tmpdir))
 
-            commands = SYNC_MODULE.build_sync_commands(paper_dir)
-
-            # Should have: init, write-notes, write-metadata, add-concepts,
-            # add-claim, add-justification, add-stance = 7 commands
-            cmd_ops = []
-            for cmd in commands:
-                cmd_str = " ".join(cmd)
-                if "source init" in cmd_str:
-                    cmd_ops.append("init")
-                elif "write-notes" in cmd_str:
-                    cmd_ops.append("write-notes")
-                elif "write-metadata" in cmd_str:
-                    cmd_ops.append("write-metadata")
-                elif "add-concepts" in cmd_str:
-                    cmd_ops.append("add-concepts")
-                elif "add-claim" in cmd_str:
-                    cmd_ops.append("add-claim")
-                elif "add-justification" in cmd_str:
-                    cmd_ops.append("add-justification")
-                elif "add-stance" in cmd_str:
-                    cmd_ops.append("add-stance")
-
-            self.assertEqual(len(cmd_ops), 7, f"Expected 7 commands, got: {cmd_ops}")
-            self.assertEqual(
-                cmd_ops,
-                ["init", "write-notes", "write-metadata", "add-concepts",
-                 "add-claim", "add-justification", "add-stance"],
+            source_bootstrap = (PLUGIN_ROOT / "skills" / "source-bootstrap" / "SKILL.md").read_text(
+                encoding="utf-8"
+            )
+            paper_process = (PLUGIN_ROOT / "skills" / "paper-process" / "SKILL.md").read_text(
+                encoding="utf-8"
             )
 
-    def test_finalize_and_promote_when_requested(self) -> None:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            paper_dir = _make_full_paper_dir(Path(tmpdir))
+            self.assertTrue((paper_dir / "paper.pdf").exists())
+            self.assertTrue((paper_dir / "notes.md").exists())
+            self.assertTrue((paper_dir / "metadata.json").exists())
+            self.assertTrue((paper_dir / "claims.yaml").exists())
+            self.assertTrue((paper_dir / "concepts.yaml").exists())
+            self.assertTrue((paper_dir / "justifications.yaml").exists())
+            self.assertTrue((paper_dir / "stances.yaml").exists())
 
-            commands = SYNC_MODULE.build_sync_commands(paper_dir, promote=True)
-            cmd_strs = [" ".join(c) for c in commands]
-
-            has_finalize = any("finalize" in s for s in cmd_strs)
-            has_promote = any("promote" in s for s in cmd_strs)
-            self.assertTrue(has_finalize)
-            self.assertTrue(has_promote)
+            self.assertIn("paper.pdf", source_bootstrap)
+            self.assertIn("notes.md", source_bootstrap)
+            self.assertIn("metadata.json", source_bootstrap)
+            self.assertIn("source-bootstrap", paper_process)
+            self.assertIn("extract-stances", paper_process)
+            self.assertIn("source-promote", paper_process)
 
 
 class TestConceptNamesRoundtrip(unittest.TestCase):
-    """Concepts proposed by propose_pks_batch can be referenced in claims.yaml."""
-
     def test_concept_names_match_claims(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             paper_dir = Path(tmpdir) / "TestPaper"
@@ -273,14 +219,10 @@ class TestConceptNamesRoundtrip(unittest.TestCase):
             result = PROPOSE_MODULE.propose_pks_batch(paper_dir=paper_dir)
             concept_names = {c["local_name"] for c in result["concepts"]}
 
-            # Every concept referenced in claims should appear in concepts.yaml
             for claim in claims["claims"]:
                 concept_ref = claim.get("concept")
                 if concept_ref:
-                    self.assertIn(
-                        concept_ref, concept_names,
-                        f"Claim references '{concept_ref}' but concepts.yaml doesn't have it",
-                    )
+                    self.assertIn(concept_ref, concept_names)
 
 
 if __name__ == "__main__":

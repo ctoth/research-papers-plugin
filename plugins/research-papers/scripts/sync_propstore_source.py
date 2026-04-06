@@ -1,10 +1,14 @@
 # /// script
 # requires-python = ">=3.10"
 # ///
-"""Sync one extracted paper directory into propstore's source-oriented CLI surface.
+"""DEPRECATED: compatibility shim for legacy callers.
+
+Sync one extracted paper directory into propstore's source-oriented CLI surface.
 
 This is a narrow helper for already-extracted paper directories. The primary
-repo-wide orchestration path is the `ingest-collection` skill.
+repo-wide orchestration path is now the `source-bootstrap`, `paper-process`,
+and `source-promote` skill stack. Keep this script only while downstream users
+finish migrating off the old helper surface.
 
 Usage:
     uv run scripts/sync_propstore_source.py <paper-dir> [--finalize] [--promote] [--dry-run]
