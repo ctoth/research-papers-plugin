@@ -66,6 +66,29 @@ class TestSourceWorkflowContracts(unittest.TestCase):
         self.assertNotIn("pks source", skill)
         self.assertNotIn("pks init", skill)
 
+    def test_paper_process_is_a_pure_skill_orchestrator(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "paper-process" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        for required in (
+            "paper-retriever",
+            "paper-reader",
+            "source-bootstrap",
+            "register-concepts",
+            "extract-claims",
+            "extract-justifications",
+            "extract-stances",
+            "source-promote",
+        ):
+            self.assertIn(required, skill)
+
+        self.assertNotIn("pks source init", skill)
+        self.assertNotIn("pks source write-notes", skill)
+        self.assertNotIn("pks source write-metadata", skill)
+        self.assertNotIn("pks source finalize", skill)
+        self.assertNotIn("pks source promote", skill)
+
     def test_orchestrator_fallbacks_use_uv_run(self) -> None:
         for rel_path in (
             ("skills", "paper-process", "SKILL.md"),
