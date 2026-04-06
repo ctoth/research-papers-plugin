@@ -15,11 +15,11 @@ Extract propositional claims from a research paper and produce a `claims.yaml` f
 ```bash
 paper_dir="$ARGUMENTS"
 ls "$paper_dir"/notes.md 2>/dev/null || echo "MISSING: notes.md"
-ls "$paper_dir"/claims.yaml 2>/dev/null && echo "EXISTS: claims.yaml — use enrich-claims to improve it"
+ls "$paper_dir"/claims.yaml 2>/dev/null && echo "EXISTS: claims.yaml — this run will overwrite it"
 ```
 
 - `notes.md` missing → STOP. Run paper-reader first.
-- `claims.yaml` already exists → report and ask whether to overwrite or use enrich-claims instead.
+- `claims.yaml` already exists → overwrite it during this run. Do not ask whether to overwrite; orchestrated flow must stay non-interactive.
 
 Check for concept inventory:
 ```bash
@@ -34,6 +34,28 @@ Read:
 - `<paper_dir>/notes.md` — primary source
 - `<paper_dir>/paper.pdf` or page images in `<paper_dir>/pngs/` — for page numbers and verification
 - `<paper_dir>/concepts.yaml` — if it exists, this is the paper's source-local concept inventory from register-concepts. Use `local_name` values as concept references in all claims.
+
+### Page Image Verification Lane
+
+When a claim cites page `N`, the corresponding page image is:
+
+- `pngs/page-{(N-1):03d}.png`
+
+Examples:
+
+- page 1 → `pngs/page-000.png`
+- page 12 → `pngs/page-011.png`
+
+For claims with precise numerics, spot-check the cited page image directly rather than trusting only `notes.md`.
+
+Spot-check at minimum:
+
+- exact values
+- lower and upper confidence bounds
+- p-values
+- sample-size-dependent reported quantities
+
+Only verify the cited pages you actually use. Do not reread every page image for claim extraction if the paper has already been read into `notes.md`.
 
 ## Step 2: Extract Claims by Type
 
@@ -244,7 +266,15 @@ source_name=$(basename "$paper_dir")
 pks source add-claim "$source_name" --batch "$paper_dir/claims.yaml"
 ```
 
-If this fails with concept validation errors, the claims reference concepts not in the source branch's concepts.yaml. Fix the concept names to match what register-concepts produced, then retry.
+If this fails with `unknown concept reference` errors, or if the add succeeds but source auto-finalize reports unknown concepts:
+
+1. note the missing concept names
+2. rerun `register-concepts`
+3. add the missing concepts to `concepts.yaml`
+4. ingest concepts again
+5. retry `pks source add-claim`
+
+This retry loop is expected. Use finalize feedback as the authoritative missing-concept list until the loop converges.
 
 ## Step 6: Stamp Provenance
 

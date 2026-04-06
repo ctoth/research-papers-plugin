@@ -41,8 +41,15 @@ class TestSourceWorkflowContracts(unittest.TestCase):
             encoding="utf-8"
         )
 
+        self.assertIn("pngs/page-", skill)
+        self.assertIn("spot-check", skill)
+        self.assertIn("unknown concept", skill)
         self.assertNotIn("knowledge/claims/*.yaml", skill)
         self.assertNotIn("Concept registry (`knowledge/concepts/*.yaml`)", skill)
+        self.assertNotIn(
+            "report and ask whether to overwrite or use enrich-claims instead",
+            skill,
+        )
 
     def test_sync_helper_has_no_dead_pyyaml_dependency(self) -> None:
         script = (PLUGIN_ROOT / "scripts" / "sync_propstore_source.py").read_text(
