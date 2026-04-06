@@ -1,6 +1,6 @@
 ---
 name: register-concepts
-description: Register concepts needed by a paper into a propstore source branch. Runs propose_concepts.py to extract concept inventory from claims, then enriches definitions via notes.md, and calls pks source add-concepts.
+description: Register a paper-local concept inventory into a propstore source branch. The primary extraction source is notes.md; claims.yaml is supplementary when present.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI."
@@ -8,18 +8,19 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 # Register Concepts: $ARGUMENTS
 
-Register all concepts needed by a paper into its propstore source branch. This must run after extract-claims (needs claims.yaml) and after `pks source init` has created the source branch.
+Register the concepts needed by one paper into its propstore source branch.
+
+This skill is rerunnable. Its primary source is `notes.md`. If `claims.yaml` exists, use it only as a supplementary pass to catch concept references you missed on the first read.
 
 ## Step 0: Validate
 
 ```bash
 paper_dir="$ARGUMENTS"
 ls "$paper_dir"/notes.md 2>/dev/null || echo "MISSING: notes.md"
-ls "$paper_dir"/claims.yaml 2>/dev/null || echo "MISSING: claims.yaml"
+ls "$paper_dir"/claims.yaml 2>/dev/null || echo "OPTIONAL: claims.yaml not present"
 ```
 
-If `notes.md` is missing → STOP, run paper-reader first.
-If `claims.yaml` is missing → STOP, run extract-claims first.
+If `notes.md` is missing, stop and run `paper-reader` first.
 
 ## Step 1: Check Propstore State
 
@@ -28,72 +29,93 @@ ls knowledge/.git 2>/dev/null
 pks source --help 2>/dev/null | head -20
 ```
 
-If no `knowledge/` directory exists → STOP. Report: "No propstore found. Run `pks init` first."
+If no `knowledge/` directory exists, stop and report: `No propstore found. Run pks init first.`
 
-## Step 2: Mechanical Concept Extraction
+## Step 2: Build The Primary Concept Inventory From Notes
 
-Run the concept proposer to extract all concept names from this paper's claims.yaml:
+Read `notes.md`, especially sections such as:
+
+- Methods
+- Results
+- Study Design
+- Key Contributions
+- Definitions
+- Terminology introduced by the authors
+
+From `notes.md`, identify all domain concepts the paper actually uses. For each concept, write:
+
+- `local_name`
+- `proposed_name`
+- a real 1-2 sentence definition
+- the correct `form`
+
+Good definitions distinguish the concept from near-neighbors and would make sense to a reader who has not seen this paper.
+
+Good:
+
+`Ratio of hazard rates between treatment and control arms, measuring relative event risk over time.`
+
+Bad:
+
+`A ratio.`
+
+## Step 3: Supplement With Claims-Derived Stragglers When Available
+
+If `claims.yaml` exists, run the supplementary mechanical pass:
 
 ```bash
 uv run scripts/propose_concepts.py pks-batch "$paper_dir" \
   --registry-dir knowledge/concepts \
-  --output "$paper_dir/concepts.yaml"
+  --output "$paper_dir/concepts.auto.yaml"
 ```
 
-Read the output `concepts.yaml`. It will have entries like:
-```yaml
-concepts:
-  - local_name: "hazard_ratio"
-    proposed_name: "hazard_ratio"
-    definition: "Auto-proposed from 5 claim(s)."
-    form: "structural"
+Read `concepts.auto.yaml` and merge in only genuinely missing concepts.
+
+Rules:
+
+- `notes.md` remains the primary authority
+- do not overwrite a real definition with an auto placeholder
+- use the supplementary pass only to catch stragglers referenced in claims
+
+## Step 4: Write concepts.yaml
+
+Write the merged inventory to:
+
+```bash
+"$paper_dir/concepts.yaml"
 ```
 
-## Step 3: Enrich Definitions
+Every entry should start with a real definition, not an auto-generated placeholder.
 
-The auto-generated definitions are placeholders. For each concept in `concepts.yaml`:
+Verify `form` carefully:
 
-1. Read the paper's `notes.md` to find how this concept is described
-2. Replace the placeholder definition with a 1-2 sentence definition that:
-   - Distinguishes this concept from near-neighbors
-   - Would make sense to someone unfamiliar with this specific paper
-   - Is specific enough to match against similar concepts in other papers
+- `ratio` for dimensionless ratios such as hazard ratio, odds ratio, and relative risk
+- `rate` for event rates or incidences over time
+- `score` for evaluation metrics, p-values, and similar scalar outputs
+- `count` for discrete quantities such as sample size or event count
+- `structural` for methods, architectures, and abstract methodological concepts
+- `category` for discrete condition variables or enumerated states
 
-Good: "Ratio of hazard rates between treatment and control arms, measuring the relative risk of an event occurring in the intervention group."
-Bad: "A ratio."
-
-3. Verify the `form` is correct:
-   - `ratio` for dimensionless ratios (hazard ratio, odds ratio, rate ratio, relative risk)
-   - `rate` for event rates (events per person-year, incidence rate)
-   - `score` for evaluation metrics, p-values, absolute risk differences
-   - `count` for discrete quantities (person-years, sample size)
-   - `structural` for methods, architectures, abstract concepts
-   - `category` for condition variables with enumerated values
-
-4. Write the enriched `concepts.yaml` back to disk.
-
-## Step 4: Ingest into Propstore
+## Step 5: Ingest Into Propstore
 
 ```bash
 source_name=$(basename "$paper_dir")
 pks source add-concepts "$source_name" --batch "$paper_dir/concepts.yaml"
 ```
 
-If this fails with "unknown source branch", the source branch hasn't been initialized. Run:
-```bash
-# See paper-process skill for full init sequence
-pks source init "$source_name" --kind academic_paper --origin-type doi --origin-value "<doi>"
-```
+If this fails with `unknown source branch`, stop and run the source bootstrap flow first.
 
-## Step 5: Report Alignment
+## Step 6: Report
 
-After add-concepts, check which concepts exact-matched existing canonical names vs which remain newly proposed:
+Report:
 
-```
+```text
 Concepts registered for: papers/[dirname]
-  Exact-match links: N (list names)
-  Newly proposed: N (list names)
+  Notes-derived concepts: N
+  Claims-derived stragglers merged: N
+  Exact-match links: N
+  Newly proposed: N
   Total in concepts.yaml: N
 ```
 
-Newly proposed concepts will need alignment decisions after all papers are finalized.
+If later `add-claim` or auto-finalize reports missing concept references, rerun this skill, add the missing concepts, and ingest again.

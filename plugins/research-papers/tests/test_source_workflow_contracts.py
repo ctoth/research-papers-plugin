@@ -28,7 +28,11 @@ class TestSourceWorkflowContracts(unittest.TestCase):
             encoding="utf-8"
         )
 
+        self.assertIn("notes.md", skill)
         self.assertIn("propose_concepts.py pks-batch", skill)
+        self.assertNotIn("If `claims.yaml` is missing → STOP", skill)
+        self.assertNotIn("This must run after extract-claims", skill)
+        self.assertNotIn("Run the concept proposer to extract all concept names from this paper's claims.yaml", skill)
         self.assertNotIn("--forms-dir", skill)
         self.assertNotIn("--domain", skill)
 
