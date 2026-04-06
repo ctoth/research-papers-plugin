@@ -108,6 +108,13 @@ class TestSourceWorkflowContracts(unittest.TestCase):
         self.assertIn("paper-reader", skill)
         self.assertNotIn("pks source", skill)
 
+    def test_ingest_new_papers_runs_paper_process(self) -> None:
+        skill = (
+            PLUGIN_ROOT / "skills" / "ingest-new-papers" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("paper-process", skill)
+
     def test_adjudicate_acquires_missing_inputs_through_paper_process_only(self) -> None:
         skill = (PLUGIN_ROOT / "skills" / "adjudicate" / "SKILL.md").read_text(
             encoding="utf-8"
