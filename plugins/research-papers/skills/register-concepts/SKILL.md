@@ -66,11 +66,35 @@ From `notes.md`, identify all domain concepts the paper actually uses. For each 
 
 ### Granularity Guidance
 
-Concepts ARE: domain-specific measurable quantities (hazard_ratio, event_rate), methodological constructs (cox_proportional_hazards, factorial_design), clinical categories (diabetes_mellitus, peripheral_arterial_disease).
+Concepts ARE: domain-specific measurable quantities (hazard_ratio, event_rate), methodological constructs (cox_proportional_hazards, factorial_design), clinical categories (diabetes_mellitus, peripheral_arterial_disease), **conditioning axes** (endpoint, comparison, intervention — dimensions along which parameter values vary).
 
 Concepts are NOT: named entities (Scotland, BMJ), specific trial names (POPADAD -- these are category values or source metadata), generic terms (data, result, study).
 
 When in doubt: if two papers could independently measure or define the same thing, it's probably a concept.
+
+### Compound-Unit Decomposition
+
+When a quantity has a compound unit (mg/day, events/patient-year, dollars/hour), ask: **are the components independently variable?** If yes, they are separate concepts, not one concept with a compound unit.
+
+Example: "aspirin 100 mg daily" is two independent facts — the dose (100 mg, form: mass) and the frequency (once daily, form: category). Another paper might use the same dose at a different frequency, or a different dose at the same frequency. Baking both into one concept with unit `mg/day` collapses two dimensions into one and prevents independent querying.
+
+**Test:** If Paper A reports "100 mg daily" and Paper B reports "100 mg twice daily," can you tell them apart? If the concept is `aspirin_dose` with unit `mg/day`, Paper A is 100 mg/day and Paper B is 200 mg/day — you've lost the fact that both use the same tablet. With separate concepts (`aspirin_dose` = 100 mg, `dosing_frequency` = once_daily vs twice_daily), both dimensions are preserved.
+
+**Rule:** When you see a compound unit, split it into its independently-variable components. Each component gets its own concept with its own form. The relationship between them is expressed through CEL conditions, not through compound units.
+
+### Conditioning-Axis Concepts
+
+Claims use CEL conditions like `endpoint == 'composite_primary'` or `comparison == 'aspirin_vs_placebo'`. **Every name on the LHS of a CEL condition must be a registered concept.** The propstore CEL checker validates condition names against the concept registry — unregistered names cause hard validation errors.
+
+This means you must register conditioning axes as concepts, not just measurement targets. Common conditioning-axis concepts include:
+
+- `endpoint` (category) — which outcome is being measured
+- `comparison` (category) — which groups are being compared
+- `intervention` (category) — which treatment arm
+- `population` (category) — which subgroup or cohort
+- `confidence_level` (ratio) — confidence level for interval estimates
+
+These are real domain concepts: multiple papers will condition their parameters on the same axes. Register them with appropriate forms (usually `category` for string-valued axes, `ratio` or other quantity forms for numeric axes).
 
 ### Definition Quality
 
@@ -105,6 +129,7 @@ If `claims.yaml` exists in the paper directory, read it and check for concept re
 - `concepts[]`
 - `variables[].concept`
 - `parameters[].concept`
+- `conditions[]` — extract every LHS name from CEL expressions (e.g., `endpoint` from `endpoint == 'composite_primary'`). These names must be registered concepts.
 
 For any concepts found in `claims.yaml` that were NOT already registered in Step 4, propose them using the same command:
 

@@ -81,8 +81,8 @@ For each parameter, constant, or threshold mentioned in the paper:
 
 Rules:
 - Every parameter needs at minimum: id, type, concept, provenance
-- Include `value` OR `lower_bound`+`upper_bound` (at least one)
-- Always include `unit` when known
+- Include `value` OR `lower_bound`+`upper_bound` (at least one). **Never** use `lower_bound` alone or `upper_bound` alone — the validator rejects unpaired bounds. If only one bound is known, use `value` with a `notes` field explaining the bound direction (e.g., ">85%").
+- Always include `unit` when known. **Never use compound units that conflate independently-variable dimensions** (e.g., `mg/day` conflates dose and frequency). Split into separate concepts with simple units and express the relationship through CEL conditions. See register-concepts "Compound-Unit Decomposition" for the full rule.
 - Use names from the paper's `concepts.yaml` inventory when available; otherwise use descriptive lowercase_underscore names
 
 ### 2.2: Equation Claims
@@ -233,6 +233,27 @@ For acknowledged scope boundaries, failure modes, unsolved problems:
     section: "Limitations"
 ```
 
+## CEL Conditions Contract
+
+**Every name on the left-hand side of a CEL condition must be a registered concept.** The propstore CEL checker (`cel_checker.py`) resolves every `NameNode` against the concept registry. If a name is not a registered concept, validation fails with `Undefined concept`.
+
+This means condition variables like `endpoint`, `comparison`, `intervention`, `population` are **not free-form strings** — they are concepts that must exist in the registry with appropriate forms. The form determines what operations are valid:
+
+- **category** concepts: can use `==`, `!=`, `in [...]` with string literals
+- **quantity** concepts: can use `==`, `!=`, `<`, `>`, `<=`, `>=` with numeric literals
+- **boolean** concepts: can use `==`, `!=` with `true`/`false`
+- **structural** concepts: **cannot appear in CEL expressions at all**
+
+### What this means in practice
+
+When you write `conditions: ["endpoint == 'composite_primary'"]`, the name `endpoint` must be a registered concept with form `category`. If it isn't registered yet, you must register it (via register-concepts or `pks source propose-concept`) before validation will pass.
+
+**Before writing any CEL condition, verify the name exists in the concept registry.** If you're introducing a new conditioning axis (e.g., `endpoint`, `comparison`, `population`), register it as a concept first. These conditioning-axis concepts are just as real as the measurement concepts — they're the dimensions along which parameter values vary.
+
+### Meta rule
+
+When producing artifacts that a downstream tool validates, discover the validation contract from the tool — do not assume you know it. The CEL checker is the authority on what condition expressions are legal, not this skill document.
+
 ## Step 3: Assemble and Write
 
 ```yaml
@@ -256,6 +277,8 @@ pks claim validate-file "$paper_dir"/claims.yaml
 If `knowledge/.git` is missing → STOP. Run `pks init` or use `paper-process`, which initializes the source branch first.
 
 If validation fails, fix and re-validate. **Do not consider extraction complete until validation passes.**
+
+**Note on source-branch workflows:** `validate-file` checks concepts against the master registry (`knowledge/concepts/`). If you are building a new source branch where concepts have been proposed but not yet promoted to master, the master concepts directory may be empty and `validate-file` will report false "Undefined concept" errors. In that case, proceed to Step 5 — `pks source add-claim` validates claims against the **source branch's own concept registry**, which includes proposed concepts. If `add-claim` succeeds, the claims are valid.
 
 ## Step 5: Ingest into Propstore
 
@@ -363,6 +386,7 @@ Do not query master-branch claims from this skill. Create the local equation cla
 - [ ] Mechanism claims have statement with causal/architectural reasoning
 - [ ] Comparison claims name both subject and comparand with evidence
 - [ ] Limitation claims specify the scope boundary
+- [ ] Every name in CEL conditions is a registered concept (not free-form strings)
 - [ ] Conditions use consistent CEL vocabulary across the file
 - [ ] Concept names match the paper's concept inventory where one exists
 - [ ] Context assigned if identified during register-concepts — or explicitly universal
