@@ -531,8 +531,9 @@ Append:
 ## Step 9: Stamp Provenance
 
 ```bash
-uv run plugins/research-papers/scripts/stamp_provenance.py \
-  "papers/<Author_Year_ShortTitle>/notes.md" \
+source_name=$(basename "$paper_dir")
+pks source stamp-provenance "$source_name" \
+  --file "papers/<Author_Year_ShortTitle>/notes.md" \
   --agent "<your model name>" --skill paper-reader
 ```
 

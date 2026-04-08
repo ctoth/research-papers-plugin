@@ -279,8 +279,8 @@ This retry loop is expected. Use finalize feedback as the authoritative missing-
 ## Step 6: Stamp Provenance
 
 ```bash
-uv run plugins/research-papers/scripts/stamp_provenance.py \
-  "<paper_dir>/claims.yaml" \
+pks source stamp-provenance "$source_name" \
+  --file "$paper_dir/claims.yaml" \
   --agent "<your model name>" --skill extract-claims
 ```
 

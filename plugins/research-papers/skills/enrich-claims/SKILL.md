@@ -172,8 +172,8 @@ If this fails because the source branch does not exist yet, stop and use `paper-
 ## Step 6: Stamp Provenance
 
 ```bash
-uv run plugins/research-papers/scripts/stamp_provenance.py \
-  "<paper_dir>/claims.yaml" \
+pks source stamp-provenance "$source_name" \
+  --file "$paper_dir/claims.yaml" \
   --agent "<your model name>" --skill enrich-claims
 ```
 

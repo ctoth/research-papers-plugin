@@ -407,8 +407,8 @@ If this fails because the source branch does not exist yet, stop and use `paper-
 ## Step 6: Stamp Provenance
 
 ```bash
-uv run plugins/research-papers/scripts/stamp_provenance.py \
-  "<paper_dir>/claims.yaml" \
+pks source stamp-provenance "$source_name" \
+  --file "$paper_dir/claims.yaml" \
   --agent "<your model name>" --skill enrich-claims
 ```
 
@@ -699,8 +699,8 @@ If this fails with concept validation errors, the claims reference concepts not 
 ## Step 6: Stamp Provenance
 
 ```bash
-uv run plugins/research-papers/scripts/stamp_provenance.py \
-  "<paper_dir>/claims.yaml" \
+pks source stamp-provenance "$source_name" \
+  --file "$paper_dir/claims.yaml" \
   --agent "<your model name>" --skill extract-claims
 ```
 
@@ -964,8 +964,8 @@ If this fails with claim reference errors, the referenced claim IDs don't match 
 ## Step 6: Stamp Provenance
 
 ```bash
-uv run plugins/research-papers/scripts/stamp_provenance.py \
-  "<paper_dir>/justifications.yaml" \
+pks source stamp-provenance "$source_name" \
+  --file "$paper_dir/justifications.yaml" \
   --agent "<your model name>" --skill extract-justifications
 ```
 
@@ -1162,8 +1162,8 @@ If this fails with claim reference errors, the referenced claim IDs don't match 
 ## Step 7: Stamp Provenance
 
 ```bash
-uv run plugins/research-papers/scripts/stamp_provenance.py \
-  "<paper_dir>/stances.yaml" \
+pks source stamp-provenance "$source_name" \
+  --file "$paper_dir/stances.yaml" \
   --agent "<your model name>" --skill extract-stances
 ```
 
@@ -2508,8 +2508,9 @@ Append:
 ## Step 9: Stamp Provenance
 
 ```bash
-uv run plugins/research-papers/scripts/stamp_provenance.py \
-  "papers/<Author_Year_ShortTitle>/notes.md" \
+source_name=$(basename "$paper_dir")
+pks source stamp-provenance "$source_name" \
+  --file "papers/<Author_Year_ShortTitle>/notes.md" \
   --agent "<your model name>" --skill paper-reader
 ```
 

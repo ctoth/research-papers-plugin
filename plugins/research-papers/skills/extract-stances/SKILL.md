@@ -156,8 +156,8 @@ If this fails with claim reference errors, the referenced claim IDs don't match 
 ## Step 7: Stamp Provenance
 
 ```bash
-uv run plugins/research-papers/scripts/stamp_provenance.py \
-  "<paper_dir>/stances.yaml" \
+pks source stamp-provenance "$source_name" \
+  --file "$paper_dir/stances.yaml" \
   --agent "<your model name>" --skill extract-stances
 ```
 

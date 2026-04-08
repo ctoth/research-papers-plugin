@@ -165,8 +165,8 @@ If this fails with claim reference errors, the referenced claim IDs don't match 
 ## Step 6: Stamp Provenance
 
 ```bash
-uv run plugins/research-papers/scripts/stamp_provenance.py \
-  "<paper_dir>/justifications.yaml" \
+pks source stamp-provenance "$source_name" \
+  --file "$paper_dir/justifications.yaml" \
   --agent "<your model name>" --skill extract-justifications
 ```
 
