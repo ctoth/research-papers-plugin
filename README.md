@@ -17,19 +17,57 @@ This plugin provides skills for retrieving, reading, and annotating scientific p
 - **citations.md** — Full reference list + key citations for follow-up
 - **papers/index.md** — Auto-generated list of paper directories in the collection
 
+## Propstore
+
+Most of the propositional-knowledge pipeline skills (`extract-claims`, `extract-justifications`, `extract-stances`, `register-concepts`, `enrich-claims`, `source-bootstrap`, `source-promote`, `ingest-collection`, `ingest-new-papers`, `paper-process`) invoke the `pks` CLI from [propstore](https://github.com/ctoth/propstore). Install it once with:
+
+```bash
+uv tool install git+https://github.com/ctoth/propstore
+```
+
+This provides the `pks` executable on your PATH. Skills that do not touch the propstore source-branch layer (`paper-retriever`, `paper-reader`, `reconcile`, `lint-paper`, `tag-papers`, `research`, `process-new-papers`, `reconcile-vocabulary`, `adjudicate`) work without it.
+
 ## Skills
+
+### Retrieval and reading
 
 | Skill | Description |
 |-------|-------------|
 | `paper-retriever` | Download a paper PDF from arxiv, DOI, ACL Anthology, or sci-hub |
 | `paper-reader` | Read a paper and extract structured notes (handles small/medium/large papers) |
-| `paper-process` | Combined retrieve + read in one step |
-| `lint-paper` | Audit paper directories for completeness and format compliance |
+| `paper-process` | Full per-paper flow: retrieve, read, and run the propstore ingestion pipeline |
+| `process-new-papers` | Batch `paper-reader` over every unprocessed PDF in `papers/` root |
+
+### Propstore ingestion
+
+| Skill | Description |
+|-------|-------------|
+| `source-bootstrap` | Initialize a propstore source branch for a paper |
+| `register-concepts` | Register the paper's concept inventory into its source branch |
+| `extract-claims` | Extract propositional claims from a paper into `claims.yaml` |
+| `enrich-claims` | Enrich an existing `claims.yaml` (pages, concept IDs, SymPy, conditions, uncertainty) |
+| `extract-justifications` | Extract intra-paper argumentative structure into `justifications.yaml` |
+| `extract-stances` | Extract inter-paper stances into `stances.yaml` |
+| `source-promote` | Promote a fully-prepared source branch into master |
+| `ingest-collection` | Rebuild a propstore knowledge store from an entire paper collection |
+| `ingest-new-papers` | Run `paper-process` over every unprocessed PDF in `papers/` root |
+
+### Collection management
+
+| Skill | Description |
+|-------|-------------|
 | `reconcile` | Cross-reference a paper against the collection bidirectionally |
+| `reconcile-vocabulary` | Reconcile paper-local concept inventories across the collection |
 | `tag-papers` | Add tags to untagged papers using their existing notes |
+| `lint-paper` | Audit paper directories for completeness and format compliance |
+| `adjudicate` | Systematically adjudicate disagreements across a paper collection |
+| `process-leads` | Extract "New Leads" from the collection and process them via `paper-process` |
+
+### Research
+
+| Skill | Description |
+|-------|-------------|
 | `research` | Web research on a topic, structured findings report |
-| `extract-claims` | Extract/enrich propositional claims from a paper into claims.yaml |
-| `make-skill` | Create new skills from prompt files |
 
 ## Scripts
 
@@ -41,30 +79,8 @@ Repository-level installer utilities live in `scripts/`. Paper-collection helper
 | `generate-paper-index.py` | Rebuild papers/index.md and papers/tagged/ symlinks |
 | `cross-reference-papers.py` | Find cross-references between papers in the collection |
 | `migrate-format.py` | Convert legacy Tags: lines → YAML frontmatter, bold refs → wikilinks |
-| `generate_claims.py` | Parse notes.md and generate claims.yaml for a single paper |
-| `batch_generate_claims.py` | Generate claims.yaml for all papers in a directory |
-| `bootstrap_concepts.py` | Deduplicate and group concept names from claims files |
 
-## Claims Extraction Pipeline
-
-The claims pipeline extracts machine-readable propositional claims from paper notes. The typical workflow:
-
-1. **`generate_claims.py`** — Parses `notes.md` (parameter tables, equations, key findings) and produces a draft `claims.yaml` marked with `stage: draft`. Fast, deterministic, no LLM needed.
-2. **`extract-claims` skill** — LLM-powered enrichment of the draft claims (adds context, fixes types, fills gaps). Can also create claims from scratch if no draft exists.
-3. **`batch_generate_claims.py`** — Runs step 1 across an entire papers directory. Use `--skip-existing` to avoid re-processing.
-4. **`bootstrap_concepts.py`** — Collects concept names from all claims files, deduplicates similar names, and outputs a unified concepts list.
-
-```bash
-# Single paper: generate draft, then enrich with LLM
-uv run plugins/research-papers/scripts/generate_claims.py papers/Author_2024_Title
-$extract-claims papers/Author_2024_Title
-
-# Batch: generate drafts for all papers missing claims.yaml
-uv run plugins/research-papers/scripts/batch_generate_claims.py papers/ --skip-existing
-
-# After batch: deduplicate concepts across all claims
-uv run plugins/research-papers/scripts/bootstrap_concepts.py papers/ --output concepts.yaml
-```
+The claims, justifications, stances, and concepts pipeline is driven by the skills (`extract-claims`, `extract-justifications`, `extract-stances`, `register-concepts`, `enrich-claims`) together with `pks source` commands from [propstore](https://github.com/ctoth/propstore). Invoke the skills rather than running pipeline scripts directly.
 
 ## Installation
 
