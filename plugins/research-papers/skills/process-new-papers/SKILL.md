@@ -108,4 +108,4 @@ Remaining unprocessed: [ls papers/*.pdf output, or "none"]
 
 - **Already-processed PDFs**: If paper-reader detects a paper is already complete, it will delete the duplicate root PDF and move on. This is expected behavior.
 
-- **reconcile needed**: paper-reader already invokes reconcile as part of its flow (Step 7.5) but you may need to do again at the end.
+- **reconcile needed**: paper-reader already invokes reconcile as part of its flow (Step 7) but you may need to do it again at the end.
