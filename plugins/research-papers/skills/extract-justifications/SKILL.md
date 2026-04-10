@@ -44,6 +44,11 @@ When a justification represents a critique rather than support, it includes an `
 
 This distinction is critical: propstore's defeat calculus treats undercuts as preference-independent (always defeat), while rebuts and undermines are preference-dependent.
 
+The attack type is inferred from which `attack_target` fields are populated — there is no `kind` discriminator field:
+- `target_claim` only → rebuts (attacks the conclusion directly)
+- `target_claim` + `target_premise_index` → undermines (attacks a specific premise)
+- `target_justification_id` → undercuts (attacks the inference/methodology)
+
 ## Step 0: Validate
 
 ```bash
@@ -99,13 +104,26 @@ justifications:
     premises:
       - claim5
     rule_kind: methodological_inference
+    # Undercut: attacks the inference rule of a justification
     attack_target:
-      kind: inference_rule
-      target_claim: claim9
+      target_justification_id: just1
     provenance:
       page: 22
       section: Discussion
       quote_fragment: "This approach fails to account for..."
+
+  - id: just3
+    conclusion: claim21
+    premises:
+      - claim6
+    rule_kind: empirical_support
+    # Rebut: attacks the conclusion claim directly
+    attack_target:
+      target_claim: claim9
+    provenance:
+      page: 25
+      section: Discussion
+      quote_fragment: "Contrary to the authors' conclusion..."
 ```
 
 ### Field Reference
@@ -121,9 +139,10 @@ justifications:
   - `quote_fragment` — Brief quote (1-2 sentences max) showing the inferential move.
 
 **Optional fields:**
-- `attack_target` — Only present when the justification represents a critique.
-  - `kind` — One of: `conclusion`, `premise`, `inference_rule`.
-  - `target_claim` — The claim ID being attacked.
+- `attack_target` — Only present when the justification represents a critique. Attack type is inferred from which fields are populated.
+  - `target_claim` — The claim ID being attacked (for rebuts and undermines).
+  - `target_justification_id` — The justification ID being attacked (for undercuts).
+  - `target_premise_index` — Which premise in the target is being attacked (for undermines). Integer index into the target's premises list.
 
 ### Rules
 
@@ -132,7 +151,7 @@ justifications:
 3. **Premises must be a genuine set.** Do not list the same claim twice. Do not include the conclusion as a premise.
 4. **Do not fabricate reasoning the paper does not make.** If the paper presents a result without connecting it to premises, it is an isolated claim — do not invent a justification.
 5. **Quote fragments must come from the paper.** Do not paraphrase or synthesize — use actual text.
-6. **Attack justifications need both attack_target and standard fields.** A critique still has premises (the evidence for the attack) and a conclusion (what the attacker concludes).
+6. **Attack justifications need both attack_target and standard fields.** A critique still has premises (the evidence for the attack) and a conclusion (what the attacker concludes). The `attack_target` must use the correct field combination: `target_claim` for rebuts, `target_claim` + `target_premise_index` for undermines, or `target_justification_id` for undercuts.
 
 ## Step 3: Write
 
@@ -144,8 +163,9 @@ Check:
 - Every `conclusion` and every entry in `premises` references a valid claim ID in `<paper_dir>/claims.yaml`
 - No justification has its conclusion in its own premises list
 - Every `rule_kind` is one of the seven valid values
-- Every `attack_target.kind` (if present) is one of: `conclusion`, `premise`, `inference_rule`
+- Every `attack_target` (if present) has a valid field combination: `target_claim` only (rebut), `target_claim` + `target_premise_index` (undermine), or `target_justification_id` (undercut)
 - Every `attack_target.target_claim` (if present) references a valid claim ID
+- Every `attack_target.target_justification_id` (if present) references a valid justification ID
 - No duplicate justification IDs
 - At least one premise per justification
 
@@ -177,7 +197,7 @@ This records which model extracted justifications, when, and which plugin versio
 - [ ] Every justification has unique sequential ID
 - [ ] Every conclusion and premise references a valid claim ID
 - [ ] Rule kinds are semantically appropriate (not just syntactically valid)
-- [ ] Attack targets correctly distinguish conclusion/premise/inference_rule
+- [ ] Attack targets use correct field combinations (rebut/undermine/undercut)
 - [ ] Quote fragments are actual paper text, not paraphrases
 - [ ] Provenance has real page numbers and section names
 - [ ] No fabricated connections — only reasoning the paper actually makes
