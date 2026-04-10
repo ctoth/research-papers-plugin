@@ -59,6 +59,7 @@ From `notes.md`, identify all domain concepts the paper actually uses. For each 
 - `local_name`: how this paper refers to the concept (snake_case identifier)
 - `definition`: 1-2 sentence definition that distinguishes it from near-neighbors
 - `form`: chosen from the `pks form list` output in Step 2
+- `values` (category concepts only): comma-separated list of known values this paper uses for the concept
 
 ### local_name vs proposed_name
 
@@ -96,6 +97,14 @@ This means you must register conditioning axes as concepts, not just measurement
 
 These are real domain concepts: multiple papers will condition their parameters on the same axes. Register them with appropriate forms (usually `category` for string-valued axes, `ratio` or other quantity forms for numeric axes).
 
+When proposing conditioning-axis concepts, include `--values` with the values this paper actually uses:
+
+- `endpoint` with `--values composite_primary,fatal_or_nonfatal_mi,stroke,gi_bleeding`
+- `comparison` with `--values aspirin_vs_placebo`
+- `population` with `--values intention_to_treat,per_protocol`
+
+The value set is extensible by default — listing only this paper's values is correct. Other papers will add theirs when they propose the same concept and get linked.
+
 ### Definition Quality
 
 Good: "Ratio of hazard rates between treatment and control arms, measuring relative event risk over time."
@@ -111,13 +120,16 @@ source_name=$(basename "$paper_dir")
 pks source propose-concept "$source_name" \
   --name "<local_name>" \
   --definition "<definition>" \
-  --form "<form>"
+  --form "<form>" \
+  --values "<val1>,<val2>,<val3>"   # category concepts only; omit for non-category
 ```
+
+For non-category concepts (ratio, count, time, mass, etc.), omit `--values` entirely. Using `--values` with a non-category form will produce an error.
 
 Read the output for each concept:
 
-- If output says `Linked '<name>' -> existing '<canonical_name>' (<artifact_id>)`: this concept already exists in the registry. Note the match.
-- If output says `Proposed new concept '<name>' (form: <form>)`: this is a new concept being proposed.
+- If output says `Linked '<name>' -> existing '<canonical_name>' (<artifact_id>)`: this concept already exists in the registry. Note the match. Any `--values` provided will be added to the existing concept's value set.
+- If output says `Proposed new concept '<name>' (form: <form>)`: this is a new concept being proposed, with values stored in `form_parameters.values`.
 - If output says `Unknown form '<form>'`: the form name is wrong. Check `pks form list` and try again with a valid form.
 
 ## Step 5: Supplementary Pass (if claims.yaml exists)
@@ -137,7 +149,8 @@ For any concepts found in `claims.yaml` that were NOT already registered in Step
 pks source propose-concept "$source_name" \
   --name "<local_name>" \
   --definition "<definition>" \
-  --form "<form>"
+  --form "<form>" \
+  --values "<val1>,<val2>"   # category concepts only; omit for non-category
 ```
 
 ## Step 6: Report

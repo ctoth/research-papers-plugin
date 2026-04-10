@@ -83,6 +83,7 @@ Rules:
 - Every parameter needs at minimum: id, type, concept, provenance
 - Include `value` OR `lower_bound`+`upper_bound` (at least one). **Never** use `lower_bound` alone or `upper_bound` alone — the validator rejects unpaired bounds. If only one bound is known, use `value` with a `notes` field explaining the bound direction (e.g., ">85%").
 - Always include `unit` when known. **Never use compound units that conflate independently-variable dimensions** (e.g., `mg/day` conflates dose and frequency). Split into separate concepts with simple units and express the relationship through CEL conditions. See register-concepts "Compound-Unit Decomposition" for the full rule.
+- For temporal quantities, use clinical time units directly: `mo` (month), `yr` (year), `d` (day), `wk` (week). Do not convert to hours or seconds — the `time` form accepts all of these natively.
 - Use names from the paper's `concepts.yaml` inventory when available; otherwise use descriptive lowercase_underscore names
 
 ### 2.2: Equation Claims
@@ -246,7 +247,7 @@ This means condition variables like `endpoint`, `comparison`, `intervention`, `p
 
 ### What this means in practice
 
-When you write `conditions: ["endpoint == 'composite_primary'"]`, the name `endpoint` must be a registered concept with form `category`. If it isn't registered yet, you must register it (via register-concepts or `pks source propose-concept`) before validation will pass.
+When you write `conditions: ["endpoint == 'composite_primary'"]`, the name `endpoint` must be a registered concept with form `category`. If it isn't registered yet, you must register it (via register-concepts or `pks source propose-concept --name endpoint --form category --values composite_primary,secondary`) before validation will pass.
 
 **Before writing any CEL condition, verify the name exists in the concept registry.** If you're introducing a new conditioning axis (e.g., `endpoint`, `comparison`, `population`), register it as a concept first. These conditioning-axis concepts are just as real as the measurement concepts — they're the dimensions along which parameter values vary.
 
