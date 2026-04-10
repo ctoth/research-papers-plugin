@@ -82,7 +82,7 @@ For each parameter, constant, or threshold mentioned in the paper:
 Rules:
 - Every parameter needs at minimum: id, type, concept, provenance
 - Include `value` OR `lower_bound`+`upper_bound` (at least one). **Never** use `lower_bound` alone or `upper_bound` alone — the validator rejects unpaired bounds. If only one bound is known, use `value` with a `notes` field explaining the bound direction (e.g., ">85%").
-- Always include `unit` when known. **Never use compound units that conflate independently-variable dimensions** (e.g., `mg/day` conflates dose and frequency). Split into separate concepts with simple units and express the relationship through CEL conditions. See register-concepts "Compound-Unit Decomposition" for the full rule.
+- Include `unit` for dimensional quantities (mass, time, pressure, etc.). **Omit `unit` for dimensionless forms** (ratio, count, score, boolean, etc.) — propstore auto-fills `unit: '1'` at build time. **Never use compound units that conflate independently-variable dimensions** (e.g., `mg/day` conflates dose and frequency). Split into separate concepts with simple units and express the relationship through CEL conditions. See register-concepts "Compound-Unit Decomposition" for the full rule.
 - For temporal quantities, use clinical time units directly: `mo` (month), `yr` (year), `d` (day), `wk` (week). Do not convert to hours or seconds — the `time` form accepts all of these natively.
 - Use names from the paper's `concepts.yaml` inventory when available; otherwise use descriptive lowercase_underscore names
 
@@ -287,7 +287,8 @@ If a propstore source branch exists for this paper, ingest the claims:
 
 ```bash
 source_name=$(basename "$paper_dir")
-pks source add-claim "$source_name" --batch "$paper_dir/claims.yaml"
+pks source add-claim "$source_name" --batch "$paper_dir/claims.yaml" \
+  --reader "<your model name>" --method "extract-claims"
 ```
 
 If this fails with `unknown concept reference` errors, or if the add succeeds but source auto-finalize reports unknown concepts:
@@ -300,15 +301,11 @@ If this fails with `unknown concept reference` errors, or if the add succeeds bu
 
 This retry loop is expected. Use finalize feedback as the authoritative missing-concept list until the loop converges.
 
-## Step 6: Stamp Provenance
+## Step 6: Provenance
 
-```bash
-pks source stamp-provenance "$source_name" \
-  --file "$paper_dir/claims.yaml" \
-  --agent "<your model name>" --skill extract-claims
-```
+Provenance is recorded automatically via `--reader` and `--method` flags on the `pks source add-claim` command in Step 5. No separate stamp step is needed.
 
-This records which model extracted claims, when, and which plugin version was used. Plugin version is autodetected.
+If you need to override provenance after the fact, `pks source stamp-provenance` still exists but is deprecated.
 
 ---
 
@@ -379,7 +376,7 @@ Do not query master-branch claims from this skill. Create the local equation cla
 
 - [ ] Every claim has unique sequential ID
 - [ ] Every claim has type, provenance with real page numbers where possible
-- [ ] Parameter claims have concept, value (or bounds), and unit
+- [ ] Parameter claims have concept, value (or bounds), and unit (auto-filled for dimensionless forms)
 - [ ] Equation claims have expression, valid sympy, and variable bindings
 - [ ] Observation claims have statement and concepts list
 - [ ] Model claims have name, equations list, and parameter bindings

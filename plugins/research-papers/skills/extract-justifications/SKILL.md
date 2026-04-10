@@ -177,20 +177,17 @@ If a propstore source branch exists for this paper, ingest the justifications:
 
 ```bash
 source_name=$(basename "$paper_dir")
-pks source add-justification "$source_name" --batch "$paper_dir/justifications.yaml"
+pks source add-justification "$source_name" --batch "$paper_dir/justifications.yaml" \
+  --reader "<your model name>" --method "extract-justifications"
 ```
 
 If this fails with claim reference errors, the referenced claim IDs don't match the source branch's claims. Fix and retry.
 
-## Step 6: Stamp Provenance
+## Step 6: Provenance
 
-```bash
-pks source stamp-provenance "$source_name" \
-  --file "$paper_dir/justifications.yaml" \
-  --agent "<your model name>" --skill extract-justifications
-```
+Provenance is recorded automatically via `--reader` and `--method` flags on the `pks source add-justification` command in Step 5. No separate stamp step is needed.
 
-This records which model extracted justifications, when, and which plugin version was used.
+If you need to override provenance after the fact, `pks source stamp-provenance` still exists but is deprecated.
 
 ## Quality Checklist
 

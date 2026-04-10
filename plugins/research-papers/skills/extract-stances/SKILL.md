@@ -148,18 +148,17 @@ Write to `<paper_dir>/stances.yaml`.
 
 ```bash
 source_name=$(basename "$paper_dir")
-pks source add-stance "$source_name" --batch "$paper_dir/stances.yaml"
+pks source add-stance "$source_name" --batch "$paper_dir/stances.yaml" \
+  --reader "<your model name>" --method "extract-stances"
 ```
 
 If this fails with claim reference errors, the referenced claim IDs don't match the source branch's claims.yaml. Fix the references and retry.
 
-## Step 7: Stamp Provenance
+## Step 7: Provenance
 
-```bash
-pks source stamp-provenance "$source_name" \
-  --file "$paper_dir/stances.yaml" \
-  --agent "<your model name>" --skill extract-stances
-```
+Provenance is recorded automatically via `--reader` and `--method` flags on the `pks source add-stance` command in Step 6. No separate stamp step is needed.
+
+If you need to override provenance after the fact, `pks source stamp-provenance` still exists but is deprecated.
 
 ## Output
 
