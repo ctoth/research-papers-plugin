@@ -88,9 +88,20 @@ This paper presents the LF model for parameterizing glottal flow...
 
 ## Step 5: Update index.md
 
-Update the paper's line in `index.md` to include its new tags. Find the line starting with `- PaperDirName` and update it to `- PaperDirName  (tag1, tag2, tag3)`.
+Each entry in `papers/index.md` is a markdown-link header followed by the description body:
 
-If the paper isn't in `index.md` yet, append it.
+```markdown
+## [<pretty title>](<Author_Year_ShortTitle>/notes.md)  (tag1, tag2, tag3)
+<description body>
+```
+
+Find the header line for this paper — it starts with `## [` and contains `](<Author_Year_ShortTitle>/notes.md)`. Update (or append) the `(tag1, tag2, tag3)` suffix. Do **not** rewrite the link itself — preserve both the pretty title and the link target exactly.
+
+If the paper isn't in `index.md` yet, append a new entry using the markdown-link header format above. Pull the pretty title from the paper's `notes.md` frontmatter:
+
+```bash
+title=$(head -8 "papers/<Author_Year_ShortTitle>/notes.md" | grep '^title:' | sed 's/^title:[[:space:]]*//; s/^"//; s/"$//')
+```
 
 ## Step 6: Report
 

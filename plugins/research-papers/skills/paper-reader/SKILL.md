@@ -518,11 +518,19 @@ Wait for reconcile to complete before proceeding.
 
 ## Step 8: Update papers/index.md
 
+Read the paper's pretty title from its `notes.md` frontmatter first:
+
+```bash
+title=$(head -8 "papers/<Author_Year_ShortTitle>/notes.md" | grep '^title:' | sed 's/^title:[[:space:]]*//; s/^"//; s/"$//')
+```
+
 Append:
 ```markdown
-## Author_Year_ShortTitle  (tag1, tag2, tag3)
+## [<pretty title>](<Author_Year_ShortTitle>/notes.md)  (tag1, tag2, tag3)
 [description.md body text — no frontmatter, no tags line]
 ```
+
+The header is a **markdown link**, not plain text and not a `[[wikilink]]`. GitHub does not render wikilinks in repo files, so cross-paper references use real markdown links pointing at the target paper's `notes.md`. Display text is the pretty title from the paper's frontmatter.
 
 **This step is NOT optional.** Without it, future sessions won't know this paper exists.
 

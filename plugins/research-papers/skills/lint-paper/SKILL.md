@@ -48,12 +48,12 @@ For each paper directory, run all checks and collect results.
    ```
    Missing → report as `UNTAGGED`
 
-3. **Wikilinks**: Are cross-references in `notes.md` using `[[wikilinks]]`?
+3. **Markdown link format**: Are cross-references in `notes.md` using real markdown links (`[Pretty Title](../Dir/notes.md)`) rather than legacy `[[wikilinks]]`?
    ```bash
-   # Check for old-style bold refs in cross-reference sections
-   grep -c '\*\*[A-Z][A-Za-z0-9_]*_[0-9]\{4\}' "$paper_dir/notes.md"
+   # Legacy wikilinks — these don't render on GitHub, must be converted
+   grep -c '\[\[[A-Z][A-Za-z0-9_-]*_[0-9]\{4\}' "$paper_dir/notes.md"
    ```
-   Found → report as `LEGACY_BOLD_REFS`
+   Found → report as `LEGACY_WIKILINKS` (convert to `[title](../Dir/notes.md)` — GitHub does not render `[[wikilinks]]` in repo files)
 
 4. **Frontmatter validity**:
    - If `notes.md` has `---` delimiters, is the YAML valid?
@@ -112,7 +112,7 @@ Lint: papers/Author_Year_Title/
   ✓ paper.pdf
   ✗ notes metadata — NOTES_METADATA_MISSING
   ✗ tags — UNTAGGED
-  ✓ wikilinks
+  ✓ markdown-link format
   ✗ cross-references — NOT_RECONCILED
   ✓ indexed
 ```
@@ -144,7 +144,7 @@ Issues found:
   NOT_RECONCILED (need reconcile):
     - Paper8, Paper9
 
-  LEGACY_BOLD_REFS (need migrate-format.py):
+  LEGACY_WIKILINKS (convert `[[Dir]]` → `[Pretty Title](../Dir/notes.md)`):
     - Paper10
 
   NOT_INDEXED (need generate-paper-index.py):

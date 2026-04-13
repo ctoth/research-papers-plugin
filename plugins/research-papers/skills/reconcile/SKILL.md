@@ -67,6 +67,22 @@ grep -i "AuthorName" ./papers/index.md
 
 If found, the matching line contains the directory name. For more detail, read `papers/<dirname>/description.md`.
 
+### Cross-reference link format
+
+Every cross-paper reference in `notes.md` is a **markdown link**, never a `[[wikilink]]`. GitHub does not render wikilinks in repo files. Format:
+
+```markdown
+[<pretty title from target's frontmatter>](../<Target_Dir>/notes.md)
+```
+
+Before writing any cross-ref entry, read the target paper's `title:` from its `notes.md` frontmatter:
+
+```bash
+head -8 "papers/<Target_Dir>/notes.md" | grep '^title:' | sed 's/^title:[[:space:]]*//; s/^"//; s/"$//'
+```
+
+Use that pretty title as the link text. The path is relative — from `papers/<A>/notes.md` to `papers/<B>/notes.md` the link target is `../<B>/notes.md`.
+
 ### 2.3: Write/Update Forward Cross-References
 
 In `notes.md`, write or update the `## Collection Cross-References` section:
@@ -75,7 +91,7 @@ In `notes.md`, write or update the `## Collection Cross-References` section:
 ## Collection Cross-References
 
 ### Already in Collection
-- [[AuthorA_Year_ShortTitle]] — cited for [reason from citations.md context]
+- [<Pretty Title of AuthorA>](../AuthorA_Year_ShortTitle/notes.md) — cited for [reason from citations.md context]
 
 ### New Leads (Not Yet in Collection)
 - AuthorB (Year) — "Paper title" — relevant for [reason]
@@ -85,18 +101,19 @@ In `notes.md`, write or update the `## Collection Cross-References` section:
 - [Only genuine relationships — not every citation]
 
 ### Conceptual Links (not citation-based)
-- [[PaperC_Year_Title]] — [specific topical connection: what claim/finding/method links these papers]
+- [<Pretty Title of PaperC>](../PaperC_Year_Title/notes.md) — [specific topical connection: what claim/finding/method links these papers]
 ```
 
 ### 2.4: Backward Annotation (Supersedes Only)
 
-If the "Supersedes or Recontextualizes" section is non-empty, append a see-also note to each affected paper's notes.md:
+If the "Supersedes or Recontextualizes" section is non-empty, append a see-also note to each affected paper's notes.md. Look up the new paper's pretty title from its frontmatter first:
 
 ```bash
+new_title=$(head -8 "./papers/NewPaper_Dir/notes.md" | grep '^title:' | sed 's/^title:[[:space:]]*//; s/^"//; s/"$//')
 echo "" >> ./papers/AffectedPaper_Dir/notes.md
 echo "---" >> ./papers/AffectedPaper_Dir/notes.md
 echo "" >> ./papers/AffectedPaper_Dir/notes.md
-echo "**See also:** [[NewPaper_Dir]] - [relationship description]" >> ./papers/AffectedPaper_Dir/notes.md
+echo "**See also:** [${new_title}](../NewPaper_Dir/notes.md) - [relationship description]" >> ./papers/AffectedPaper_Dir/notes.md
 ```
 
 **Check first** whether a see-also note already exists (to avoid duplicates):
@@ -131,7 +148,7 @@ If any collection papers cite this one, add or update a "Cited By" subsection in
 
 ```markdown
 ### Cited By (in Collection)
-- [[CitingPaper_Year_ShortTitle]] — cites this for [aspect, determined in Step 4]
+- [<Pretty Title of Citing Paper>](../CitingPaper_Year_ShortTitle/notes.md) — cites this for [aspect, determined in Step 4]
 ```
 
 If no papers cite this one, either omit the section or write:
@@ -201,8 +218,8 @@ Add a `### Conceptual Links (not citation-based)` subsection to the Collection C
 
 ```markdown
 ### Conceptual Links (not citation-based)
-- [[PaperA_Year_Title]] — [specific connection: what claim/finding/method connects these papers and how they relate — convergence, tension, mechanism↔observation, etc.]
-- [[PaperB_Year_Title]] — [specific connection]
+- [<Pretty Title of PaperA>](../PaperA_Year_Title/notes.md) — [specific connection: what claim/finding/method connects these papers and how they relate — convergence, tension, mechanism↔observation, etc.]
+- [<Pretty Title of PaperB>](../PaperB_Year_Title/notes.md) — [specific connection]
 ```
 
 Each entry must state the **specific relationship**, not just "related to duration modeling." Good: "Hertz's 'stable transition phenomenon' (CV transitions hold at ~65ms while steady states stretch) is exactly what AP predicts for a high-stiffness gesture — different formalisms, same empirical convergence." Bad: "Also about formant transitions."
@@ -238,7 +255,7 @@ Search both sections for an entry matching this paper (by author name and year).
 
 **If found in `## Related Work Worth Reading`:**
 - **Do NOT delete** the entry (that section is the paper-reader's historical output)
-- **Annotate inline** by appending `→ NOW IN COLLECTION: [[Author_Year_ShortTitle]]` to the entry
+- **Annotate inline** by appending `→ NOW IN COLLECTION: [<Pretty Title>](../Author_Year_ShortTitle/notes.md)` to the entry
 - **Add** the entry to `### Now in Collection (previously listed as leads)` in the `## Collection Cross-References` section (create section and subsection if needed)
 
 In both cases, write the "Now in Collection" entry with:
@@ -249,7 +266,7 @@ In both cases, write the "Now in Collection" entry with:
 Example:
 ```markdown
 ### Now in Collection (previously listed as leads)
-- [[Groth_2010_AnatomyNanopublication]] — Defines nanopublication model (concept→triple→statement→annotation→nanopublication) with RDF Named Graph serialization. Structurally analogous to the micropublication model but focused on Semantic Web interoperability rather than argumentation structure.
+- [Anatomy of a Nanopublication](../Groth_2010_AnatomyNanopublication/notes.md) — Defines nanopublication model (concept→triple→statement→annotation→nanopublication) with RDF Named Graph serialization. Structurally analogous to the micropublication model but focused on Semantic Web interoperability rather than argumentation structure.
 ```
 
 ### 5.2: Inaccurate Descriptions
