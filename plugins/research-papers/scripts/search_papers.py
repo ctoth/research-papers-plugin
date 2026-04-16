@@ -13,18 +13,31 @@ Usage:
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
+import re
 import sys
 import unicodedata
+from collections.abc import Callable
 
 import arxiv
 from semanticscholar import SemanticScholar
+
+SOURCE_ORDER = ('arxiv', 's2')
+SearchFn = Callable[[str, int], list[dict]]
 
 
 def normalize_title(title: str) -> str:
     """Normalize a title for deduplication."""
     title = unicodedata.normalize('NFKD', title)
     return ''.join(c.lower() for c in title if c.isalnum())
+
+
+def normalize_doi(doi: str | None) -> str | None:
+    """Normalize a DOI for deduplication while preserving displayed metadata."""
+    if not doi:
+        return None
+    return doi.strip().lower()
 
 
 def search_arxiv(query: str, max_results: int) -> list[dict]:
@@ -35,7 +48,7 @@ def search_arxiv(query: str, max_results: int) -> list[dict]:
     for r in client.results(search):
         arxiv_id = r.entry_id.split('/abs/')[-1]
         # Strip version suffix for clean ID
-        clean_id = arxiv_id.split('v')[0] if 'v' in arxiv_id else arxiv_id
+        clean_id = re.sub(r'v\d+$', '', arxiv_id)
         doi = r.doi or None
         results.append({
             'title': r.title,
@@ -77,6 +90,61 @@ def search_s2(query: str, max_results: int) -> list[dict]:
     return results
 
 
+SEARCHERS: dict[str, SearchFn] = {
+    'arxiv': search_arxiv,
+    's2': search_s2,
+}
+
+
+def sources_for(source: str) -> list[str]:
+    """Return concrete sources in stable output order."""
+    if source == 'all':
+        return list(SOURCE_ORDER)
+    return [source]
+
+
+def run_searches(query: str, max_results: int, source: str) -> tuple[list[dict], list[str]]:
+    """Run requested searches, overlapping independent network-bound sources."""
+    selected_sources = sources_for(source)
+    if max_results <= 0:
+        return [], []
+
+    per_source: dict[str, list[dict]] = {name: [] for name in selected_sources}
+    errors_by_source: dict[str, str] = {}
+
+    if len(selected_sources) == 1:
+        name = selected_sources[0]
+        try:
+            per_source[name] = SEARCHERS[name](query, max_results)
+        except Exception as e:
+            errors_by_source[name] = str(e)
+    else:
+        with ThreadPoolExecutor(
+            max_workers=len(selected_sources),
+            thread_name_prefix='paper-search',
+        ) as executor:
+            future_to_source = {
+                executor.submit(SEARCHERS[name], query, max_results): name
+                for name in selected_sources
+            }
+            for future in as_completed(future_to_source):
+                name = future_to_source[future]
+                try:
+                    per_source[name] = future.result()
+                except Exception as e:
+                    errors_by_source[name] = str(e)
+
+    results: list[dict] = []
+    for name in selected_sources:
+        results.extend(per_source[name])
+    errors = [
+        f"{name}: {errors_by_source[name]}"
+        for name in selected_sources
+        if name in errors_by_source
+    ]
+    return deduplicate(results), errors
+
+
 def deduplicate(results: list[dict]) -> list[dict]:
     """Deduplicate by DOI first, then by normalized title."""
     seen_dois: set[str] = set()
@@ -84,7 +152,7 @@ def deduplicate(results: list[dict]) -> list[dict]:
     deduped = []
 
     for r in results:
-        doi = r.get('doi')
+        doi = normalize_doi(r.get('doi'))
         if doi:
             if doi in seen_dois:
                 continue
@@ -136,22 +204,7 @@ def main():
                         help='Output as JSON')
     args = parser.parse_args()
 
-    results = []
-    errors = []
-
-    if args.source in ('arxiv', 'all'):
-        try:
-            results.extend(search_arxiv(args.query, args.max_results))
-        except Exception as e:
-            errors.append(f"arxiv: {e}")
-
-    if args.source in ('s2', 'all'):
-        try:
-            results.extend(search_s2(args.query, args.max_results))
-        except Exception as e:
-            errors.append(f"s2: {e}")
-
-    results = deduplicate(results)
+    results, errors = run_searches(args.query, args.max_results, args.source)
 
     if args.json:
         output = {'results': results, 'count': len(results)}
