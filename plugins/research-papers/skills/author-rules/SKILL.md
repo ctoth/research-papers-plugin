@@ -34,7 +34,24 @@ Garcia & Simari 2004 DeLP:
 - Quoted strings (`"low"`) and numeric literals coerce to typed constants.
 - Zero-arity atoms are just `predicate` (no parens) or `predicate()`.
 
-**CRITICAL shell-quoting:** bash expands leading `~` as a home directory. ALWAYS single-quote atoms with negation: `--head '~safe(X)'`, not `--head ~safe(X)`. When in doubt, single-quote every atom string.
+**CRITICAL flag form — use `--head=<atom>` and `--body=<atom>`, NOT `--head <atom>`:**
+
+The separate-argument form (`--head '~safe(X)'`) is broken on Windows regardless of quoting style — `pks` receives the `~` as the start of a path token and expands it to the user home directory, producing `C:\Users\...safe(X)`. Single-quoting in bash does not prevent this; PowerShell does not prevent this; backslash-escaping does not prevent this. The expansion is inside the pks launcher, past the shell.
+
+The equals-form (`--head=~safe(X)`, `--body=~p(X)`) bypasses the expansion entirely and is portable. Use it for every `--head` and `--body` value, with or without a leading `~`:
+
+```bash
+pks rule add \
+  --file ikeda_2014 \
+  --paper Ikeda_2014_Low-doseAspirinPrimaryPrevention \
+  --id r_ikeda_not_indicated \
+  --kind defeater \
+  --head=~aspirin_indicated_for_primary_prevention(X) \
+  --body=~aspirin_has_net_benefit(X) \
+  --body=jppp_like_cohort(X)
+```
+
+Do NOT fall back to positive-encoding predicates (e.g. `aspirin_not_indicated/1` instead of `~aspirin_indicated/1`) just to avoid `~`. That loses strong negation semantics. Use the equals form and keep the negation.
 
 ## Step 0: Validate
 
@@ -66,7 +83,7 @@ Conventions:
 
 - Rule IDs: `r_<what_it_concludes>` or `r_<paper_slug>_<what>`. Stable across re-runs.
 - Variables: uppercase single letters (`X`, `Y`) per DeLP convention. All head variables must appear in the body.
-- Use a leading `~` (single-quoted) for strong negation. Defeaters use this pattern when the paper is arguing against a standard conclusion.
+- Use a leading `~` for strong negation. Defeaters use this pattern when the paper is arguing against a standard conclusion. **Always use the `--head=<atom>` / `--body=<atom>` equals-form** (see CLI atom DSL above for why).
 
 ```bash
 cd knowledge  # or pass -C to each pks call
@@ -77,8 +94,8 @@ pks rule add \
   --paper Ikeda_2014_Low-doseAspirinPrimaryPrevention \
   --id r_ikeda_mi_reduction \
   --kind defeasible \
-  --head 'aspirin_reduces_nonfatal_mi(X)' \
-  --body 'jppp_like_cohort(X)'
+  --head=aspirin_reduces_nonfatal_mi(X) \
+  --body=jppp_like_cohort(X)
 
 # Defeasible rule with negated head: no net benefit conclusion
 pks rule add \
@@ -86,9 +103,9 @@ pks rule add \
   --paper Ikeda_2014_Low-doseAspirinPrimaryPrevention \
   --id r_ikeda_no_net_benefit \
   --kind defeasible \
-  --head '~aspirin_has_net_benefit(X)' \
-  --body 'aspirin_increases_extracranial_hemorrhage(X)' \
-  --body 'aspirin_reduces_nonfatal_mi(X)'
+  --head=~aspirin_has_net_benefit(X) \
+  --body=aspirin_increases_extracranial_hemorrhage(X) \
+  --body=aspirin_reduces_nonfatal_mi(X)
 
 # Defeater: paper argues against standard indication
 pks rule add \
@@ -96,9 +113,9 @@ pks rule add \
   --paper Ikeda_2014_Low-doseAspirinPrimaryPrevention \
   --id r_ikeda_not_indicated \
   --kind defeater \
-  --head '~aspirin_indicated_for_primary_prevention(X)' \
-  --body '~aspirin_has_net_benefit(X)' \
-  --body 'jppp_like_cohort(X)'
+  --head=~aspirin_indicated_for_primary_prevention(X) \
+  --body=~aspirin_has_net_benefit(X) \
+  --body=jppp_like_cohort(X)
 ```
 
 Repeat for every reasoning move you identified. Duplicate rule ids inside the same file are rejected by the CLI.
