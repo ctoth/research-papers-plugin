@@ -59,6 +59,16 @@ Only verify the cited pages you actually use. Do not reread every page image for
 
 ## Step 2: Extract Claims by Type
 
+### 2.0: Determine the paper's context
+
+**Every claim must reference an existing context.** Propstore's master-side `ClaimDocument.context` is a required field; claims without context cannot be promoted from a source branch to master. Source-side `SourceClaimDocument.context` is optional at ingest time, but promote will fail if it is missing.
+
+Convention: one context per paper, named `ctx_<author>_<year>_<trial-slug>` (e.g., `ctx_ikeda_2014_jppp`, `ctx_bowman_2018_ascend`). The context carries the trial's structural assumptions (population, intervention, follow-up, design) as CEL assumptions and parameters; claim-level `conditions[]` handle finer axes like endpoint or ITT-vs-per-protocol.
+
+If no context exists for this paper yet, run the `author-context` skill FIRST, before extracting claims. That skill calls `pks context add` with the trial's structural assumptions.
+
+Write the chosen context name into `context:` on EVERY claim in the output (see 2.1 onward).
+
 ### 2.1: Parameter Claims
 
 For each parameter, constant, or threshold mentioned in the paper:
@@ -66,6 +76,7 @@ For each parameter, constant, or threshold mentioned in the paper:
 ```yaml
 - id: claim1
   type: parameter
+  context: <ctx_author_year_slug>
   concept: <local_concept_name or descriptive_name>
   value: <number>
   unit: <unit string>
@@ -80,7 +91,7 @@ For each parameter, constant, or threshold mentioned in the paper:
 ```
 
 Rules:
-- Every parameter needs at minimum: id, type, concept, provenance
+- Every parameter needs at minimum: id, type, **context**, concept, provenance
 - Include `value` OR `lower_bound`+`upper_bound` (at least one). **Never** use `lower_bound` alone or `upper_bound` alone — the validator rejects unpaired bounds. If only one bound is known, use `value` with a `notes` field explaining the bound direction (e.g., ">85%").
 - Include `unit` for dimensional quantities (mass, time, pressure, etc.). **Omit `unit` for dimensionless forms** (ratio, count, score, boolean, etc.) — propstore auto-fills `unit: '1'` at build time. **Never use compound units that conflate independently-variable dimensions** (e.g., `mg/day` conflates dose and frequency). Split into separate concepts with simple units and express the relationship through CEL conditions. See register-concepts "Compound-Unit Decomposition" for the full rule.
 - For temporal quantities, use clinical time units directly: `mo` (month), `yr` (year), `d` (day), `wk` (week). Do not convert to hours or seconds — the `time` form accepts all of these natively.
@@ -387,13 +398,13 @@ Do not query master-branch claims from this skill. Create the local equation cla
 - [ ] Every name in CEL conditions is a registered concept (not free-form strings)
 - [ ] Conditions use consistent CEL vocabulary across the file
 - [ ] Concept names match the paper's concept inventory where one exists
-- [ ] Context assigned if identified during register-concepts — or explicitly universal
+- [ ] **Every claim carries a `context:` field referencing a pre-authored context**
 
 ## Output
 
 ```
 Claims extracted: papers/[dirname]/claims.yaml
-  Context: [context_id or "universal"]
+  Context: [ctx_author_year_slug]
   Validation: PASS (0 errors, N warnings)
   Claims: N total (P parameter, E equation, O observation, M model, X measurement, K mechanism, C comparison, L limitation)
 ```
