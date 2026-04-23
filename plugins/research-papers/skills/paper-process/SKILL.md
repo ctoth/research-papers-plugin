@@ -53,7 +53,17 @@ Invoke:
 /research-papers:source-bootstrap <paper-directory-path>
 ```
 
-## Step 5: Register Concepts
+## Step 5: Author The Paper's Context
+
+Invoke:
+
+```text
+/research-papers:author-context <paper-directory-path>
+```
+
+This creates `knowledge/contexts/ctx_<author>_<year>_<slug>.yaml` with the trial's structural CEL assumptions, parameters, and perspective. Every claim extracted in later steps references this context by name. Promote fails if claims are contextless.
+
+## Step 6: Register Concepts
 
 Invoke:
 
@@ -63,7 +73,7 @@ Invoke:
 
 This is the notes-first concept pass.
 
-## Step 6: Extract Claims
+## Step 7: Extract Claims
 
 Invoke:
 
@@ -71,7 +81,7 @@ Invoke:
 /research-papers:extract-claims <paper-directory-path>
 ```
 
-## Step 7: Iterate Concepts And Claims If Needed
+## Step 8: Iterate Concepts And Claims If Needed
 
 If claim ingestion or auto-finalize feedback reports unknown concepts:
 
@@ -86,7 +96,7 @@ Do not invent a different recovery path. The intended loop is:
 - inspect feedback
 - repeat if necessary
 
-## Step 8: Extract Justifications
+## Step 9: Extract Justifications
 
 Invoke:
 
@@ -94,7 +104,7 @@ Invoke:
 /research-papers:extract-justifications <paper-directory-path>
 ```
 
-## Step 9: Extract Stances
+## Step 10: Extract Stances
 
 Invoke:
 
@@ -104,7 +114,7 @@ Invoke:
 
 This is per-paper stance extraction against whatever claims already exist in the current knowledge store.
 
-## Step 10: Promote
+## Step 11: Promote
 
 Invoke:
 
@@ -112,7 +122,7 @@ Invoke:
 /research-papers:source-promote <paper-directory-path>
 ```
 
-## Step 11: Build
+## Step 12: Build
 
 If this run is being used as a single-paper ingestion flow rather than a large collection batch, rebuild the sidecar:
 
@@ -122,7 +132,7 @@ pks build
 
 If this run is part of a larger batch orchestrator that will do one final build later, defer the build there instead of rebuilding after every paper.
 
-## Step 12: Report
+## Step 13: Report
 
 Write a concise report to `reports/paper-$SAFE_NAME.md` summarizing:
 
