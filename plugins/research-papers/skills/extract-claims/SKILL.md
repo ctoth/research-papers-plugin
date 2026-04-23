@@ -67,7 +67,14 @@ Convention: one context per paper, named `ctx_<author>_<year>_<trial-slug>` (e.g
 
 If no context exists for this paper yet, run the `author-context` skill FIRST, before extracting claims. That skill calls `pks context add` with the trial's structural assumptions.
 
-Write the chosen context name into `context:` on EVERY claim in the output (see 2.1 onward).
+You have two ways to stamp the context onto claims:
+
+1. Write `context: ctx_<author>_<year>_<slug>` into every claim in the YAML (explicit per-claim) — see 2.1 onward.
+2. Omit `context:` from the YAML and pass `--context <ctx_id>` to `pks source add-claim` at ingest time — the CLI fills in the default on every claim that does not already declare one. Inline `context:` always wins over the flag.
+
+Option 2 is the recommended path when every claim in the batch shares the same context (the common case — one context per paper). Option 1 is needed only when individual claims override the paper-wide context.
+
+Do NOT author a temporary python/ruamel.yaml script to inject contexts after the fact — that's what `--context` replaces.
 
 ### 2.1: Parameter Claims
 
@@ -299,8 +306,11 @@ If a propstore source branch exists for this paper, ingest the claims:
 ```bash
 source_name=$(basename "$paper_dir")
 pks source add-claim "$source_name" --batch "$paper_dir/claims.yaml" \
-  --reader "<your model name>" --method "extract-claims"
+  --reader "<your model name>" --method "extract-claims" \
+  --context "ctx_<author>_<year>_<slug>"   # default context for claims lacking an inline one
 ```
+
+If every claim in the batch already declares `context:` inline, omit `--context`. Inline context always wins over the flag.
 
 If this fails with `unknown concept reference` errors, or if the add succeeds but source auto-finalize reports unknown concepts:
 

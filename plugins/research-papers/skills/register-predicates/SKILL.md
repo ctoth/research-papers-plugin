@@ -10,7 +10,7 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 Declare the DeLP predicates a paper's rules will use. Predicates carry a name, arity, per-argument sort, optional description, and optional `derived_from` grounding DSL.
 
-No dedicated `pks predicate add` CLI exists today — this skill writes YAML directly to `knowledge/predicates/<author>_<year>.yaml` and commits on master.
+Use `pks predicate add` (propstore >= 0.2.0). The CLI handles YAML authoring, schema validation, and git commit uniformly. Do NOT hand-author YAML or run `git commit` yourself.
 
 ## Theoretical Background
 
@@ -40,58 +40,48 @@ Prefer DESCRIPTIVE predicate names over abstract ones. `aspirin_reduces_nonfatal
 
 `arg_types` is a tuple of sort names, one per position. For cohort-style unary predicates, use `entity` (the propstore seed concept for generic entities). For domain-specific sorts, use a concept name that exists in the registry.
 
-## Step 3: Write The Predicates File
+## Step 3: Register Predicates Via CLI
 
-Path: `knowledge/predicates/<author>_<year>.yaml` (e.g., `knowledge/predicates/ikeda_2014.yaml`).
-
-Schema (`PredicatesFileDocument`):
-
-```yaml
-predicates:
-- id: <predicate_name>
-  arity: <int>
-  arg_types:
-  - <sort_1>
-  - <sort_2>
-  description: <one-sentence human description>
-- id: <next_predicate>
-  arity: <int>
-  arg_types:
-  - <sort>
-  description: <...>
-```
-
-Optional fields per predicate:
-- `derived_from: <dsl-string>` — how propstore should materialize ground atoms from repo data. Recognised forms live in `propstore.grounding.predicates`. Omit if you're authoring abstract (non-grounded) predicates whose truth will be asserted by rules, not data.
-
-## Step 4: Commit
+Use the file stem `<author>_<year>` (e.g., `ikeda_2014`). The first `pks predicate add` call creates `knowledge/predicates/<stem>.yaml`; subsequent calls append to it. Duplicate predicate ids inside the same file are rejected.
 
 ```bash
-cd knowledge
-git status -s   # verify nothing unexpected is staged
-git add predicates/<author>_<year>.yaml
-git diff --cached --stat   # verify ONLY this file is staged
-git commit -m "Author DeLP predicates for <Author>_<Year>"
+cd knowledge  # or pass -C to each pks call
+
+pks predicate add \
+  --file ikeda_2014 \
+  --id aspirin_reduces_nonfatal_mi \
+  --arity 1 \
+  --arg-type entity \
+  --description "Aspirin reduces the rate of non-fatal myocardial infarction in this cohort."
+
+pks predicate add \
+  --file ikeda_2014 \
+  --id jppp_like_cohort \
+  --arity 1 \
+  --arg-type entity \
+  --description "Subject belongs to a cohort comparable to the JPPP trial."
 ```
 
-**Always run `git diff --cached --stat` before committing inside knowledge/.** The propstore git backend shares the index with user git commands, and an unchecked commit can accidentally include prior pending mutations from pks.
+Optional flags:
 
-## Step 5: Verify
+- `--derived-from <dsl-string>` — how propstore should materialize ground atoms from repo data. Recognised forms live in `propstore.grounding.predicates`. Omit for abstract (non-grounded) predicates whose truth will be asserted by rules, not data.
+- `--description` — short human-readable explanation. Always supply for RCT predicates.
+
+## Step 4: Verify
 
 ```bash
 pks build
 ```
 
-Expect: `Build rebuilt:` or `Build unchanged:` with zero warnings. If build fails, the predicates file has a schema error — fix and recommit.
+Expect: `Build rebuilt:` or `Build unchanged:` with zero warnings. If build fails, a predicate declaration has a schema error — diagnose and re-run `pks predicate add` with corrections.
 
 ## Output
 
 ```
 Predicates registered: knowledge/predicates/<author>_<year>.yaml
-  Predicates: N total
-  Commit: <sha>
+  Predicates: N total (one emit_success per add)
 ```
 
 ## When To Rerun
 
-Rerun this skill if author-rules needs predicates you haven't declared. Add new predicates to the existing file (edit + recommit) rather than creating multiple files per paper — one predicates file per paper is the convention.
+Rerun this skill if author-rules needs predicates you haven't declared. Use additional `pks predicate add` calls with the same `--file` to append — one predicates file per paper is the convention. Duplicate ids inside a single file are rejected by the CLI.

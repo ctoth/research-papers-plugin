@@ -8,9 +8,9 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 # Author Rules: $ARGUMENTS
 
-Encode a paper's stated argument structure as DeLP rules. Each rule has a head atom, a body of atoms, and a kind (strict, defeasible, defeater). Rule priorities are authored as explicit `(superior_rule_id, inferior_rule_id)` pairs.
+Encode a paper's stated argument structure as DeLP rules. Each rule has a head atom, a body of atoms, and a kind (strict, defeasible, defeater).
 
-No dedicated `pks rule add` CLI exists today — this skill writes YAML directly to `knowledge/rules/<author>_<year>.yaml` and commits on master.
+Use `pks rule add` (propstore >= 0.2.0). The CLI parses a shallow atom DSL, validates the schema, and commits on master. Do NOT hand-author YAML or run `git commit` yourself. Rule-priority pairs (`superiority`) are not yet exposed via CLI; if you need them, stop here and ask Q.
 
 ## Theoretical Background
 
@@ -21,7 +21,20 @@ Garcia & Simari 2004 DeLP:
 - **Strong negation** (`~L`) is permitted on literal heads and bodies.
 - Language is safe: every variable in the head must appear in the body.
 
-Heads and bodies are atoms: predicate + terms + optional `negated: true` for strong negation. Terms are `kind: var` with a `name` (uppercase convention like `X`) or `kind: const` with a `value` (string/int/float/bool).
+## CLI atom DSL
+
+`pks rule add` accepts atom strings with this shape:
+
+```
+[~]predicate(term1, term2, ...)
+```
+
+- A leading `~` marks strong negation on the literal.
+- Terms whose first character is uppercase are treated as variables (`X`, `Dose`); everything else is a constant.
+- Quoted strings (`"low"`) and numeric literals coerce to typed constants.
+- Zero-arity atoms are just `predicate` (no parens) or `predicate()`.
+
+**CRITICAL shell-quoting:** bash expands leading `~` as a home directory. ALWAYS single-quote atoms with negation: `--head '~safe(X)'`, not `--head ~safe(X)`. When in doubt, single-quote every atom string.
 
 ## Step 0: Validate
 
@@ -38,75 +51,69 @@ If the predicates file is missing, stop and run `register-predicates` first. Rul
 
 ## Step 1: Identify The Paper's Stated Reasoning Steps
 
-Read `notes.md` and `claims.yaml`. Find the paper's core argumentative moves — statements of the form:
+Read `notes.md` and `claims.yaml`. Find the paper's core argumentative moves:
 
 - "Because X, we conclude Y" → defeasible rule, body has X premises, head has Y.
 - "Our result contradicts the expectation that Z" → defeater against Z.
 - "By definition, if X then Y" → strict rule.
 - "Effect A offsets benefit B, so no net gain" → defeasible rule with negated head.
 
-For each identified reasoning step, write a rule. Rules are the skeletal structure of the paper's argument — justifications (intra-paper claim-to-claim hyperedges) are richer but narrower; rules generalize over cohorts via variables.
+## Step 2: Add Rules Via CLI
 
-## Step 2: Author The Rules File
-
-Path: `knowledge/rules/<author>_<year>.yaml` (e.g., `knowledge/rules/ikeda_2014.yaml`).
-
-Schema (`RulesFileDocument`):
-
-```yaml
-source:
-  paper: <paper-directory-name>
-rules:
-- id: r_<short_descriptive_slug>
-  kind: defeasible   # or strict, or defeater
-  head:
-    predicate: <predicate_name>
-    terms:
-    - kind: var
-      name: X
-    negated: false   # omit or true for strong negation ~
-  body:
-  - predicate: <body_predicate_1>
-    terms:
-    - kind: var
-      name: X
-  - predicate: <body_predicate_2>
-    terms:
-    - kind: var
-      name: X
-# ... more rules
-superiority:
-- [r_specific_rule, r_general_rule]   # first dominates second
-```
+Use the file stem `<author>_<year>` (e.g. `ikeda_2014`). The first `pks rule add` call creates `knowledge/rules/<stem>.yaml` with `source.paper = <paper-directory-name>` from `--paper`; subsequent calls append (the `--paper` must match).
 
 Conventions:
-- Rule IDs: `r_<paper_slug>_<what_it_concludes>`. Lowercase snake_case. Stable across re-runs.
-- Variables: uppercase single letters (`X`, `Y`) per DeLP convention. All head variables must appear in the body.
-- Use `negated: true` to express strong negation `~L`. Defeaters use this pattern when the paper is arguing against a standard conclusion.
-- `superiority` is optional. Use it only when the paper explicitly argues one rule dominates another.
 
-## Step 3: Commit
+- Rule IDs: `r_<what_it_concludes>` or `r_<paper_slug>_<what>`. Stable across re-runs.
+- Variables: uppercase single letters (`X`, `Y`) per DeLP convention. All head variables must appear in the body.
+- Use a leading `~` (single-quoted) for strong negation. Defeaters use this pattern when the paper is arguing against a standard conclusion.
 
 ```bash
-cd knowledge
-git status -s   # verify nothing unexpected is staged
-git add rules/<author>_<year>.yaml
-git diff --cached --stat   # verify ONLY this file is staged
-git commit -m "Author DeLP rules for <Author>_<Year>"
+cd knowledge  # or pass -C to each pks call
+
+# Defeasible rule: aspirin reduces MI in JPPP-like cohort
+pks rule add \
+  --file ikeda_2014 \
+  --paper Ikeda_2014_Low-doseAspirinPrimaryPrevention \
+  --id r_ikeda_mi_reduction \
+  --kind defeasible \
+  --head 'aspirin_reduces_nonfatal_mi(X)' \
+  --body 'jppp_like_cohort(X)'
+
+# Defeasible rule with negated head: no net benefit conclusion
+pks rule add \
+  --file ikeda_2014 \
+  --paper Ikeda_2014_Low-doseAspirinPrimaryPrevention \
+  --id r_ikeda_no_net_benefit \
+  --kind defeasible \
+  --head '~aspirin_has_net_benefit(X)' \
+  --body 'aspirin_increases_extracranial_hemorrhage(X)' \
+  --body 'aspirin_reduces_nonfatal_mi(X)'
+
+# Defeater: paper argues against standard indication
+pks rule add \
+  --file ikeda_2014 \
+  --paper Ikeda_2014_Low-doseAspirinPrimaryPrevention \
+  --id r_ikeda_not_indicated \
+  --kind defeater \
+  --head '~aspirin_indicated_for_primary_prevention(X)' \
+  --body '~aspirin_has_net_benefit(X)' \
+  --body 'jppp_like_cohort(X)'
 ```
 
-**Always run `git diff --cached --stat` before committing inside knowledge/.** The propstore git backend shares the index with user git commands.
+Repeat for every reasoning move you identified. Duplicate rule ids inside the same file are rejected by the CLI.
 
-## Step 4: Verify
+## Step 3: Verify
 
 ```bash
 pks build
 ```
 
-Expect: `Build rebuilt:` or `Build unchanged:` with zero warnings. Build failures here usually mean:
-- Rule head variable not in body → safety violation.
-- Predicate not declared → run register-predicates for the missing one.
-- Arity mismatch → rule uses wrong number of terms for a declared predicate.
+Expect `Build rebuilt:` or `Build unchanged:` with zero warnings. Common build failures at this stage:
+
+- Head variable not in body → safety violation. Fix the rule's body to include the missing variable.
+- Predicate not declared → re-run `register-predicates` for the missing one.
+- Arity mismatch → rule uses wrong number of terms. Check the declared predicate's `arity` and `arg_types`.
 
 Note: DeLP rules and predicates are not materialized as sidecar tables — they are consumed by the argumentation engine at query time (`pks world`, grounding). A successful build validates syntax; runtime argumentation is where they become visible.
 
@@ -114,14 +121,13 @@ Note: DeLP rules and predicates are not materialized as sidecar tables — they 
 
 ```
 Rules authored: knowledge/rules/<author>_<year>.yaml
-  Rules: N total
-    strict: X
-    defeasible: Y
-    defeater: Z
-  Superiority pairs: M
-  Commit: <sha>
+  Rules: N total (one emit_success per add)
 ```
 
 ## When To Rerun
 
-Rerun if you missed a reasoning move and want to add more rules, or if a rule's logic was wrong. Edit the existing file and recommit — one rules file per paper.
+Rerun if you missed a reasoning move and want to add more rules. Additional `pks rule add` calls with the same `--file` (and matching `--paper`) append. One rules file per paper.
+
+## Superiority pairs (not yet in CLI)
+
+`RulesFileDocument.superiority` expresses `(superior_rule_id, inferior_rule_id)` pairs for explicit rule priority. No CLI surface exists yet. If a paper requires superiority, stop and ask Q — do not hand-edit the YAML.
