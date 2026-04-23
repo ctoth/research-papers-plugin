@@ -118,7 +118,7 @@ For each concept identified in Step 3, run:
 ```bash
 source_name=$(basename "$paper_dir")
 pks source propose-concept "$source_name" \
-  --name "<local_name>" \
+  --concept-name "<local_name>" \
   --definition "<definition>" \
   --form "<form>" \
   --values "<val1>,<val2>,<val3>"   # category concepts only; omit for non-category
@@ -147,7 +147,7 @@ For any concepts found in `claims.yaml` that were NOT already registered in Step
 
 ```bash
 pks source propose-concept "$source_name" \
-  --name "<local_name>" \
+  --concept-name "<local_name>" \
   --definition "<definition>" \
   --form "<form>" \
   --values "<val1>,<val2>"   # category concepts only; omit for non-category
