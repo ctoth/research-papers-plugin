@@ -38,7 +38,9 @@ Garcia & Simari 2004 DeLP:
 
 The separate-argument form (`--head '~safe(X)'`) is broken on Windows regardless of quoting style — `pks` receives the `~` as the start of a path token and expands it to the user home directory, producing `C:\Users\...safe(X)`. Single-quoting in bash does not prevent this; PowerShell does not prevent this; backslash-escaping does not prevent this. The expansion is inside the pks launcher, past the shell.
 
-The equals-form (`--head=~safe(X)`, `--body=~p(X)`) bypasses the expansion entirely and is portable. Use it for every `--head` and `--body` value, with or without a leading `~`:
+The equals-form (`--head=~safe(X)`, `--body=~p(X)`) bypasses the expansion entirely and is portable. Use it for every `--head` and `--body` value, with or without a leading `~`.
+
+**Additional shell-quoting note for Git Bash / MSYS on Windows:** parentheses in the atom payload (`pred(X)`) trigger bash's subshell grouping, producing `syntax error near unexpected token '('`. Wrap the whole flag token in double quotes: `"--head=~pred(X)"`, `"--body=pred(X,Y)"`. The `~` is still not expanded (it's not a standalone token after `=`), and the parens are protected:
 
 ```bash
 pks rule add \
