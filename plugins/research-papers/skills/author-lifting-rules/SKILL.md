@@ -23,13 +23,13 @@ Propstore's lifting-rule schema (`LiftingRuleDocument`) carries: `id, source, ta
 
 ## Lifting modes
 
-Pick the mode that matches the relationship between source and target contexts:
+Pick the mode that matches the relationship between source and target contexts per the Guha 1991 / Serafini-Tamilin taxonomy:
 
-- **`bridge`** (default): two contexts are commensurable on shared concepts without one subsuming the other. Example: two independent RCTs in similar cohorts whose hazard ratios are authored as comparable.
-- **`specialization`**: the SOURCE context is a specialization of the TARGET — target is broader, source is narrower. A claim that holds in the narrower source also holds in the broader target (under conditions). Example: a finding in Japanese-adults-60-85-with-CV-risk lifts to a broader elderly-primary-prevention frame as a specialization lift.
-- **`decontextualization`** (Guha): the SOURCE drops context-specific constraints to land in the TARGET. Example: ASPREE-XT's extended-observational findings decontextualize (drop the "randomized phase" and "primary composite" constraints) to become claims about the underlying ASPREE cohort.
+- **`bridge`** (default): two contexts are commensurable on shared concepts without one subsuming the other. Use when neither context is a generalization of the other but specific propositions are cross-applicable.
+- **`specialization`**: the SOURCE context is a specialization of the TARGET. Target is broader, source is narrower. A claim that holds in the narrower source also holds in the broader target (under the authored conditions).
+- **`decontextualization`** (Guha): the SOURCE drops context-specific constraints to land in the TARGET — the classical "lifting" move that removes a context's restrictions to reach a more general frame.
 
-The mode flows into how the conflict detector and argumentation engine treat the lifted claim at runtime. Pick carefully.
+The mode flows into how the conflict detector and argumentation engine treat the lifted claim at runtime. Pick based on the authored semantics of the two contexts, not on a pattern template.
 
 ## Step 0: Validate
 
@@ -41,25 +41,13 @@ pks build                                     # baseline must be green
 
 If `pks context lifting list` already shows a rule between a pair you're about to author, inspect before overwriting: `pks context lifting show TARGET_CTX --rule-id R_ID`.
 
-## Step 1: Identify candidate bridges
+## Step 1: Read the contexts
 
-Read the knowledge store's context YAMLs (`knowledge/contexts/*.yaml`) and the claims that reference them. Look for these patterns:
-
-### Pattern A — Meta-analysis → individual trials
-If one context is a meta-analysis or pooled frame (perspective mentions pooling, assumptions mention `study_type == 'meta_analysis'`), every individual trial context whose trials it pools should have a **bridge** lifting rule authored INTO the meta context. Rule direction: `source = trial_ctx`, `target = meta_ctx`. A bridge, not specialization, because the meta-analysis doesn't claim trials are specializations of it — it claims commensurability of their reported effects.
-
-### Pattern B — Extension of an earlier trial
-If one paper is explicitly a follow-up or extended-observational phase of another (ASPREE-XT → ASPREE, longitudinal follow-ups, secondary analyses), author a **decontextualization** lift: `source = extension_ctx`, `target = base_ctx`. The extension drops whatever phase-specific constraints it adds (blinding, randomization phase, analytic cutoff) to reach the base context.
-
-### Pattern C — Shared structural frame
-If multiple trials share a cohort frame (all primary-prevention RCTs in elderly adults with CV risk factors, for instance), consider whether a shared super-frame context is worth authoring. If you author one (via `pks context add ctx_shared_frame ...`), author **specialization** lifts from each individual trial context INTO it: `source = individual_trial_ctx`, `target = shared_frame_ctx`, `mode = specialization`. This is optional — only author the super-frame if you intend cross-trial reasoning against it.
-
-### Pattern D — Direct cross-trial commensurability
-Two trials that reported the same endpoint in genuinely comparable cohorts (same primary-prevention population, same intervention class, comparable follow-up) — a **bridge** can be authored directly between them if no meta-context is mediating. Use sparingly: prefer routing through a meta-analytic or shared-frame target.
+Read every `knowledge/contexts/*.yaml` file in full — description, assumptions, parameters, perspective. Also sample claims in each context via `pks claim list --limit N` and `pks claim show <id>`. The bridges you author should be grounded in what the contexts actually assert, not in a template. A lift is a semantic commitment that authored claim material in the source justifies entering claim material into the target; you cannot make that commitment without reading the sources.
 
 ## Step 2: Author one lifting rule at a time
 
-For each candidate bridge identified in Step 1:
+For each bridge you identify:
 
 ```bash
 pks context lifting add TARGET_CTX_NAME \
@@ -67,50 +55,37 @@ pks context lifting add TARGET_CTX_NAME \
   --source SOURCE_CTX_NAME \
   --mode <bridge|specialization|decontextualization> \
   [--condition "<CEL guard>"] \
-  --justification "<one-sentence authored rationale citing the pattern and the papers>"
+  [--condition "<additional CEL guard>"] \
+  --justification "<one-sentence authored rationale>"
 ```
 
 Notes:
 
-- `CONTEXT_NAME` (positional) is the TARGET — the context whose YAML hosts the rule.
+- `TARGET_CTX_NAME` (positional) is the TARGET — the context whose YAML hosts the rule.
 - `--source` is the SOURCE context.
-- `--rule-id` should be stable across re-runs; if authoring fails mid-batch, rerunning is idempotent if ids match.
-- `--condition` (optional) is a CEL expression that must hold for the lift to fire. Leave empty for unconditional commensurability; add when the lift only applies under specific claim-level conditions.
+- `--rule-id` should be stable across re-runs; re-running is idempotent if ids match.
+- `--condition` is a CEL expression that must hold for the lift to fire. Repeat the flag for multiple conditions (all must hold). **Conditions are the mechanism that propagates propositions between contexts** — an empty-conditions lift marks the pair as context-reachable but does not rewrite any claim conditions, so the conflict detector still sees the trial-specific conditions as disjoint and classifies cross-context pairs as regime-split PHI_NODEs. If you want the argumentation layer to produce cross-context CONFLICT records, you must author conditions that make the claim-level conditions align.
 - `--justification` is authored reasoning text for audit. Always supply.
 
-Example for aspirin corpus (meta-analysis pooling individual trials):
-
-```bash
-pks context lifting add ctx_att_2009_meta \
-  --rule-id r_lift_ikeda_into_att_pool \
-  --source ctx_ikeda_2014_jppp \
-  --mode bridge \
-  --justification "ATT 2009 pooled hazard ratios across primary-prevention RCTs; Ikeda JPPP is one such RCT whose primary-endpoint HR is commensurable with the ATT pooled estimate."
-```
-
-Example for extension decontextualization:
-
-```bash
-pks context lifting add ctx_mcneil_2018_aspree \
-  --rule-id r_lift_aspree_xt_to_aspree_base \
-  --source ctx_wolfe_2025_aspree_xt \
-  --mode decontextualization \
-  --justification "ASPREE-XT (Wolfe 2025) is the post-randomization observational extension of the ASPREE cohort; extended-phase findings decontextualize into claims about the underlying ASPREE cohort."
-```
-
-Use `--dry-run` the first time to preview without writing: `pks context lifting add ctx_att_2009_meta --rule-id r_probe --source ctx_ikeda_2014_jppp --mode bridge --justification "probe" --dry-run`.
+Use `--dry-run` the first time to preview without writing.
 
 ## Step 3: Verify
 
 ```bash
 pks context lifting list                      # inspect the bridge graph
-pks context lifting list --target ctx_att_2009_meta    # target-scoped
+pks context lifting list --target TARGET_CTX  # target-scoped
 pks build                                     # must still be green
+pks claim conflicts 2>&1 | awk '{print $1}' | sort | uniq -c
 ```
 
-Expect: `Build rebuilt:` (or `Build unchanged:`) with zero warnings. If build fails, a lifting rule introduced a schema error or a CEL condition referenced a structural concept — diagnose and re-run `pks context lifting update` or `remove`.
+Expect `pks build` to report zero warnings. The conflict-class breakdown is the semantic signal:
 
-After rebuild, run `pks build` output through the diagnostic summary: the `CONTEXT_PHI_NODE` count should have dropped (pairs that were context-non-liftable are now lift-connected and either classify as `COMPATIBLE` or fall through to condition-based classification). Real `CONFLICT` records may appear where lifted claims actually disagree under lifted interpretation — THAT is the interesting signal. Review each.
+- **CONTEXT_PHI_NODE** count drops when new lifts connect previously-isolated contexts.
+- **PHI_NODE** count (condition-based regime split) may or may not drop depending on whether your `--condition` rewrites actually align claim-level conditions.
+- **CONFLICT** records appear only when lifted claims collide under identical conditions — this requires `--condition` expressions that carry the alignment.
+- **OVERLAP** records appear for partial condition agreement with differing values.
+
+Review the actual records — `pks claim conflicts | grep CONFLICT`, `pks claim conflicts | grep OVERLAP` — and sanity-check them against the contexts you lifted from and to. An empty CONFLICT list after authoring lifts means either no substantive disagreement exists across your corpus, or your lifts lack the condition rewrites needed to surface it. Do not treat "N rules authored" as the deliverable; `pks claim conflicts` output is.
 
 ## Step 4: Report
 
