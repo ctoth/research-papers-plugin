@@ -83,56 +83,60 @@ Notes:
 ### Undefined concept
 
 ```
-Error: context 'ctx_foo': assumption[2] = 'double_blind == true': Undefined concept: 'double_blind'
+Error: context '<ctx_name>': assumption[N] = '<expr>': Undefined concept: '<concept_name>'
 ```
 
-The LHS name is not in the master concept registry. Before retrying, register it. For design-marker booleans (`double_blind`, `placebo_controlled`, `open_label`, `free_of_cvd_at_baseline`, etc.) the pattern is:
+The LHS name is not in the master concept registry. Before retrying, register it. Pick a form that matches how the assumption uses the name:
+
+- `== true` / `== false` on the RHS → `--form boolean`
+- `== '<string>'` on the RHS → `--form category --values "<a,b,c>"` (leave extensible, i.e. omit `--closed`, unless your domain demands closure)
+- integer `>= N` / `<= N` → `--form count`
+- non-integer numeric, or a dimensional quantity (mass, time, etc.) → whichever quantity form fits. Check `pks form list` for the available set.
 
 ```bash
 pks concept add \
-  --domain clinical_trial \
-  --name double_blind \
-  --form boolean \
-  --definition "Trial design where both participants and investigators are unaware of treatment assignment."
+  --domain <your_domain> \
+  --name <concept_name> \
+  --form <boolean|category|count|...> \
+  [--values "<v1,v2,...>"]    # category only
+  --definition "<one-sentence definition in domain terms>"
 ```
 
-For a category concept (e.g. `comparator == 'placebo'`):
-
-```bash
-pks concept add \
-  --domain clinical_trial \
-  --name comparator \
-  --form category \
-  --values "placebo,no_aspirin,no_treatment,active_comparator" \
-  --definition "Arm used as the reference in the trial's primary comparison."
-```
-
-For a count (pooled trial counts, pooled N, person-years): `--form count`. For dose/duration/age: use the matching quantity form (see `pks form list` — `mass`, `time`, `dimensionless`, etc.). Leave category value sets extensible (omit `--closed`) unless the domain demands closure.
-
-Once registered, retry the context add. Concept adds auto-commit; no `git add` needed.
+`pks concept add` auto-commits. Retry the context add afterward.
 
 ### CEL parse error on dotted notation
 
 ```
-Error: context 'ctx_foo': assumption[0] = 'population.age_ge_70 == true': Parse error: Unexpected character at position 10: '.age_ge_70 == true'
+Error: context '<ctx_name>': assumption[N] = '<prefix>.<field> == <value>': Parse error: Unexpected character at position M: '.<field> == <value>'
 ```
 
-CEL in propstore doesn't take dotted paths on concept references. Flatten the name — replace the dot with an underscore (or just drop the prefix) — and register that flat concept. `population.age_ge_70` becomes `age_ge_70` (or `population_age_ge_70` if disambiguation matters). Then register `age_ge_70` as boolean (or whatever form matches) and rewrite the assumption to the flat form before retrying the add.
+Propstore's CEL grammar does not accept dotted paths on concept references — LHS names must be flat registered concepts. Pick a flat name (drop the prefix, or replace `.` with `_` to preserve grouping intent), register it, and rewrite the assumption:
 
-If you're authoring a batch of related assumptions (e.g. all the `design.*` markers for a trial), use a consistent flat-naming convention — `design_randomized`, `design_double_blind`, etc. — or register them all bare if the domain space allows.
+```
+# Before (rejected)
+- <prefix>.<field> == <value>
+
+# After (flat name registered, assumption rewritten)
+- <field> == <value>          # or <prefix>_<field> == <value> if disambiguation matters
+```
+
+If you're authoring a group of related markers, use a consistent flat-naming convention and register all of them before retrying — don't interleave partial fixes.
 
 ### Structural concept in CEL
 
 ```
-Error: context 'ctx_foo': assumption[3] = 'enteric_coated_formulation == true': Structural concept 'enteric_coated_formulation' cannot appear in CEL expressions
+Error: context '<ctx_name>': assumption[N] = '<expr>': Structural concept '<concept_name>' cannot appear in CEL expressions
 ```
 
-The concept exists but its `physical_dimension_form` is `structural`, which propstore's CEL grammar forbids (structural is for decorative/referential concepts, not truth-valued ones). Two recoveries:
+The concept exists but is declared `physical_dimension_form: structural`. CEL forbids structural concepts on its boundaries — structural is for decorative/referential roles, not truth-valued ones. Two recoveries, in order of preference:
 
-1. **Use a different concept.** Often there's a boolean sibling (`enteric_coated_formulation` is structural → use `aspirin_formulation == 'enteric_coated'` if `aspirin_formulation` is a category concept instead).
-2. **If the concept genuinely SHOULD be boolean** (the misclassification is in the concept, not your assumption), the concept's YAML needs a form flip: `physical_dimension_form: structural` → `physical_dimension_form: boolean`. There is no CLI for this today — edit `knowledge/concepts/<name>.yaml` directly. You must also update the `version_id: sha256:...` line to match the new content hash (run `pks build` after editing; it prints the expected hash in the mismatch error and you paste that back). See `feedback_propstore_git_backend.md` in project memory for git-discipline when committing concept YAMLs.
+1. **Use a different concept.** Often a boolean or category sibling says the same thing. Run `pks concept list` and `pks concept show <nearby_name>` to look for one. Rewrite the assumption against that sibling.
+2. **Flip the form, if the structural classification is wrong.** Run `pks concept show <concept_name>` and confirm the original form declaration was the mistake (usually: a boolean-shaped fact was authored as structural during early ingest). Then edit `knowledge/concepts/<concept_name>.yaml`:
+   - Change `physical_dimension_form: structural` to the correct form (usually `boolean`).
+   - The concept YAML carries a `version_id: sha256:...` content hash. Changing the form invalidates it. Run `pks build`; the mismatch error prints the expected new hash. Paste it back into the YAML.
+   - Commit both lines (the form edit and the hash update) in one commit.
 
-Pick option 1 first. Only do option 2 if you checked `pks concept show <name>` and concluded the original form declaration was wrong.
+When committing any YAML inside a propstore-backed `knowledge/` repository: always run `git diff --cached --stat` after `git add` and before `git commit`. The propstore git backend shares the index with user git and can leave unrelated mutations staged; a blind commit can pick them up. Verify the staged set matches your intent every time.
 
 ## Step 4: Verify
 
