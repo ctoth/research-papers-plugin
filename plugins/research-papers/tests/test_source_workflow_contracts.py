@@ -50,6 +50,16 @@ class TestSourceWorkflowContracts(unittest.TestCase):
             skill,
         )
 
+    def test_extract_claims_preserves_script_as_draft_proposer(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "extract-claims" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("scripts/generate_claims.py", skill)
+        self.assertIn("draft proposal", skill)
+        self.assertIn("LLM", skill)
+        self.assertIn("pks source add-claim", skill)
+
     def test_claim_skills_document_output_concept_for_parameter_claims(self) -> None:
         extract_skill = (PLUGIN_ROOT / "skills" / "extract-claims" / "SKILL.md").read_text(
             encoding="utf-8"
