@@ -10,6 +10,10 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 Extract propositional claims from a research paper and produce a `claims.yaml` file from scratch using `notes.md` content.
 
+Ontology-policy reference:
+
+- `plugins/research-papers/docs/ontology-authoring-policy.md`
+
 ## Step 0: Validate
 
 ```bash
@@ -84,7 +88,7 @@ For each parameter, constant, or threshold mentioned in the paper:
 - id: claim1
   type: parameter
   context: <ctx_author_year_slug>
-  concept: <local_concept_name or descriptive_name>
+  output_concept: <local_concept_name or descriptive_name>
   value: <number>
   unit: <unit string>
   conditions:
@@ -98,11 +102,12 @@ For each parameter, constant, or threshold mentioned in the paper:
 ```
 
 Rules:
-- Every parameter needs at minimum: id, type, **context**, concept, provenance
+- Every parameter needs at minimum: id, type, **context**, `output_concept`, provenance
 - Include `value` OR `lower_bound`+`upper_bound` (at least one). **Never** use `lower_bound` alone or `upper_bound` alone — the validator rejects unpaired bounds. If only one bound is known, use `value` with a `notes` field explaining the bound direction (e.g., ">85%").
 - Include `unit` for dimensional quantities (mass, time, pressure, etc.). **Omit `unit` for dimensionless forms** (ratio, count, score, boolean, etc.) — propstore auto-fills `unit: '1'` at build time. **Never use compound units that conflate independently-variable dimensions** (e.g., `mg/day` conflates dose and frequency). Split into separate concepts with simple units and express the relationship through CEL conditions. See register-concepts "Compound-Unit Decomposition" for the full rule.
 - For temporal quantities, use clinical time units directly: `mo` (month), `yr` (year), `d` (day), `wk` (week). Do not convert to hours or seconds — the `time` form accepts all of these natively.
 - Use names from the paper's `concepts.yaml` inventory when available; otherwise use descriptive lowercase_underscore names
+- Do not use top-level `concept` for new parameter claims; the current propstore claim schema requires `output_concept`
 
 ### 2.2: Equation Claims
 
@@ -269,6 +274,20 @@ When you write `conditions: ["endpoint == 'composite_primary'"]`, the name `endp
 
 **Before writing any CEL condition, verify the name exists in the concept registry.** If you're introducing a new conditioning axis (e.g., `endpoint`, `comparison`, `population`), register it as a concept first. These conditioning-axis concepts are just as real as the measurement concepts — they're the dimensions along which parameter values vary.
 
+Before writing a condition, classify the thing you are encoding:
+
+- If it is paper-wide and structural, move it to the paper context instead of repeating it as a claim condition.
+- If it is a reusable domain object like `all_cause_mortality` or `major_bleeding`, make sure it exists as a first-class concept. The condition may still select it through an axis, but do not treat the literal as only an opaque string.
+- If it is only a selector like `primary_endpoint` or `per_protocol`, keep it as a category value on the relevant axis.
+- If it fuses multiple dimensions, decompose it instead of introducing a single opaque literal unless the paper truly treats that fused label as indivisible.
+
+Examples:
+
+- `endpoint == 'primary_endpoint'` is usually a selector on the `endpoint` axis
+- `endpoint == 'all_cause_mortality'` is acceptable for a claim-specific slice, but `all_cause_mortality` should also exist as a first-class concept
+- `population == 'per_protocol'` is a selector on the analysis-set axis
+- intervention identity, dose, comparator identity, and follow-up usually belong in the paper context rather than on every claim
+
 ### Meta rule
 
 When producing artifacts that a downstream tool validates, discover the validation contract from the tool — do not assume you know it. The CEL checker is the authority on what condition expressions are legal, not this skill document.
@@ -397,7 +416,7 @@ Do not query master-branch claims from this skill. Create the local equation cla
 
 - [ ] Every claim has unique sequential ID
 - [ ] Every claim has type, provenance with real page numbers where possible
-- [ ] Parameter claims have concept, value (or bounds), and unit (auto-filled for dimensionless forms)
+- [ ] Parameter claims have `output_concept`, value (or bounds), and unit (auto-filled for dimensionless forms)
 - [ ] Equation claims have expression, valid sympy, and variable bindings
 - [ ] Observation claims have statement and concepts list
 - [ ] Model claims have name, equations list, and parameter bindings
@@ -408,6 +427,7 @@ Do not query master-branch claims from this skill. Create the local equation cla
 - [ ] Every name in CEL conditions is a registered concept (not free-form strings)
 - [ ] Conditions use consistent CEL vocabulary across the file
 - [ ] Concept names match the paper's concept inventory where one exists
+- [ ] Reusable outcomes, interventions, populations, and methodological constructs are modeled as concepts instead of being left only as selector literals
 - [ ] **Every claim carries a `context:` field referencing a pre-authored context**
 
 ## Output

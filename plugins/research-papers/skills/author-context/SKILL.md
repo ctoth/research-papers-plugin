@@ -10,6 +10,10 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 Create the per-paper context that carries the paper's structural assumptions (population, intervention, follow-up, design). Every claim this paper extracts will reference the context by name. Promote fails on contextless claims, so this must happen before extract-claims.
 
+Ontology-policy reference:
+
+- `plugins/research-papers/docs/ontology-authoring-policy.md`
+
 ## What A Context Is
 
 A context is a first-class `ist(c, p)` qualifier (McCarthy, lifted-axioms style). It says "these propositions hold within these structural assumptions." Claim-level `conditions[]` handle finer axes like endpoint or ITT-vs-per-protocol; context handles the trial's BIG structural commitments — who was studied, with what intervention, for how long, under which design.
@@ -53,6 +57,26 @@ From these, derive:
 - **CEL assumptions**: boolean or equality CEL expressions over registered concepts (e.g., `primary_prevention == true`, `blinded_outcome_adjudication == true`, `open_label == true`). Any concept name on the LHS must be a registered concept in master OR will be registered during the paper's register-concepts step.
 - **Parameters**: KEY=VALUE scalar bindings that are constant across all paper claims (e.g., `trial_name=JPPP`, `sample_size=14464`, `followup_median_yr=5.02`, `age_range_min_yr=60`).
 - **Perspective**: the analysis viewpoint name — usually `authors_primary_analysis` for the paper's headline results. Use a different perspective name (e.g., `per_protocol_analysis`, `subgroup_analysis_<name>`) if you're authoring a separate context for an alternative analysis.
+
+Apply this decision rule before writing any assumption:
+
+- If the fact holds for essentially every claim in the paper, it belongs in context.
+- If the fact varies across claims within the paper, it belongs in claim-level `conditions[]`, not in context.
+
+Typical context material:
+
+- trial-wide intervention identity, dose, formulation, and schedule
+- comparator identity
+- trial design and adjudication regime
+- cohort-wide eligibility facts
+- follow-up regime
+
+Typical condition material that should stay out of context:
+
+- endpoint selectors
+- subgroup selectors
+- ITT vs per-protocol selectors
+- arm-specific reported slices
 
 ## Step 3: Author The Context
 

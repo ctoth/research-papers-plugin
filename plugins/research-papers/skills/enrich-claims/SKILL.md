@@ -10,6 +10,10 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 Improve an existing `claims.yaml` with real data from the paper. This skill assumes a paper-local `concepts.yaml` exists or that you will keep concept names consistent until `register-concepts` runs.
 
+Ontology-policy reference:
+
+- `plugins/research-papers/docs/ontology-authoring-policy.md`
+
 ## Step 0: Validate
 
 ```bash
@@ -42,17 +46,26 @@ Replace `page: 0` with the actual page number. Cross-reference:
 
 If the exact page cannot be determined, add `provenance.section` with the section name and leave page as 0.
 
-### Concept Resolution (concept)
+### Concept Resolution (`output_concept`, `target_concept`, `concepts`, bindings)
 The generator produces lowercase underscore names like `fundamental_frequency`. Check against the paper-local concept inventory:
 
 ```bash
 ls "$paper_dir"/concepts.yaml 2>/dev/null
 ```
 
-For each concept name:
+For each referenced concept name:
 - If a matching `local_name` exists in `concepts.yaml`, use that exact name
 - If a matching `proposed_name` exists, convert the claim to the corresponding `local_name`
 - If no match exists, keep the descriptive name and flag it for `register-concepts` to absorb later
+
+Current claim-schema reminder:
+
+- parameter claims use `output_concept`
+- measurement claims use `target_concept`
+- observation / mechanism / comparison / limitation claims use `concepts[]`
+- equation and model claims reference concepts through bindings
+
+Do not rewrite enriched parameter claims back to legacy top-level `concept`.
 
 ### SymPy Expressions (sympy)
 For equation claims, the generator copies LaTeX into both `expression` and `sympy`. Replace `sympy` with a valid SymPy-parseable expression:
@@ -109,6 +122,12 @@ conditions:
 ```
 
 **Vocabulary constraint:** Every string literal compared against a category concept should match the paper-local inventory where one exists. If the paper uses a new value, add a note in `concepts.yaml` or keep the condition but flag it for later concept enrichment.
+
+Apply the ontology policy while enriching:
+
+- if the literal names a reusable outcome, intervention, population, or methodological construct, do not leave it only as an opaque category value
+- if the claim is repeating a paper-wide structural fact, move that fact to context rather than duplicating it across conditions
+- if a fused label should be decomposed, prefer the decomposed representation when the paper supports it
 
 ### Notes (notes)
 Add when methodological context matters:
@@ -186,10 +205,11 @@ This records which model enriched claims, when, and which plugin version was use
 
 - [ ] Every claim has unique sequential ID
 - [ ] Every claim has type, provenance with real page numbers where possible
-- [ ] Parameter claims have concept, value (or bounds), and unit
+- [ ] Parameter claims have `output_concept`, value (or bounds), and unit
 - [ ] Equation claims have expression, valid sympy, and variable bindings
 - [ ] Conditions use consistent CEL vocabulary
 - [ ] Concept names match the paper-local inventory where one exists
+- [ ] Reusable domain entities are modeled as concepts rather than left only as selector literals
 - [ ] Notes added where methodological context matters
 
 ## Output

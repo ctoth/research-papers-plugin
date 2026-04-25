@@ -12,6 +12,10 @@ Register the concepts needed by one paper into its propstore source branch using
 
 This skill is rerunnable. Its primary source is `notes.md`. If `claims.yaml` exists, use it only as a supplementary pass to catch concept references you missed on the first read.
 
+Ontology-policy reference:
+
+- `plugins/research-papers/docs/ontology-authoring-policy.md`
+
 ## Step 0: Validate
 
 ```bash
@@ -105,6 +109,23 @@ When proposing conditioning-axis concepts, include `--values` with the values th
 
 The value set is extensible by default — listing only this paper's values is correct. Other papers will add theirs when they propose the same concept and get linked.
 
+### Classification Rules
+
+Before proposing a concept or category value, classify it using the ontology policy.
+
+- If it is a paper-wide structural commitment, put it in the paper context instead of proposing it only to support claim conditions.
+- If it is the left-hand side of CEL and multiple claims vary along it, it is a conditioning-axis concept.
+- If it is a reusable outcome, intervention, population, or methodological construct, it is usually a first-class concept even if a claim also selects it through an axis.
+- If it is only a selector like `primary_endpoint` or `per_protocol`, it is usually a category value on an axis, not the concept itself.
+- If it fuses independently variable dimensions, decompose it instead of registering the fused label as the only representation.
+
+Examples:
+
+- `all_cause_mortality`, `major_bleeding`, `nonfatal_myocardial_infarction` -> usually first-class concepts
+- `primary_endpoint`, `secondary_endpoint`, `safety_endpoint` -> usually category values on `endpoint`
+- `intention_to_treat` -> usually a first-class methodological concept; may also appear as a selected `population` value for specific claims
+- `aspirin_vs_placebo` -> decompose by default; keep as one comparison value only if the paper truly treats it as an indivisible named contrast
+
 ### Definition Quality
 
 Good: "Ratio of hazard rates between treatment and control arms, measuring relative event risk over time."
@@ -136,12 +157,16 @@ Read the output for each concept:
 
 If `claims.yaml` exists in the paper directory, read it and check for concept references in the following fields:
 
-- `concept`
+- `output_concept`
 - `target_concept`
 - `concepts[]`
 - `variables[].concept`
 - `parameters[].concept`
 - `conditions[]` — extract every LHS name from CEL expressions (e.g., `endpoint` from `endpoint == 'composite_primary'`). These names must be registered concepts.
+
+Legacy compatibility:
+
+- If an older `claims.yaml` still uses top-level `concept` on parameter claims, treat it as legacy input and migrate the paper forward. Do not teach new artifacts to emit that field for parameter claims.
 
 For any concepts found in `claims.yaml` that were NOT already registered in Step 4, propose them using the same command:
 
