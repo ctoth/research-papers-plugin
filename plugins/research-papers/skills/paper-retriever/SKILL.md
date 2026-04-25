@@ -83,11 +83,50 @@ If `fetch_paper.py` obtains the intended paper's PDF through an allowed path, St
 
 ## Step 4: Handle Fallback (if needed)
 
-If fetch_paper.py returns `"fallback_needed": true`, the paper couldn't be downloaded via open-access channels. In that case it returns the planned `dirname`/`directory` plus inline `metadata`, but it does **not** create `metadata.json` or the paper directory yet. Fall back to browser automation for sci-hub:
+If fetch_paper.py returns `"fallback_needed": true`, the paper couldn't be downloaded via open-access channels. In that case it returns the planned `dirname`/`directory` plus inline `metadata`, but it does **not** create `metadata.json` or the paper directory yet.
 
-**Try browser automation in this order:**
+**Choose the fallback path by input shape:**
 
-### Option 1: Any available browser automation (preferred)
+### Option 0: Publisher-hosted HTML document (W3C TR, ECMA / ISO specs, some tech reports)
+
+Papers with **no DOI and no arxiv ID** that live at a canonical publisher URL as HTML (and possibly also as PDF) should use headless Chrome print-to-pdf, not sci-hub. W3C Recommendations (`https://www.w3.org/TR/...`) are the canonical example. Sci-hub will not have them.
+
+Detect this case when:
+- The input was a `w3.org/TR/...`, `ecma-international.org`, or similar publisher URL, OR
+- Metadata resolution succeeded but no DOI/arxiv_id was attached, AND the paper has a stable public landing URL.
+
+Locate Chrome:
+
+```bash
+for p in "/c/Program Files/Google/Chrome/Application/chrome.exe" \
+         "/c/Program Files (x86)/Google/Chrome/Application/chrome.exe" \
+         "/usr/bin/google-chrome" "/usr/bin/chromium" \
+         "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"; do
+  [ -x "$p" ] && CHROME="$p" && break
+done
+```
+
+Print the canonical URL to PDF:
+
+```bash
+mkdir -p "./papers/<dirname>"
+"$CHROME" --headless --disable-gpu --no-sandbox \
+  --print-to-pdf="./papers/<dirname>/paper.pdf" \
+  --print-to-pdf-no-header \
+  "<canonical URL>"
+```
+
+Verify the output is a valid PDF (`file ./papers/<dirname>/paper.pdf` reports "PDF document", size > 100KB) before treating this as success. Then materialize `metadata.json`:
+
+```bash
+uv run scripts/fetch_paper.py "<identifier>" --papers-dir papers/ --output-dir "<dirname>" --metadata-only
+```
+
+If metadata resolution already failed and no DOI/arxiv lookup can produce fields, write `metadata.json` by hand from the paper's title page (title, authors, year required; `doi` and `arxiv_id` as `null`; `url` set to the canonical URL).
+
+If this path succeeds, STOP. Do not try sci-hub — sci-hub will not have publisher-direct-HTML documents, and trying wastes time.
+
+### Option 1: Any available browser automation (preferred for paywalled journal papers)
 
 If you have browser automation available, use it to:
 
