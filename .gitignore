@@ -9,3 +9,5 @@ notes
 *.png
 knowledge
 prompts
+pyghidra_mcp_projects/
+**/pyghidra_mcp_projects/
