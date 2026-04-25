@@ -10,6 +10,12 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 Extract propositional claims from a research paper and produce a `claims.yaml` file from scratch using `notes.md` content.
 
+This skill has a strict actor split:
+
+- The claim-generation script proposes a mechanical draft from tables, equations, and testable-property bullets.
+- The LLM reads that draft proposal, checks it against notes/page images/concepts/context, and enriches or corrects it.
+- The LLM then runs the `pks` CLI add step. The script must not be treated as the final propstore mutation path.
+
 Ontology-policy reference:
 
 - `plugins/research-papers/docs/ontology-authoring-policy.md`
@@ -60,6 +66,24 @@ Spot-check at minimum:
 - sample-size-dependent reported quantities
 
 Only verify the cited pages you actually use. Do not reread every page image for claim extraction if the paper has already been read into `notes.md`.
+
+## Step 1.5: Generate The Script Draft Proposal
+
+Run the existing proposal generator before hand-authoring claims:
+
+```bash
+uv run plugins/research-papers/scripts/generate_claims.py "$paper_dir" --output "$paper_dir/claims.yaml"
+```
+
+This preserves the script's mechanical extraction behavior:
+
+- parameter claims from standard parameter tables
+- equation claims from `$$...$$` blocks
+- observation claims from `Testable Properties` bullets
+- sequential local claim IDs
+- draft provenance and page-resolution attempts
+
+Treat the generated `claims.yaml` as a **draft proposal**, not as completed extraction. The script intentionally leaves gaps for the LLM: context, claim selection judgment, page-image verification, richer provenance, conditions, concept alignment, SymPy normalization, missing high-value claims, and removal of low-value mechanical claims.
 
 ## Step 2: Extract Claims by Type
 
@@ -292,7 +316,7 @@ Examples:
 
 When producing artifacts that a downstream tool validates, discover the validation contract from the tool — do not assume you know it. The CEL checker is the authority on what condition expressions are legal, not this skill document.
 
-## Step 3: Assemble and Write
+## Step 3: Review, Enrich, And Write
 
 ```yaml
 source:
@@ -303,7 +327,16 @@ claims:
     ...
 ```
 
-Write to `<paper_dir>/claims.yaml`.
+Read the script's draft proposal in `<paper_dir>/claims.yaml`, then edit that file in place. Preserve good script-produced claims, but do not accept them blindly.
+
+The LLM must:
+
+- add the paper context to every claim or be prepared to pass the context in the `pks` command
+- enrich page-0 or weak provenance using `notes.md` and cited page images
+- add missing high-value claims the script cannot see
+- remove low-value mechanical claims
+- add conditions, uncertainty, notes, quote fragments, and concept lists where needed
+- align concept references with `<paper_dir>/concepts.yaml`
 
 ## Step 4: Validate
 
@@ -318,9 +351,9 @@ If validation fails, fix and re-validate. **Do not consider extraction complete 
 
 **Note on source-branch workflows:** `validate-file` checks concepts against the master registry (`knowledge/concepts/`). If you are building a new source branch where concepts have been proposed but not yet promoted to master, the master concepts directory may be empty and `validate-file` will report false "Undefined concept" errors. In that case, proceed to Step 5 — `pks source add-claim` validates claims against the **source branch's own concept registry**, which includes proposed concepts. If `add-claim` succeeds, the claims are valid.
 
-## Step 5: Ingest into Propstore
+## Step 5: LLM Runs The pks Add Step
 
-If a propstore source branch exists for this paper, ingest the claims:
+If a propstore source branch exists for this paper, the LLM now performs the `pks` work and ingests the reviewed proposal:
 
 ```bash
 source_name=$(basename "$paper_dir")
