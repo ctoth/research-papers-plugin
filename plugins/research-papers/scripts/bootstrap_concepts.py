@@ -21,7 +21,8 @@ from typing import Any
 def extract_concept_names(claims_dir: Path) -> set[str]:
     """Walk claims.yaml files under claims_dir, collect all concept names.
 
-    Looks for 'concept', 'target_concept', and 'concepts' fields in claims.
+    Looks for current concept-link fields in claims, plus legacy parameter
+    `concept` for backward compatibility with older artifacts.
     """
     try:
         import yaml
@@ -43,10 +44,14 @@ def extract_concept_names(claims_dir: Path) -> set[str]:
             for claim in data["claims"]:
                 if not isinstance(claim, dict):
                     continue
-                # 'concept' field
-                c = claim.get("concept")
+                # current parameter/algorithm field
+                c = claim.get("output_concept")
                 if c and isinstance(c, str):
                     names.add(c)
+                # legacy parameter field
+                legacy_c = claim.get("concept")
+                if legacy_c and isinstance(legacy_c, str):
+                    names.add(legacy_c)
                 # 'target_concept' field
                 tc = claim.get("target_concept")
                 if tc and isinstance(tc, str):

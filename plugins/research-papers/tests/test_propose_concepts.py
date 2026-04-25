@@ -31,12 +31,12 @@ source:
 claims:
   - id: claim1
     type: parameter
-    concept: rate_ratio
+    output_concept: rate_ratio
     value: 0.88
     unit: "dimensionless"
   - id: claim2
     type: parameter
-    concept: event_rate
+    output_concept: event_rate
     value: 8.5
     unit: "%"
   - id: claim3
@@ -59,12 +59,12 @@ source:
 claims:
   - id: claim1
     type: parameter
-    concept: hazard_ratio
+    output_concept: hazard_ratio
     value: 1.14
     unit: "dimensionless"
   - id: claim2
     type: parameter
-    concept: event_rate
+    output_concept: event_rate
     value: 12.7
     unit: "%"
 """
@@ -75,7 +75,6 @@ source:
 claims:
   - id: claim1
     type: equation
-    concept: risk_model
     expression: "HR = exp(beta * X)"
     sympy: "Eq(HR, exp(beta * X))"
     variables:
@@ -91,7 +90,6 @@ claims:
   - id: claim2
     type: model
     name: "Cox proportional hazards"
-    concept: survival_model
     parameters:
       - name: baseline_hazard
         concept: baseline_hazard_rate
@@ -184,6 +182,26 @@ class TestExtractConcepts(unittest.TestCase):
             concepts = PROPOSE_MODULE.extract_concepts(Path(tmpdir))
             self.assertIn("baseline_hazard_rate", concepts)
             self.assertIn("treatment_hazard_ratio", concepts)
+
+    def test_extracts_legacy_parameter_concept_field(self) -> None:
+        import yaml
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            paper_dir = Path(tmpdir) / "LegacyPaper"
+            paper_dir.mkdir()
+            claims = {
+                "source": {"paper": "LegacyPaper"},
+                "claims": [
+                    {"id": "claim1", "type": "parameter", "concept": "legacy_parameter_name", "value": 1.0}
+                ],
+            }
+            (paper_dir / "claims.yaml").write_text(
+                yaml.dump(claims, default_flow_style=False),
+                encoding="utf-8",
+            )
+
+            concepts = PROPOSE_MODULE.extract_concepts(Path(tmpdir))
+            self.assertIn("legacy_parameter_name", concepts)
 
     def test_collects_units(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -316,8 +334,8 @@ class TestPksBatchMode(unittest.TestCase):
             claims = {
                 "source": {"paper": "TestPaper"},
                 "claims": [
-                    {"id": "c1", "type": "parameter", "concept": "x", "value": 1},
-                    {"id": "c2", "type": "parameter", "concept": "real_concept", "value": 2},
+                    {"id": "c1", "type": "parameter", "output_concept": "x", "value": 1},
+                    {"id": "c2", "type": "parameter", "output_concept": "real_concept", "value": 2},
                 ],
             }
             (paper_dir / "claims.yaml").write_text(

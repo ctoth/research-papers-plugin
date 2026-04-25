@@ -26,6 +26,51 @@ logger = logging.getLogger(__name__)
 import yaml
 
 
+def _claim_concept_names(claim: dict[str, Any]) -> list[str]:
+    """Extract concept references from one claim.
+
+    Accepts legacy parameter `concept` for backward compatibility, but the
+    current schema uses `output_concept`.
+    """
+    names: list[str] = []
+
+    output_concept = claim.get("output_concept")
+    if isinstance(output_concept, str) and output_concept:
+        names.append(output_concept)
+
+    legacy_concept = claim.get("concept")
+    if isinstance(legacy_concept, str) and legacy_concept:
+        names.append(legacy_concept)
+
+    target_concept = claim.get("target_concept")
+    if isinstance(target_concept, str) and target_concept:
+        names.append(target_concept)
+
+    concepts = claim.get("concepts")
+    if isinstance(concepts, list):
+        for item in concepts:
+            if isinstance(item, str):
+                names.append(item)
+
+    variables = claim.get("variables")
+    if isinstance(variables, list):
+        for entry in variables:
+            if isinstance(entry, dict):
+                variable_concept = entry.get("concept")
+                if isinstance(variable_concept, str) and variable_concept:
+                    names.append(variable_concept)
+
+    parameters = claim.get("parameters")
+    if isinstance(parameters, list):
+        for entry in parameters:
+            if isinstance(entry, dict):
+                parameter_concept = entry.get("concept")
+                if isinstance(parameter_concept, str) and parameter_concept:
+                    names.append(parameter_concept)
+
+    return names
+
+
 def extract_concepts(papers_dir: Path) -> dict[str, dict[str, Any]]:
     """Extract unique concept names with metadata from claims.yaml files.
 
@@ -53,35 +98,7 @@ def extract_concepts(papers_dir: Path) -> dict[str, dict[str, Any]]:
                 if not isinstance(claim, dict):
                     continue
 
-                names: list[str] = []
-                c = claim.get("concept")
-                if c and isinstance(c, str):
-                    names.append(c)
-                tc = claim.get("target_concept")
-                if tc and isinstance(tc, str):
-                    names.append(tc)
-                cs = claim.get("concepts")
-                if isinstance(cs, list):
-                    for item in cs:
-                        if isinstance(item, str):
-                            names.append(item)
-                # equation claims: variables[].concept
-                variables = claim.get("variables")
-                if isinstance(variables, list):
-                    for entry in variables:
-                        if isinstance(entry, dict):
-                            vc = entry.get("concept")
-                            if isinstance(vc, str) and vc:
-                                names.append(vc)
-                # model claims: parameters[].concept
-                parameters = claim.get("parameters")
-                if isinstance(parameters, list):
-                    for entry in parameters:
-                        if isinstance(entry, dict):
-                            pc = entry.get("concept")
-                            if isinstance(pc, str) and pc:
-                                names.append(pc)
-
+                names = _claim_concept_names(claim)
                 unit = claim.get("unit", "")
 
                 for name in names:
@@ -147,35 +164,7 @@ def _extract_concepts_single_paper(paper_dir: Path) -> dict[str, dict[str, Any]]
         if not isinstance(claim, dict):
             continue
 
-        names: list[str] = []
-        c = claim.get("concept")
-        if c and isinstance(c, str):
-            names.append(c)
-        tc = claim.get("target_concept")
-        if tc and isinstance(tc, str):
-            names.append(tc)
-        cs = claim.get("concepts")
-        if isinstance(cs, list):
-            for item in cs:
-                if isinstance(item, str):
-                    names.append(item)
-        # equation claims: variables[].concept
-        variables = claim.get("variables")
-        if isinstance(variables, list):
-            for entry in variables:
-                if isinstance(entry, dict):
-                    vc = entry.get("concept")
-                    if isinstance(vc, str) and vc:
-                        names.append(vc)
-        # model claims: parameters[].concept
-        parameters = claim.get("parameters")
-        if isinstance(parameters, list):
-            for entry in parameters:
-                if isinstance(entry, dict):
-                    pc = entry.get("concept")
-                    if isinstance(pc, str) and pc:
-                        names.append(pc)
-
+        names = _claim_concept_names(claim)
         unit = claim.get("unit", "")
 
         for name in names:

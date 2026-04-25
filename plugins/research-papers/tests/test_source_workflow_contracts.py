@@ -29,7 +29,6 @@ class TestSourceWorkflowContracts(unittest.TestCase):
         )
 
         self.assertIn("notes.md", skill)
-        self.assertIn("propose_concepts.py pks-batch", skill)
         self.assertNotIn("If `claims.yaml` is missing → STOP", skill)
         self.assertNotIn("This must run after extract-claims", skill)
         self.assertNotIn("Run the concept proposer to extract all concept names from this paper's claims.yaml", skill)
@@ -51,6 +50,19 @@ class TestSourceWorkflowContracts(unittest.TestCase):
             skill,
         )
 
+    def test_claim_skills_document_output_concept_for_parameter_claims(self) -> None:
+        extract_skill = (PLUGIN_ROOT / "skills" / "extract-claims" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        enrich_skill = (PLUGIN_ROOT / "skills" / "enrich-claims" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("output_concept", extract_skill)
+        self.assertIn("output_concept", enrich_skill)
+        self.assertNotIn("Parameter claims have concept", extract_skill)
+        self.assertNotIn("Parameter claims have concept", enrich_skill)
+
     def test_sync_helper_has_no_dead_pyyaml_dependency(self) -> None:
         script = (PLUGIN_ROOT / "scripts" / "sync_propstore_source.py").read_text(
             encoding="utf-8"
@@ -63,7 +75,8 @@ class TestSourceWorkflowContracts(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertNotIn("pks source", skill)
+        self.assertNotIn("pks source init", skill)
+        self.assertNotIn("pks source promote", skill)
         self.assertNotIn("pks init", skill)
 
     def test_paper_process_is_a_pure_skill_orchestrator(self) -> None:

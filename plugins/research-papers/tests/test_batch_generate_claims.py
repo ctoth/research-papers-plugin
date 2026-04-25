@@ -84,7 +84,7 @@ source:
 claims:
   - id: claim1
     type: parameter
-    concept: fundamental_frequency
+    output_concept: fundamental_frequency
 """
 
 

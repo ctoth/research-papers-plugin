@@ -49,8 +49,8 @@ def _make_full_paper_dir(root: Path) -> Path:
     claims = {
         "source": {"paper": "Bowman_2018_EffectsAspirinPrimaryPrevention"},
         "claims": [
-            {"id": "claim1", "type": "parameter", "concept": "rate_ratio", "value": 0.88, "unit": "dimensionless"},
-            {"id": "claim2", "type": "parameter", "concept": "event_rate", "value": 8.5, "unit": "%"},
+            {"id": "claim1", "type": "parameter", "output_concept": "rate_ratio", "value": 0.88, "unit": "dimensionless"},
+            {"id": "claim2", "type": "parameter", "output_concept": "event_rate", "value": 8.5, "unit": "%"},
         ],
     }
     (paper_dir / "claims.yaml").write_text(
@@ -125,7 +125,7 @@ class TestConceptsYamlMatchesPipelineContract(unittest.TestCase):
             claims = {
                 "source": {"paper": "TestPaper"},
                 "claims": [
-                    {"id": "c1", "type": "parameter", "concept": "rate_ratio", "value": 1.0}
+                    {"id": "c1", "type": "parameter", "output_concept": "rate_ratio", "value": 1.0}
                 ],
             }
             (paper_dir / "claims.yaml").write_text(
@@ -208,8 +208,8 @@ class TestConceptNamesRoundtrip(unittest.TestCase):
             claims = {
                 "source": {"paper": "TestPaper"},
                 "claims": [
-                    {"id": "c1", "type": "parameter", "concept": "hazard_ratio", "value": 1.14},
-                    {"id": "c2", "type": "parameter", "concept": "event_rate", "value": 12.7},
+                    {"id": "c1", "type": "parameter", "output_concept": "hazard_ratio", "value": 1.14},
+                    {"id": "c2", "type": "parameter", "output_concept": "event_rate", "value": 12.7},
                 ],
             }
             (paper_dir / "claims.yaml").write_text(
@@ -220,7 +220,7 @@ class TestConceptNamesRoundtrip(unittest.TestCase):
             concept_names = {c["local_name"] for c in result["concepts"]}
 
             for claim in claims["claims"]:
-                concept_ref = claim.get("concept")
+                concept_ref = claim.get("output_concept")
                 if concept_ref:
                     self.assertIn(concept_ref, concept_names)
 

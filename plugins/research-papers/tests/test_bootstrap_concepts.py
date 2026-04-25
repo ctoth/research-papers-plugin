@@ -32,15 +32,16 @@ source:
 claims:
   - id: claim1
     type: parameter
-    concept: fundamental_frequency
+    output_concept: fundamental_frequency
     value: 120
   - id: claim2
     type: parameter
-    concept: open_quotient
+    output_concept: open_quotient
     value: 0.5
   - id: claim3
-    type: property
-    concept: spectral_tilt
+    type: observation
+    concepts:
+      - spectral_tilt
 """
 
 SAMPLE_CLAIMS_YAML_2 = """\
@@ -49,15 +50,16 @@ source:
 claims:
   - id: claim1
     type: parameter
-    concept: formant_frequency
+    output_concept: formant_frequency
     value: 500
   - id: claim2
     type: parameter
-    concept: fundamental_frequency
+    output_concept: fundamental_frequency
     value: 100
   - id: claim3
-    type: property
-    concept: vocal_tract_length
+    type: observation
+    concepts:
+      - vocal_tract_length
 """
 
 # Strategy for generating concept-like names: lowercase letters and underscores

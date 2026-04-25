@@ -238,6 +238,14 @@ class TestClaimProperties(unittest.TestCase):
         # SAMPLE_NOTES_MD has 3 parameter rows
         self.assertEqual(len(param_claims), 3)
 
+    def test_parameter_claims_use_output_concept(self) -> None:
+        result = self._generate()
+        param_claims = [c for c in result["claims"] if c["type"] == "parameter"]
+        self.assertTrue(param_claims)
+        for claim in param_claims:
+            self.assertIn("output_concept", claim)
+            self.assertNotIn("concept", claim)
+
 
 if __name__ == "__main__":
     unittest.main()

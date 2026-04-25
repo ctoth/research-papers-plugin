@@ -402,7 +402,7 @@ def _row_to_claim(
     claim: dict[str, Any] = {
         "id": f"claim{claim_counter}",
         "type": "parameter",
-        "concept": _concept_name_from_param(name),
+        "output_concept": _concept_name_from_param(name),
         "provenance": {
             "paper": paper_name,
             "page": 0,
@@ -562,7 +562,7 @@ def _row_to_multi_claims(
         claim: dict[str, Any] = {
             "id": f"claim{claim_counter}",
             "type": "parameter",
-            "concept": concept,
+            "output_concept": concept,
             "provenance": {
                 "paper": paper_name,
                 "page": 0,
@@ -621,7 +621,7 @@ def generate_claims(paper_dir: Path) -> dict[str, Any]:
                    Must contain a notes.md file.
 
     Returns:
-        A dict matching the ClaimFile schema with 'source' and 'claims' keys.
+        A dict matching the draft ClaimFile schema with 'source' and 'claims' keys.
     """
     paper_name = paper_dir.name
     notes_path = paper_dir / "notes.md"
@@ -678,7 +678,7 @@ def generate_claims(paper_dir: Path) -> dict[str, Any]:
         if claim["provenance"].get("page", 0) == 0:
             # Pick the best search target for this claim type
             if claim["type"] == "parameter":
-                target = claim.get("concept", "")
+                target = claim.get("output_concept", "") or claim.get("concept", "")
             elif claim["type"] == "equation":
                 target = claim.get("expression", "")[:80]
             elif claim["type"] == "observation":
