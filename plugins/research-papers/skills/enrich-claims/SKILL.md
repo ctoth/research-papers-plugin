@@ -187,10 +187,11 @@ If this fails because the source branch does not exist yet, stop and use `paper-
 ```bash
 pks source stamp-provenance "$source_name" \
   --file "$paper_dir/claims.yaml" \
-  --agent "<your model name>" --skill enrich-claims
+  --agent "<your model name>" --skill enrich-claims \
+  --status stated
 ```
 
-This records which model enriched claims, when, and which plugin version was used. Plugin version is autodetected.
+`--status stated` is correct here: enriched claims are assertions over the paper text, not empirical measurements. The CLI accepts `measured | calibrated | stated | defaulted | vacuous`. Plugin version is autodetected.
 
 ## Provenance Rules
 

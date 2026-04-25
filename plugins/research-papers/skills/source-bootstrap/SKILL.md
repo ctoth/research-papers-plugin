@@ -31,17 +31,18 @@ source_name=$(basename "$paper_dir")
 
 Read `metadata.json` and pick the strongest available origin in this order:
 
-1. DOI
-2. arXiv ID
-3. URL
-4. local file path
+1. DOI → `--origin-type doi`, value is the bare DOI (e.g. `10.1145/1142351.1142399`)
+2. local file path → `--origin-type file`, value is the path
+3. anything else (arXiv ID, URL, CEUR-WS link, etc.) → `--origin-type manual`, value is the canonical URL or identifier
+
+The CLI's `SourceOriginType` enum accepts only `doi | file | manual`. arXiv IDs and bare URLs route through `manual`.
 
 ## Step 2: Initialize The Source Branch
 
 ```bash
 pks source init "$source_name" \
   --kind academic_paper \
-  --origin-type <doi|arxiv|url|file> \
+  --origin-type <doi|file|manual> \
   --origin-value "<value>" \
   --content-file "$paper_dir/paper.pdf"
 ```

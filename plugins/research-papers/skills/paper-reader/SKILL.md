@@ -1,6 +1,6 @@
 ---
 name: paper-reader
-description: Read scientific papers and extract implementation-focused notes. Converts PDFs to page images, then reads them. Papers <=50pp are read directly; papers >50pp are chunked into 50-page ranges for thorough parallel extraction. Creates structured notes in papers/ directory.
+description: Read scientific papers and extract implementation-focused notes. Converts PDFs to page images, then reads them. Papers <=300pp are read directly by the assigned worker; papers >300pp fall back to 50-page chunks. Creates structured notes in papers/ directory.
 argument-hint: "[path/to/paper.pdf]"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires shell access; subagents are optional but improve large-paper throughput."
@@ -150,8 +150,8 @@ ls "$paper_dir"/pngs/page-*.png | wc -l
 ```
 
 **Decision:**
-- **≤50 pages**: Read all page images yourself (Step 2A)
-- **>50 pages**: Chunk protocol (Step 2B)
+- **≤300 pages**: Read all page images yourself (Step 2A). This is the default path. Modern long-context models hold a full academic paper in working memory without chunking.
+- **>300 pages**: Chunk protocol (Step 2B). Only book-length works should reach this branch.
 
 ## Step 1.5: Prove the Page-Image Lane Works
 
@@ -165,22 +165,24 @@ Once `page-000.png` is visible, continue immediately to Step 2A or Step 2B.
 
 ---
 
-## Step 2A: Direct Read (≤50 pages)
+## Step 2A: Direct Read (≤300 pages)
 
 **CRITICAL: Read EVERY page image. No skipping, no sampling, no "reading enough to get the gist."** Read every single `page-NNN.png` file from `page-000` through the last page. If you have 34 pages, read 34 page images. Agents routinely skip pages to save tokens — this produces incomplete notes that miss equations, parameters, and key details buried in middle sections. The entire point of reading the paper is completeness. If you skip pages, the notes are worthless.
 
-For papers with 50 pages or fewer, the assigned worker must do this reading itself. Do **not** dispatch additional readers for a small paper.
+For papers with 300 pages or fewer, the assigned worker must do this reading itself in a single agent context. Do **not** dispatch additional readers, do **not** split the paper across workers, and do **not** sample pages. Every paper in this range fits comfortably in a long-context model's working memory.
 
 Take thorough notes as you go. Continue to Step 3.
 
 ---
 
-## Step 2B: Chunk Protocol (>50 pages)
+## Step 2B: Chunk Protocol (>300 pages)
 
-Split into **50-page chunks**. Calculate ranges:
+Only book-length works reach this branch. Split into **50-page chunks**. Calculate ranges:
 - Chunk 1: pages 000-049
 - Chunk 2: pages 050-099
 - Last chunk: whatever remains
+
+**Chunk dispatch is the caller's responsibility, not this skill's.** A subagent invoked for a single paper cannot itself spawn parallel chunk workers (Claude Code supports only one level of delegation). If you hit this branch, stop and report the page count to your caller so they can dispatch one worker per chunk at the top level. Do **not** sample pages to stay in context; sampling produces worthless notes. Do **not** attempt to dispatch subagents from within a subagent.
 
 ### Write ONE Template Prompt
 
@@ -226,11 +228,11 @@ You are running alongside other chunk readers.
 mkdir -p "./papers/Author_Year_ShortTitle/chunks"
 ```
 
-**If you can dispatch parallel subagents**, launch one per chunk simultaneously. Each reads its page range and writes to `chunks/chunk-START-END.md`. Use the strongest available full-size model for every chunk worker. Never use a mini/small tier worker for chunk extraction.
+If you are the **top-level caller** (not a subagent), dispatch one chunk worker per range simultaneously. Each reads its page range and writes to `chunks/chunk-START-END.md`. Use the strongest available full-size model for every chunk worker. Never use a mini/small tier worker for chunk extraction.
 
-Do not dispatch chunk workers until you have successfully inspected at least one local page image from this paper yourself. If you cannot inspect even `page-000.png`, that is a concrete blocker and you should stop there.
+If you are a **subagent** invoked for this paper, you cannot dispatch further subagents. Stop, report the page count and the required chunk ranges to your caller, and let them re-dispatch flat.
 
-**If parallel dispatch is not available**, process each chunk sequentially yourself.
+Do not dispatch chunk workers until at least one local page image from this paper has been successfully inspected. If you cannot inspect even `page-000.png`, that is a concrete blocker and you should stop there.
 
 ### Synthesize
 
@@ -542,10 +544,11 @@ The header is a **markdown link**, not plain text and not a `[[wikilink]]`. GitH
 source_name=$(basename "$paper_dir")
 pks source stamp-provenance "$source_name" \
   --file "papers/<Author_Year_ShortTitle>/notes.md" \
-  --agent "<your model name>" --skill paper-reader
+  --agent "<your model name>" --skill paper-reader \
+  --status stated
 ```
 
-This records which model read the paper, when, and which plugin version was used. Plugin version is autodetected.
+`--status stated` is correct for paper-reader: the notes are assertions derived from reading the paper text, not measured or calibrated values. Plugin version is autodetected. The CLI accepts `measured | calibrated | stated | defaulted | vacuous` and emits a deprecation warning recommending `--reader/--method` flags on `add-claim`/`add-justification`/`add-stance` instead — paper-reader doesn't add those, so the deprecated path is still the right entry point here.
 
 ---
 
@@ -573,7 +576,7 @@ This records which model read the paper, when, and which plugin version was used
 
 All papers produce: `papers/Author_Year_Title/` containing `notes.md`, `metadata.json`, `description.md`, `abstract.md`, `citations.md`, `pngs/`, and an updated `papers/index.md` entry.
 
-Papers >50 pages also produce `chunks/`.
+Papers >300 pages also produce `chunks/`.
 
 When done:
 ```
