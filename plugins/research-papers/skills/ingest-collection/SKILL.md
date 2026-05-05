@@ -60,6 +60,27 @@ Each paper is expected to:
 
 There is no collection-wide promote gate before paper-level progress is allowed.
 
+### Parallel Write Recovery
+
+Workers may call `pks` against the same knowledge store concurrently. Treat stale branch-head / compare-and-swap errors as retryable coordination failures, not paper failures.
+
+Retry these exact step failures after a short randomized backoff:
+
+- `StaleHeadError`
+- `head mismatch`
+- `head changed`
+- clean git-store CAS errors that say the expected branch head no longer matches the actual branch head
+
+Retry rule:
+
+1. Re-read the current store state before retrying.
+2. If the intended artifact already exists with compatible content, count the step as succeeded.
+3. If the intended artifact exists with incompatible content, stop that paper and report the semantic conflict.
+4. Otherwise retry the same skill step. Do not delete, reset, or hand-edit artifacts as part of retry.
+5. After 5 failed retries of the same step, stop that paper and report the exact last error.
+
+This retry policy applies especially to master-branch steps such as context authoring, predicate authoring, rule authoring, source promotion, and build. Source-branch proposal commands may already retry internally; still report any final stale-head failure with the exact command and paper.
+
 ## Step 3: Optional Enrichment Pass
 
 Optional cleanup is allowed after the first full pass.
