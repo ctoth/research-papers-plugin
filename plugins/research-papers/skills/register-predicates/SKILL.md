@@ -42,7 +42,7 @@ Prefer descriptive predicate names over opaque abstraction. `intervention_reduce
 
 ## Step 3: Register Predicates Via CLI
 
-Use the file stem `<author>_<year>` (e.g., `ikeda_2014`). The first `pks predicate add` call creates `knowledge/predicates/<stem>.yaml`; subsequent calls append to it. Duplicate predicate ids inside the same file are rejected.
+Use the file stem `<author>_<year>` (e.g., `author_2024`). The first `pks predicate add` call creates `knowledge/predicates/<stem>.yaml`; subsequent calls append to it. Duplicate predicate ids inside the same file are rejected.
 
 ```bash
 cd knowledge  # or pass -C to each pks call
