@@ -1,6 +1,6 @@
 ---
 name: paper-reader
-description: Read scientific papers and extract implementation-focused notes. Converts PDFs to page images, then reads them. Papers <=300pp are read directly by the assigned worker; papers >300pp fall back to 50-page chunks. Creates structured notes in papers/ directory.
+description: Read scientific papers and extract implementation-focused notes. Converts PDFs to page images, then reads them. Papers <=300pp are read directly by the assigned worker; papers >300pp use a chapter-aligned chunk protocol (preferred) or 50-page chunks (fallback) and synthesize a master notes.md that links to per-chapter files. Creates structured notes in papers/ directory.
 argument-hint: "[path/to/paper.pdf]"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires shell access; subagents are optional but improve large-paper throughput."
@@ -171,20 +171,46 @@ Once `page-000.png` is visible, continue immediately to Step 2A or Step 2B.
 
 For papers with 300 pages or fewer, the assigned worker must do this reading itself in a single agent context. Do **not** dispatch additional readers, do **not** split the paper across workers, and do **not** sample pages. Every paper in this range fits comfortably in a long-context model's working memory.
 
-Take thorough notes as you go. Continue to Step 3.
+**Incremental write discipline.** Take thorough notes as you go AND write them out periodically. The dominant silent-failure mode is buffering everything in context and trying to issue a single final Write at the end — if context fills before that Write fires, no output reaches disk. After every ~15-25 pages of reading, append your accumulated extraction to `notes.md` (or a working scratch file you will promote to `notes.md` at the end). If your context starts feeling tight, write what you have *now* before reading more pages.
+
+Continue to Step 3.
 
 ---
 
 ## Step 2B: Chunk Protocol (>300 pages)
 
-Only book-length works reach this branch. Split into **50-page chunks**. Calculate ranges:
-- Chunk 1: pages 000-049
-- Chunk 2: pages 050-099
-- Last chunk: whatever remains
+Only book-length works reach this branch. **Prefer chapter-aligned chunking** over fixed-page chunking. Fall back to 50-page chunks only when no usable TOC is detectable.
 
 **Chunk dispatch is the caller's responsibility, not this skill's.** A subagent invoked for a single paper cannot itself spawn parallel chunk workers (Claude Code supports only one level of delegation). If you hit this branch, stop and report the page count to your caller so they can dispatch one worker per chunk at the top level. Do **not** sample pages to stay in context; sampling produces worthless notes. Do **not** attempt to dispatch subagents from within a subagent.
 
-### Write ONE Template Prompt
+### Step 2B.1: Read the TOC and plan chunks
+
+Before dispatching anything, inspect the table of contents to learn the chapter structure:
+
+```bash
+# Quick low-res extract of the front matter / TOC pages to a temp dir
+tmp=$(mktemp -d)
+magick -density 100 "$paper_dir/paper.pdf[0-32]" -quality 80 -resize '1400x1400>' "$tmp/toc-%03d.png"
+```
+
+Read the TOC pages and extract: every chapter number, its title, its starting **printed book page number**, and the page count of the book overall. This locks down the chapter boundaries, even though the *PDF index* offset may not be constant — front matter (roman numerals), Part dividers, and blank pages introduce drift between PDF idx and printed book page (typical drift: +16 to +25 across an 800-page Springer monograph). Chunk workers will be told to cite the **printed page number from the page header**, not the PDF index, so the offset drift does not propagate downstream.
+
+### Step 2B.2: Chapter-aligned chunking (preferred)
+
+Group chapters into **7-10 worker chunks** sized 50-150 pages each, aligned to chapter boundaries. Goals:
+
+- One chunk per coherent topical unit. Two short adjacent chapters can be one chunk; one very long chapter is its own chunk.
+- Chunk sizes should be roughly balanced but do not split a chapter across two workers.
+- Front matter (preface, TOC) goes with Chapter 1; references and back matter go with the last chapter.
+- Aim for **fewer, fatter workers** (~80-130pp each) over more skinny ones. A book with 17 chapters and 864pp wants 8-10 chunks, not 17.
+
+Each chunk gets a descriptive tag like `01-front-intro`, `05-bf-geometry`, `10-future-references`. Output files go to `./papers/Author_Year_ShortTitle/chapters/chapter-{TAG}.md`.
+
+### Step 2B.3: Fixed-page chunking (fallback only)
+
+If the paper has no usable chapter structure (proceedings volume, festschrift, edited collection without unified chapters), fall back to **50-page chunks** with chunk files at `./papers/Author_Year_ShortTitle/chunks/chunk-STARTPAGE-ENDPAGE.md`.
+
+### Step 2B.4: Write ONE Template Prompt
 
 Write to `./prompts/paper-chunk-reader.md`:
 
@@ -192,53 +218,94 @@ Write to `./prompts/paper-chunk-reader.md`:
 # Task: Read Paper Chunk and Extract Notes
 
 ## Context
-You are reading a chunk of [PAPER TITLE] being processed in parallel.
+You are one of N parallel chunk readers extracting dense notes from [PAPER TITLE].
 Page images: `./papers/Author_Year_ShortTitle/pngs/page-NNN.png`
 
 Use the strongest available full-size model for this job. Do not use any mini/small tier model.
 
 ## Your Chunk
-**START_PAGE** to **END_PAGE** (inclusive)
+- CHUNK_NUM / CHUNK_TITLE: [...]
+- BOOK_PAGE_RANGE: [printed page numbers covered]
+- PDF_IDX_RANGE: [page-image filename indices]
+- OUTPUT_FILE: chapters/chapter-{TAG}.md (or chunks/chunk-START-END.md for fallback)
 
-Read each page image in your range. Be exhaustive — extract EVERY equation, parameter, algorithm step, implementation detail, limitation, criticism of prior work, and design rationale. Do not summarize away formal content or skip "minor" material. **Tag every finding with its page number** using *(p.N)* notation — downstream claim extraction depends on this.
+Read EVERY page image in your range. Be exhaustive — extract every numbered definition, theorem, proposition, lemma, corollary, equation, algorithm, parameter, worked example, figure description, criticism of prior work, and design rationale. Cite the **printed book page number** visible at the top/bottom of each page image, not the PDF index.
+
+## CRITICAL: Incremental write discipline
+
+After reading every ~10-15 pages, append your accumulated extraction to your output file via Write. Do not try to defer writing until "the end" — context exhaustion before a single final Write is the dominant silent-failure mode. If your context starts feeling tight, stop reading more pages and write what you have right now, then continue.
 
 ## Output Format
-Write DIRECTLY to `./papers/Author_Year_ShortTitle/chunks/chunk-STARTPAGE-ENDPAGE.md`:
 
-# Pages START-END Notes
-
-## Chapters/Sections Covered
-## Key Findings
-## Equations Found (LaTeX)
-## Parameters Found (table)
-## Rules/Algorithms
-## Figures of Interest
-## Quotes Worth Preserving
-## Implementation Notes
+Standard sections (omit any that are truly absent for your chunk):
+- Sections covered (with book page numbers)
+- Chapter overview (2-4 paragraphs)
+- Definitions (numbered, verbatim formal statement)
+- Theorems / propositions / lemmas / corollaries (with proof ideas and consequences)
+- Equations (one LaTeX block per equation, variables defined after)
+- Geometric structures / data structures
+- Algorithms (numbered steps)
+- Parameters / quantities (table with Page column)
+- Worked examples
+- Figures of interest (with page references)
+- Criticisms of prior work
+- Design rationale
+- Open / research questions
+- Notable references cited (with citation keys)
+- Implementation notes for [downstream project]
+- Quotes worth preserving (verbatim short snippets)
 
 ## CRITICAL: Parallel Swarm Awareness
+
 You are running alongside other chunk readers.
-- Only write to YOUR chunk file in the chunks/ directory
-- NEVER use git restore/checkout/reset/clean
+- Only write to YOUR own output file in chapters/ or chunks/.
+- NEVER use git restore/checkout/reset/clean — siblings have uncommitted work.
+- Do NOT modify notes.md, description.md, abstract.md, citations.md, metadata.json, or any file outside your assigned output.
+- Do NOT spawn further subagents — one level of delegation only.
+- Boundary tolerance: if pages at the start or end of your PDF range belong to an adjacent chunk's chapter, capture them briefly and note that the neighbour has primary responsibility.
 ```
 
-### Process All Chunks
+### Step 2B.5: Process All Chunks
 
 ```bash
-mkdir -p "./papers/Author_Year_ShortTitle/chunks"
+mkdir -p "./papers/Author_Year_ShortTitle/chapters"  # for chapter-aligned mode
+# or
+mkdir -p "./papers/Author_Year_ShortTitle/chunks"   # for fixed-page fallback mode
 ```
 
-If you are the **top-level caller** (not a subagent), dispatch one chunk worker per range simultaneously. Each reads its page range and writes to `chunks/chunk-START-END.md`. Use the strongest available full-size model for every chunk worker. Never use a mini/small tier worker for chunk extraction.
+If you are the **top-level caller** (not a subagent), dispatch one chunk worker per range simultaneously. Each reads its page range and writes to its assigned output file. Use the strongest available full-size model for every chunk worker. Never use a mini/small tier worker for chunk extraction.
 
 If you are a **subagent** invoked for this paper, you cannot dispatch further subagents. Stop, report the page count and the required chunk ranges to your caller, and let them re-dispatch flat.
 
 Do not dispatch chunk workers until at least one local page image from this paper has been successfully inspected. If you cannot inspect even `page-000.png`, that is a concrete blocker and you should stop there.
 
-### Synthesize
+### Step 2B.6: Handle silent stalls
 
-Read all `chunks/chunk-*.md` files and synthesize into `notes.md`. Merge, deduplicate, and organize into the format from Step 3. Preserve detail; synthesis should reorganize and deduplicate, not compress the paper into sparse abstractions. If you can dispatch a synthesis subagent, do so using the strongest available full-size model; otherwise do it yourself.
+If after a reasonable wait (~60-90 minutes for a 50-150pp chunk) a worker has not written any output to its assigned file, treat it as **silently stalled**. The dominant failure mode is workers buffering all extraction in context and never issuing a Write — they consume their context budget on reading, hit the limit, and die with nothing on disk. Mitigation:
 
-Continue to Step 3.
+1. Confirm via `ls -la chapters/` that no output file exists for the stalled chunk.
+2. Dispatch a **replacement worker** for that chunk with the same parameters but emphasising the incremental-write discipline above. The replacement may inherit any partial output its predecessor wrote.
+3. Do not attempt to cancel the stalled original — async agents will eventually time out.
+
+If you can `SendMessage` to the running agent (Claude Code: pass the agent's internal id as the `to` field), a friendly "finalize your output" nudge is also non-destructive and may unblock a worker that is between tool calls.
+
+### Step 2B.7: Synthesize
+
+The synthesis output is a **master `notes.md` that acts as a navigation surface over the per-chapter files**, not a single dense file containing everything. The chapter files hold the depth; the master notes provide the cross-cutting structure.
+
+For chapter-aligned mode, write `notes.md` with:
+- Standard frontmatter (title, authors, year, venue, doi_url, pages, etc.)
+- One-sentence summary, problem, contributions
+- A **chapter-by-chapter table** that names each chapter and links to its `chapters/chapter-{TAG}.md` file with a one-paragraph topical description
+- Cross-cutting indexes appropriate to the book: master parameter table (or pointer), index of named formalisms, master research-question ledger if the book has explicit numbered open questions, key theorem highlights, key equation highlights
+- Implementation notes for the downstream project, consolidated across chapters
+- Standard sections: limitations, design rationale, testable properties, relevance to project, open questions, related work
+
+For fixed-page fallback mode, read all `chunks/chunk-*.md` files and synthesize into `notes.md` in the standard Step-3 format, deduplicating and organising rather than compressing. The chunks become reference material; the master notes is what readers consult first.
+
+If you can dispatch a synthesis subagent, do so using the strongest available full-size model. Otherwise do it yourself.
+
+Continue to Step 3 for the standard fields. For chapter-aligned mode, Step 3's notes-format becomes the *master* notes; per-chapter content lives in `chapters/`.
 
 ---
 
@@ -568,7 +635,9 @@ The header is a **markdown link**, not plain text and not a `[[wikilink]]`. GitH
 
 All papers produce: `papers/Author_Year_Title/` containing `notes.md`, `metadata.json`, `description.md`, `abstract.md`, `citations.md`, `pngs/`, and an updated `papers/index.md` entry.
 
-Papers >300 pages also produce `chunks/`.
+Papers >300 pages also produce either:
+- `chapters/` — chapter-aligned mode (preferred for monographs and other works with a clear chapter structure). One `chapter-{TAG}.md` per chunk worker; `notes.md` is a navigation surface that links to them.
+- `chunks/` — fixed-page fallback mode (used when no chapter structure is detectable). One `chunk-START-END.md` per 50-page span; `notes.md` synthesises across them.
 
 When done:
 ```
