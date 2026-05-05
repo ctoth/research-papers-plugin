@@ -82,7 +82,7 @@ Read `notes.md` and the already-authored source-branch claims for this paper. Fi
 
 ## Step 2: Add Rules Via CLI
 
-Use the file stem `<author>_<year>` (e.g. `ikeda_2014`). The first `pks rule add` call creates `knowledge/rules/<stem>.yaml` with `source.paper = <paper-directory-name>` from `--paper`; subsequent calls append (the `--paper` must match).
+Use the file stem `<author>_<year>` (e.g. `author_2024`). The first `pks rule add` call creates `knowledge/rules/<stem>.yaml` with `source.paper = <paper-directory-name>` from `--paper`; subsequent calls append (the `--paper` must match).
 
 Conventions:
 
@@ -156,9 +156,9 @@ Rerun if you missed a reasoning move and want to add more rules. Additional `pks
 
 ```bash
 pks rule superiority add \
-  --file ikeda_2014 \
-  --superior r_ikeda_not_indicated \
-  --inferior r_standard_indicated
+  --file author_2024 \
+  --superior r_not_recommended \
+  --inferior r_standard_recommendation
 ```
 
 Both rule ids must exist in the same rules file, neither may be a strict rule, and the resulting priority relation must remain acyclic. The CLI validates those constraints and commits the update.
