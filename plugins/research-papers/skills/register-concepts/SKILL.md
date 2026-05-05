@@ -72,7 +72,7 @@ From `notes.md`, identify all domain concepts the paper actually uses. For each 
 
 Concepts ARE: domain-specific measurable quantities (hazard_ratio, event_rate), methodological constructs (cox_proportional_hazards, factorial_design), clinical categories (diabetes_mellitus, peripheral_arterial_disease), **conditioning axes** (endpoint, comparison, intervention — dimensions along which parameter values vary).
 
-Concepts are NOT: named entities (Scotland, BMJ), specific trial names (POPADAD -- these are category values or source metadata), generic terms (data, result, study).
+Concepts are NOT: named entities (Scotland, BMJ), specific trial names (these are category values or source metadata), generic terms (data, result, study).
 
 When in doubt: if two papers could independently measure or define the same thing, it's probably a concept.
 
