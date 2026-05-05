@@ -56,6 +56,15 @@ When extracting stances for one source, the current source is the only mutable s
 
 ## Step 2: Propose Stances Through pks
 
+Before writing only `supports` links, actively look for disagreement:
+
+- Compare effect direction, endpoint definition, population, follow-up window, and causal interpretation against related papers.
+- Use `rebuts` when two claims answer the same substantive question with incompatible conclusions.
+- Use `undermines` when the source attacks another claim's evidence quality, selection criteria, endpoint, adherence, follow-up, or ascertainment.
+- Use `undercuts` when the source attacks the inference from the target's evidence to its conclusion.
+- Use `supersedes` when the source is a later/larger/corrective synthesis that should replace an older value or conclusion.
+- Do not force adversarial stances where the papers merely differ in context. If no adversarial stance is grounded, report the checked targets and the reason they are context differences rather than conflicts.
+
 Use one command per stance:
 
 ```bash
@@ -88,4 +97,5 @@ Stances extracted for: papers/[dirname]
   supersedes: X
   Cross-paper links: N
   Validation boundary: pks source propose-stance
+  Adversarial checks: checked N targets; authored N; skipped N with reason
 ```
