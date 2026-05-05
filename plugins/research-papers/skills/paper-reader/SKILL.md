@@ -461,8 +461,8 @@ Rules:
 | Name | Symbol | Units | Default | Range | Notes |
 |------|--------|-------|---------|-------|-------|
 | Fundamental frequency | F0 | Hz | 120 | 60-500 | Male speaker baseline |
-| Aspirin dose | — | mg/day | 100 | 75-325 | Low-dose range |
-| Hazard ratio (MACE) | HR | — | 0.89 | 0.77-1.03 | Primary composite endpoint |
+| Intervention dose | — | mg/day | 100 | 75-325 | Example dose range |
+| Effect estimate | HR | — | 0.89 | 0.77-1.03 | Primary outcome estimate |
 | Learning rate | α | — | 0.001 | 1e-5–0.1 | Adam optimizer |
 
 **Rules:**
