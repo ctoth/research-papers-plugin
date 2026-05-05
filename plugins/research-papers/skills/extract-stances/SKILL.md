@@ -51,10 +51,10 @@ Use one command per stance:
 ```bash
 pks source propose-stance "$source_name" \
   --source-claim claim3 \
-  --target Bowman_2018_EffectsAspirinPrimaryPrevention:claim11 \
+  --target OtherPaper_2024_RelatedFinding:claim11 \
   --type supports \
   --strength strong \
-  --note "Independent replication of a null primary-prevention result."
+  --note "Independent replication of a comparable null result."
 ```
 
 Rules:
