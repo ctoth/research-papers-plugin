@@ -1,6 +1,6 @@
 ---
 name: enrich-claims
-description: Enrich an existing claims.yaml for a paper. Fixes page numbers, aligns concept references with the paper-local concepts.yaml inventory, converts SymPy expressions, adds variable bindings, conditions, notes, uncertainty, and missing claims.
+description: Enrich existing source-branch claims by updating them through pks source propose-claim.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI."
@@ -8,7 +8,7 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 # Enrich Claims: $ARGUMENTS
 
-Improve an existing `claims.yaml` with real data from the paper. This skill assumes a paper-local `concepts.yaml` exists or that you will keep concept names consistent until `register-concepts` runs.
+Improve claims that already exist on a propstore source branch. Reuse each claim's local id and call `pks source propose-claim` again with the enriched fields. Do not edit claim batch files.
 
 Ontology-policy reference:
 
@@ -18,211 +18,75 @@ Ontology-policy reference:
 
 ```bash
 paper_dir="$ARGUMENTS"
+source_name=$(basename "$paper_dir")
 ls "$paper_dir"/notes.md 2>/dev/null || echo "MISSING: notes.md"
-ls "$paper_dir"/claims.yaml 2>/dev/null || echo "MISSING: claims.yaml"
+ls knowledge/.git 2>/dev/null || echo "MISSING: knowledge/.git"
+pks source finalize "$source_name" 2>&1 || true
 ```
 
-Both must exist. If `claims.yaml` is missing, run `extract-claims` first to produce one. This skill enriches an existing file; it does not create one from scratch.
+If the source branch or claims are missing, run `paper-process` or `extract-claims` first.
 
-## Step 1: Read Source Material
+## Step 1: Inspect Current Claims
 
-Read these files:
-- `<paper_dir>/claims.yaml` — the mechanical extraction to enrich
-- `<paper_dir>/notes.md` — the full paper notes with equations, parameters, context
+Inspect the source branch's current claims and local ids using the propstore source state. If you need a filesystem view for reading only, materialize the source branch with `pks source sync` into a scratch/report directory; do not treat that materialized file as an authoring target.
 
-If available, also read:
-- `<paper_dir>/paper.pdf` or page images in `<paper_dir>/pngs/` — for verifying page numbers
-- `<paper_dir>/concepts.yaml` — for aligning concept references with the paper's source-local inventory
+Read:
 
-## Step 2: Enrich Each Claim
+- `<paper_dir>/notes.md`
+- page images in `<paper_dir>/pngs/` for exact values and provenance
+- current source claims for local ids and current field values
 
-Walk through every claim in the file. For each one, improve these fields:
+## Step 2: Enrich Through pks
 
-### Page Numbers (provenance.page)
-Replace `page: 0` with the actual page number. Cross-reference:
-- The parameter name against sections in notes.md
-- Table/figure references
-- Section headings in notes.md "Figures of Interest" or equation locations
-
-If the exact page cannot be determined, add `provenance.section` with the section name and leave page as 0.
-
-### Concept Resolution (`output_concept`, `target_concept`, `concepts`, bindings)
-The generator produces lowercase underscore names like `fundamental_frequency`. Check against the paper-local concept inventory:
+For each correction or enrichment, rerun `pks source propose-claim` with the same `--id` and the full intended claim payload:
 
 ```bash
-ls "$paper_dir"/concepts.yaml 2>/dev/null
+pks source propose-claim "$source_name" \
+  --id claim7 \
+  --type observation \
+  --statement "Corrected and enriched claim statement." \
+  --context "ctx_<author>_<year>_<slug>" \
+  --concept-ref concept_a \
+  --concept-ref concept_b \
+  --condition "endpoint == 'primary_endpoint'" \
+  --page 8 \
+  --section "Discussion" \
+  --quote-fragment "Brief supporting quote" \
+  --notes "Methodological qualifier."
 ```
 
-For each referenced concept name:
-- If a matching `local_name` exists in `concepts.yaml`, use that exact name
-- If a matching `proposed_name` exists, convert the claim to the corresponding `local_name`
-- If no match exists, keep the descriptive name and flag it for `register-concepts` to absorb later
+Parameter enrichment:
 
-Current claim-schema reminder:
-
-- parameter claims use `output_concept`
-- measurement claims use `target_concept`
-- observation / mechanism / comparison / limitation claims use `concepts[]`
-- equation and model claims reference concepts through bindings
-
-Do not rewrite enriched parameter claims back to legacy top-level `concept`.
-
-### SymPy Expressions (sympy)
-For equation claims, the generator copies LaTeX into both `expression` and `sympy`. Replace `sympy` with a valid SymPy-parseable expression:
-
-- LaTeX `\frac{a}{b}` → SymPy `a/b`
-- LaTeX `e^{x}` → SymPy `exp(x)`
-- LaTeX `\sqrt{x}` → SymPy `sqrt(x)`
-- LaTeX `\sum_{i=0}^{N}` → SymPy `Sum(f(i), (i, 0, N))`
-- Subscripts `T_p` → SymPy `T_p`
-
-The `sympy` field encodes as `Eq(lhs, rhs)` — dependent variable on left, expression on right. Use paper-local concept names (not letter symbols) as variable names for dimensional consistency verification.
-
-**How to build a sympy field:**
-1. Identify the dependent variable — use its paper-local concept name as lhs
-2. Write rhs using paper-local concept names for all physical quantities
-3. Use bare symbols for mathematical constants (pi, e, I, numeric coefficients)
-4. Wrap in `Eq(lhs, rhs)`
-
-**Examples:**
-
-| Expression | sympy |
-|------------|-------|
-| `F = m * a` | `Eq(force, mass * acceleration)` |
-| `E = 0.5 * m * v^2` | `Eq(energy, 0.5 * mass * velocity**2)` |
-| `v = f * lambda` | `Eq(velocity, frequency * wavelength)` |
-
-**Common mistakes:**
-- Bare expression without `Eq()` wrapper
-- Using raw letter symbols instead of concept names
-- Mapping mathematical constants (i, pi, e) to concepts — use bare sympy symbols
-
-### Variable Bindings (variables)
-For equation claims, populate variable mappings:
-
-```yaml
-variables:
-  - symbol: "S"
-    concept: "similarity_score"
-    role: "dependent"
-  - symbol: "q_i"
-    concept: "query_embedding"
-    role: "independent"
+```bash
+pks source propose-claim "$source_name" \
+  --id claim8 \
+  --type parameter \
+  --concept hazard_ratio \
+  --value 0.88 \
+  --lower-bound 0.79 \
+  --upper-bound 0.97 \
+  --uncertainty-type "95% CI" \
+  --context "ctx_<author>_<year>_<slug>" \
+  --page 5
 ```
 
-Roles: `dependent`, `independent`, `parameter`, `constant`.
+Rules:
 
-### Conditions (conditions)
-Add CEL expressions where the paper specifies conditions:
-
-```yaml
-conditions:
-  - "dataset == 'ActivityNet'"
-  - "model == 'GPT-4o'"
-```
-
-**Vocabulary constraint:** Every string literal compared against a category concept should match the paper-local inventory where one exists. If the paper uses a new value, add a note in `concepts.yaml` or keep the condition but flag it for later concept enrichment.
-
-Apply the ontology policy while enriching:
-
-- if the literal names a reusable outcome, intervention, population, or methodological construct, do not leave it only as an opaque category value
-- if the claim is repeating a paper-wide structural fact, move that fact to context rather than duplicating it across conditions
-- if a fused label should be decomposed, prefer the decomposed representation when the paper supports it
-
-### Notes (notes)
-Add when methodological context matters:
-- Sample size or population details not in conditions
-- Measurement methodology caveats
-- Whether a value is measured vs. derived vs. assumed
-
-### Uncertainty (uncertainty, uncertainty_type)
-```yaml
-uncertainty: 0.29
-uncertainty_type: sd  # sd, se, ci95, or range
-```
-
-### Sample Size (sample_size)
-Add if the paper reports how many observations a parameter estimate is based on.
-
-### Measurement Claims
-Ensure measurement-type claims have:
-- `target_concept`, `measure` (jnd_absolute, preference_rating, accuracy, f1_score, etc.)
-- `value` and `unit`
-- `evaluation_population` if specified
-- `methodology` description
+- Reusing the same local claim id replaces that source-local claim.
+- Include all fields that should remain on the claim; do not rely on partial update semantics.
+- If `pks source propose-claim` reports missing concepts, propose those concepts first and rerun the claim command.
+- Validation happens in `pks source propose-claim`; do not run file validators.
 
 ## Step 3: Add Missing Claims
 
-After enriching existing claims, check if notes contain uncaptured information:
-- Parameters in prose but not tables
-- Observations in Discussion/Results not extracted
-- Model descriptions
-- Key findings stated as conclusions
+If enrichment discovers important uncaptured findings, add them with new local ids through `pks source propose-claim`.
 
-Add new claims with sequential IDs continuing from the highest existing ID.
+## Step 4: Report
 
-## Step 4: Write and Validate
-
-Write enriched claims back to `<paper_dir>/claims.yaml`.
-
-```bash
-pks claim validate-file "$paper_dir"/claims.yaml
-```
-
-If validation fails, fix and re-validate. **Do not consider enrichment complete until validation passes.**
-
-## Step 5: Re-ingest Into The Source Branch
-
-If this paper already has a source branch, push the enriched claims back into it:
-
-```bash
-source_name=$(basename "$paper_dir")
-pks source add-claim "$source_name" --batch "$paper_dir/claims.yaml"
-```
-
-If this fails because the source branch does not exist yet, stop and use `paper-process` or initialize the source branch first.
-
-## Step 6: Stamp Provenance
-
-```bash
-pks source stamp-provenance "$source_name" \
-  --file "$paper_dir/claims.yaml" \
-  --agent "<your model name>" --skill enrich-claims \
-  --status stated
-```
-
-`--status stated` is correct here: enriched claims are assertions over the paper text, not empirical measurements. The CLI accepts `measured | calibrated | stated | defaulted | vacuous`. Plugin version is autodetected.
-
-## Provenance Rules
-
-- `paper`: paper directory name
-- `page`: integer; use 0 only as last resort
-- `section`: section name or number
-- `table`: table identifier (e.g., "Table 2")
-- `figure`: figure identifier
-- `quote_fragment`: brief supporting quote (1-2 sentences max)
-
-## Quality Checklist
-
-- [ ] Every claim has unique sequential ID
-- [ ] Every claim has type, provenance with real page numbers where possible
-- [ ] Parameter claims have `output_concept`, value (or bounds), and unit
-- [ ] Equation claims have expression, valid sympy, and variable bindings
-- [ ] Conditions use consistent CEL vocabulary
-- [ ] Concept names match the paper-local inventory where one exists
-- [ ] Reusable domain entities are modeled as concepts rather than left only as selector literals
-- [ ] Notes added where methodological context matters
-
-## Output
-
-```
-Claims enriched: papers/[dirname]/claims.yaml
-  Validation: PASS (0 errors, N warnings)
-  Claims: N total (P parameter, E equation, O observation, M model, X measurement, K mechanism, C comparison, L limitation)
-  Page numbers resolved: X of Y
-  Concepts aligned to inventory: X of Y
-  SymPy expressions added: X of Y
-  Conditions added: X claims
-  Notes added: X claims
-  New claims added: X
+```text
+Claims enriched for: papers/[dirname]
+  Claims updated: N
+  New claims added: N
+  Missing concepts encountered and fixed: [...]
+  Validation boundary: pks source propose-claim
 ```

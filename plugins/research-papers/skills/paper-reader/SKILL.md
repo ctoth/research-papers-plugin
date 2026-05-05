@@ -538,17 +538,9 @@ The header is a **markdown link**, not plain text and not a `[[wikilink]]`. GitH
 
 ---
 
-## Step 9: Stamp Provenance
+## Step 9: Stop At Paper Artifacts
 
-```bash
-source_name=$(basename "$paper_dir")
-pks source stamp-provenance "$source_name" \
-  --file "papers/<Author_Year_ShortTitle>/notes.md" \
-  --agent "<your model name>" --skill paper-reader \
-  --status stated
-```
-
-`--status stated` is correct for paper-reader: the notes are assertions derived from reading the paper text, not measured or calibrated values. Plugin version is autodetected. The CLI accepts `measured | calibrated | stated | defaulted | vacuous` and emits a deprecation warning recommending `--reader/--method` flags on `add-claim`/`add-justification`/`add-stance` instead — paper-reader doesn't add those, so the deprecated path is still the right entry point here.
+`paper-reader` does not mutate propstore source branches. Source initialization, claim authoring, provenance on semantic assertions, and promotion are handled by later source-oriented skills.
 
 ---
 

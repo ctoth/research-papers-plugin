@@ -1,14 +1,15 @@
 # /// script
 # requires-python = ">=3.10"
 # ///
-"""DEPRECATED: compatibility shim for legacy callers.
+"""DEPRECATED: bootstrap-only helper for legacy callers.
 
-Sync one extracted paper directory into propstore's source-oriented CLI surface.
+Initialize one extracted paper directory in propstore's source-oriented CLI surface.
 
 This is a narrow helper for already-extracted paper directories. The primary
 repo-wide orchestration path is now the `source-bootstrap`, `paper-process`,
-and `source-promote` skill stack. Keep this script only while downstream users
-finish migrating off the old helper surface.
+and `source-promote` skill stack. Claim, concept, justification, and stance
+authoring must use `pks source propose-*`; this helper intentionally does not
+ingest paper-local YAML artifacts.
 
 Usage:
     uv run scripts/sync_propstore_source.py <paper-dir> [--finalize] [--promote] [--dry-run]
@@ -96,37 +97,6 @@ def build_sync_commands(
     if metadata_path.exists():
         commands.append(
             ["pks", "source", "write-metadata", source_name, "--file", str(metadata_path)]
-        )
-
-    concepts_path = paper_dir / "concepts.yaml"
-    if concepts_path.exists():
-        commands.append(
-            ["pks", "source", "add-concepts", source_name, "--batch", str(concepts_path)]
-        )
-
-    claims_path = paper_dir / "claims.yaml"
-    if claims_path.exists():
-        commands.append(
-            ["pks", "source", "add-claim", source_name, "--batch", str(claims_path)]
-        )
-
-    justifications_path = paper_dir / "justifications.yaml"
-    if justifications_path.exists():
-        commands.append(
-            [
-                "pks",
-                "source",
-                "add-justification",
-                source_name,
-                "--batch",
-                str(justifications_path),
-            ]
-        )
-
-    stances_path = paper_dir / "stances.yaml"
-    if stances_path.exists():
-        commands.append(
-            ["pks", "source", "add-stance", source_name, "--batch", str(stances_path)]
         )
 
     if finalize or promote:

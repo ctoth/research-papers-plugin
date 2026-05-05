@@ -1,6 +1,6 @@
 ---
 name: extract-claims
-description: Extract propositional claims from a paper directory, building claims.yaml from scratch using notes.md. Produces machine-readable claims conforming to the propstore claim schema. If a concepts.yaml exists (from register-concepts), uses canonical concept names.
+description: Extract propositional claims from a paper directory into the propstore source branch using pks source propose-claim.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI."
@@ -8,13 +8,7 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 # Extract Claims: $ARGUMENTS
 
-Extract propositional claims from a research paper and produce a `claims.yaml` file from scratch using `notes.md` content.
-
-This skill has a strict actor split:
-
-- The claim-generation script proposes a mechanical draft from tables, equations, and testable-property bullets.
-- The LLM reads that draft proposal, checks it against notes/page images/concepts/context, and enriches or corrects it.
-- The LLM then runs the `pks` CLI add step. The script must not be treated as the final propstore mutation path.
+Extract high-value claims from a paper and author them directly into the paper's propstore source branch. Do not create, edit, validate, or ingest paper-directory claim batch files.
 
 Ontology-policy reference:
 
@@ -24,28 +18,24 @@ Ontology-policy reference:
 
 ```bash
 paper_dir="$ARGUMENTS"
+source_name=$(basename "$paper_dir")
 ls "$paper_dir"/notes.md 2>/dev/null || echo "MISSING: notes.md"
-ls "$paper_dir"/claims.yaml 2>/dev/null && echo "EXISTS: claims.yaml — this run will overwrite it"
+ls knowledge/.git 2>/dev/null || echo "MISSING: knowledge/.git"
+pks source finalize "$source_name" 2>&1 || true
 ```
 
-- `notes.md` missing → STOP. Run paper-reader first.
-- `claims.yaml` already exists → overwrite it during this run. Do not ask whether to overwrite; orchestrated flow must stay non-interactive.
-
-Check for concept inventory:
-```bash
-ls "$paper_dir"/concepts.yaml 2>/dev/null
-```
-
-If `<paper_dir>/concepts.yaml` exists (from register-concepts), read it and use those `local_name` values as concept references in claims. If no concept inventory exists yet, use descriptive `lowercase_underscore` names and keep them consistent across the file.
+- `notes.md` missing -> STOP. Run `paper-reader` first.
+- `knowledge/.git` missing -> STOP. Run `source-bootstrap` or `paper-process`.
+- If the source branch does not exist -> STOP. Run `source-bootstrap` first.
 
 ## Step 1: Read Source Material
 
 Read:
-- `<paper_dir>/notes.md` — primary source
-- `<paper_dir>/paper.pdf` or page images in `<paper_dir>/pngs/` — for page numbers and verification
-- `<paper_dir>/concepts.yaml` — if it exists, this is the paper's source-local concept inventory from register-concepts. Use `local_name` values as concept references in all claims.
 
-### Page Image Verification Lane
+- `<paper_dir>/notes.md` as the primary source.
+- Page images in `<paper_dir>/pngs/` for every exact numeric value, confidence interval, p-value, sample size, page citation, or claim whose wording matters.
+
+spot-check every extracted high-value claim against the relevant page image before proposing it.
 
 When a claim cites page `N`, the corresponding page image is:
 
@@ -53,421 +43,128 @@ When a claim cites page `N`, the corresponding page image is:
 
 Examples:
 
-- page 1 → `pngs/page-000.png`
-- page 12 → `pngs/page-011.png`
+- page 1 -> `pngs/page-000.png`
+- page 12 -> `pngs/page-011.png`
 
-For claims with precise numerics, spot-check the cited page image directly rather than trusting only `notes.md`.
+Do not use PDF text extraction as the basis for rereading the paper.
 
-Spot-check at minimum:
+## Step 2: Determine Context
 
-- exact values
-- lower and upper confidence bounds
-- p-values
-- sample-size-dependent reported quantities
+Every claim must have a context. Use the context created by `author-context`, conventionally:
 
-Only verify the cited pages you actually use. Do not reread every page image for claim extraction if the paper has already been read into `notes.md`.
-
-## Step 1.5: Generate The Script Draft Proposal
-
-Run the existing proposal generator before hand-authoring claims:
-
-```bash
-uv run plugins/research-papers/scripts/generate_claims.py "$paper_dir" --output "$paper_dir/claims.yaml"
+```text
+ctx_<author>_<year>_<trial_or_short_slug>
 ```
 
-This preserves the script's mechanical extraction behavior:
+If no context exists for this paper, run `author-context` before extracting claims.
 
-- parameter claims from standard parameter tables
-- equation claims from `$$...$$` blocks
-- observation claims from `Testable Properties` bullets
-- sequential local claim IDs
-- draft provenance and page-resolution attempts
+## Step 3: Ensure Claim Concepts Exist
 
-Treat the generated `claims.yaml` as a **draft proposal**, not as completed extraction. The script intentionally leaves gaps for the LLM: context, claim selection judgment, page-image verification, richer provenance, conditions, concept alignment, SymPy normalization, missing high-value claims, and removal of low-value mechanical claims.
+Before proposing a claim, every referenced concept must be present on the source branch or master registry. Use `register-concepts` to propose missing concepts.
 
-## Step 2: Extract Claims by Type
+If `pks source propose-claim` fails with `unknown concept reference(s): ...`, do not edit a file. Propose the missing concepts with `pks source propose-concept`, then rerun the failed claim command.
 
-### 2.0: Determine the paper's context
+## Step 4: Propose Claims Through pks
 
-**Every claim must reference an existing context.** Propstore's master-side `ClaimDocument.context` is a required field; claims without context cannot be promoted from a source branch to master. Source-side `SourceClaimDocument.context` is optional at ingest time, but promote will fail if it is missing.
+Use one `pks source propose-claim` command per claim. This command is the validation boundary and the mutation boundary. It validates source-local concepts, CEL conditions, and numeric value bounds before writing.
 
-Convention: one context per paper, named `ctx_<author>_<year>_<trial-slug>` (e.g., `ctx_ikeda_2014_jppp`, `ctx_bowman_2018_ascend`). The context carries the trial's structural assumptions (population, intervention, follow-up, design) as CEL assumptions and parameters; claim-level `conditions[]` handle finer axes like endpoint or ITT-vs-per-protocol.
+Observation, mechanism, comparison, and limitation claims:
 
-If no context exists for this paper yet, run the `author-context` skill FIRST, before extracting claims. That skill calls `pks context add` with the trial's structural assumptions.
+```bash
+pks source propose-claim "$source_name" \
+  --id claim1 \
+  --type observation \
+  --statement "Single declarative sentence capturing the claim." \
+  --context "ctx_<author>_<year>_<slug>" \
+  --concept-ref concept_a \
+  --concept-ref concept_b \
+  --condition "endpoint == 'primary_endpoint'" \
+  --page 7 \
+  --section "Results" \
+  --quote-fragment "Brief supporting quote" \
+  --notes "Any methodological qualifier needed to interpret the claim."
+```
 
-You have two ways to stamp the context onto claims:
+Parameter claims:
 
-1. Write `context: ctx_<author>_<year>_<slug>` into every claim in the YAML (explicit per-claim) — see 2.1 onward.
-2. Omit `context:` from the YAML and pass `--context <ctx_id>` to `pks source add-claim` at ingest time — the CLI fills in the default on every claim that does not already declare one. Inline `context:` always wins over the flag.
+```bash
+pks source propose-claim "$source_name" \
+  --id claim2 \
+  --type parameter \
+  --concept hazard_ratio \
+  --value 0.88 \
+  --context "ctx_<author>_<year>_<slug>" \
+  --condition "endpoint == 'serious_vascular_event'" \
+  --page 5 \
+  --section "Results" \
+  --quote-fragment "Brief supporting quote"
+```
 
-Option 2 is the recommended path when every claim in the batch shares the same context (the common case — one context per paper). Option 1 is needed only when individual claims override the paper-wide context.
+Bounds and uncertainty:
 
-Do NOT author a temporary python/ruamel.yaml script to inject contexts after the fact — that's what `--context` replaces.
-
-### 2.1: Parameter Claims
-
-For each parameter, constant, or threshold mentioned in the paper:
-
-```yaml
-- id: claim1
-  type: parameter
-  context: <ctx_author_year_slug>
-  concept: <local_concept_name or descriptive_name>
-  value: <number>
-  unit: <unit string>
-  conditions:
-    - "<CEL expression>"
-  provenance:
-    paper: <paper_dir_name>
-    page: <page number>
-    section: "<section name>"
-    quote_fragment: "<brief supporting quote>"
-  notes: "<methodological context>"
+```bash
+pks source propose-claim "$source_name" \
+  --id claim3 \
+  --type parameter \
+  --concept hazard_ratio \
+  --value 0.88 \
+  --lower-bound 0.79 \
+  --upper-bound 0.97 \
+  --uncertainty-type "95% CI" \
+  --context "ctx_<author>_<year>_<slug>" \
+  --page 5
 ```
 
 Rules:
-- Every parameter needs at minimum: id, type, **context**, `concept`, provenance
-- Include `value` OR `lower_bound`+`upper_bound` (at least one). **Never** use `lower_bound` alone or `upper_bound` alone — the validator rejects unpaired bounds. If only one bound is known, use `value` with a `notes` field explaining the bound direction (e.g., ">85%").
-- Include `unit` for dimensional quantities (mass, time, pressure, etc.). **Omit `unit` for dimensionless forms** (ratio, count, score, boolean, etc.) — propstore auto-fills `unit: '1'` at build time. **Never use compound units that conflate independently-variable dimensions** (e.g., `mg/day` conflates dose and frequency). Split into separate concepts with simple units and express the relationship through CEL conditions. See register-concepts "Compound-Unit Decomposition" for the full rule.
-- For temporal quantities, use clinical time units directly: `mo` (month), `yr` (year), `d` (day), `wk` (week). Do not convert to hours or seconds — the `time` form accepts all of these natively.
-- Use names from the paper's `concepts.yaml` inventory when available; otherwise use descriptive lowercase_underscore names
-- Use top-level `concept:` for parameter claims — the source-side ingest schema (`SourceClaimDocument`) is the validator that runs at `pks source add-claim` time, and it expects `concept`. (Note: master-side `ClaimDocument` carries the resolved value as `output_concept_id` after promotion. That's an internal artifact, not the field you author.)
 
-### 2.2: Equation Claims
+- Use stable local ids: `claim1`, `claim2`, ...
+- Reusing a local id updates that source-local claim. Do this intentionally when enriching or correcting a claim.
+- For non-parameter claims, use repeated `--concept-ref` for every referenced concept.
+- For parameter claims, use `--concept` for the form-bearing output concept.
+- Use repeated `--condition` for CEL conditions.
+- Do not create an intermediate claim batch file.
+- Do not run file validators; source proposal validation happens inside `pks source propose-claim`.
 
-For each equation or mathematical relationship:
+## Step 5: Claim Selection
 
-```yaml
-- id: claim5
-  type: equation
-  expression: "F = m * a"
-  sympy: "Eq(concept2, concept1 * concept3)"
-  variables:
-    - symbol: "F"
-      concept: "force"
-      role: "dependent"
-    - symbol: "m"
-      concept: "mass"
-      role: "independent"
-    - symbol: "a"
-      concept: "acceleration"
-      role: "independent"
-  provenance:
-    paper: <paper_dir_name>
-    page: 4
-    section: "Method"
-```
+Before extracting a claim, ask: "Would someone building a system in this domain query this claim?" and "Would someone adjudicating between competing approaches query this?" If neither, skip it.
 
-Rules:
-- `expression`: human-readable string
-- `sympy`: valid `Eq(lhs, rhs)` using concept IDs for physical quantities, bare symbols for constants (pi, e, numeric coefficients)
-- Every symbol must have a variable binding
-- Mathematical constants (i, pi, e, 0.5, 2) are NOT concepts
+Extract:
 
-### 2.3: Observation Claims
+- Architectural or clinical findings that generalize beyond one table cell.
+- Design constraints and validated thresholds.
+- Cross-paper findings.
+- Failure modes and limitations.
+- Design rationale and mechanisms.
+- Comparisons against prior work.
 
-For qualitative claims, empirical observations, and testable properties:
+Skip:
 
-```yaml
-- id: claim8
-  type: observation
-  statement: "Single declarative sentence capturing the claim."
-  concepts:
-    - concept_a
-    - concept_b
-  provenance:
-    paper: <paper_dir_name>
-    page: 7
-    section: "Results"
-    quote_fragment: "Brief supporting quote"
-```
+- Study logistics unless they are part of the claim being adjudicated.
+- Benchmark metadata without interpretation.
+- Implementation details without rationale.
+- Repeated table cells that should instead become one synthesized observation.
 
-Rules:
-- `statement`: a single declarative sentence
-- `concepts`: list all concept IDs referenced
-- Testable properties from notes.md are good candidates
+## Step 6: CEL Conditions Contract
 
-### 2.4: Model Claims
+Every name on the left side of a CEL condition must be a registered concept. Category condition values are string literals; boolean conditions use `true` / `false`; structural concepts cannot appear in CEL expressions.
 
-For parameterized equation systems (multi-equation frameworks):
-
-```yaml
-- id: claim12
-  type: model
-  name: "Model name"
-  equations:
-    - "equation1"
-    - "equation2"
-  parameters:
-    - name: "param_name"
-      concept: "concept_name"
-      note: "What this parameter controls"
-  provenance:
-    paper: <paper_dir_name>
-    page: 5
-    section: "Method"
-```
-
-### 2.5: Measurement Claims
-
-For perceptual, behavioral, or evaluation measurements:
-
-```yaml
-- id: claim15
-  type: measurement
-  target_concept: concept_name
-  measure: preference_rating
-  value: 4.2
-  unit: "points"
-  evaluation_population: "participant_group"
-  methodology: "Brief method description"
-  conditions:
-    - "system == 'SystemA'"
-  provenance:
-    paper: <paper_dir_name>
-    page: 12
-```
-
-Measure types: `jnd_absolute`, `jnd_relative`, `discrimination_threshold`, `preference_rating`, `detection_threshold`, `correlation`, `effect_size`, `accuracy`, `precision`, `recall`, `f1_score`, `mean_average_precision`, `intersection_over_union`, `benchmark_score`
-
-### 2.6: Mechanism Claims
-
-For causal or architectural arguments:
-
-```yaml
-- id: claim18
-  type: mechanism
-  statement: "X works by Y because Z — include the reasoning chain, not just the conclusion."
-  concepts:
-    - concept_a
-    - concept_b
-  provenance:
-    paper: <paper_dir_name>
-    page: 12
-    section: "Discussion"
-    quote_fragment: "Supporting quote"
-```
-
-### 2.7: Comparison Claims
-
-For contrastive claims positioning this work against prior approaches:
-
-```yaml
-- id: claim20
-  type: comparison
-  statement: "Unlike Y, X handles Z — must name both subject and comparand with evidence."
-  concepts:
-    - concept_a
-    - concept_b
-  provenance:
-    paper: <paper_dir_name>
-    page: 3
-    section: "Related Work"
-```
-
-### 2.8: Limitation Claims
-
-For acknowledged scope boundaries, failure modes, unsolved problems:
-
-```yaml
-- id: claim22
-  type: limitation
-  statement: "What the approach does not handle — specify the boundary, not just 'has limitations'."
-  concepts:
-    - concept_a
-  provenance:
-    paper: <paper_dir_name>
-    page: 42
-    section: "Limitations"
-```
-
-## CEL Conditions Contract
-
-**Every name on the left-hand side of a CEL condition must be a registered concept.** The propstore CEL checker (`cel_checker.py`) resolves every `NameNode` against the concept registry. If a name is not a registered concept, validation fails with `Undefined concept`.
-
-This means condition variables like `endpoint`, `comparison`, `intervention`, `population` are **not free-form strings** — they are concepts that must exist in the registry with appropriate forms. The form determines what operations are valid:
-
-- **category** concepts: can use `==`, `!=`, `in [...]` with string literals
-- **quantity** concepts: can use `==`, `!=`, `<`, `>`, `<=`, `>=` with numeric literals
-- **boolean** concepts: can use `==`, `!=` with `true`/`false`
-- **structural** concepts: **cannot appear in CEL expressions at all**
-
-### What this means in practice
-
-When you write `conditions: ["endpoint == 'composite_primary'"]`, the name `endpoint` must be a registered concept with form `category`. If it isn't registered yet, you must register it (via register-concepts or `pks source propose-concept --name endpoint --form category --values composite_primary,secondary`) before validation will pass.
-
-**Before writing any CEL condition, verify the name exists in the concept registry.** If you're introducing a new conditioning axis (e.g., `endpoint`, `comparison`, `population`), register it as a concept first. These conditioning-axis concepts are just as real as the measurement concepts — they're the dimensions along which parameter values vary.
-
-Before writing a condition, classify the thing you are encoding:
-
-- If it is paper-wide and structural, move it to the paper context instead of repeating it as a claim condition.
-- If it is a reusable domain object like `all_cause_mortality` or `major_bleeding`, make sure it exists as a first-class concept. The condition may still select it through an axis, but do not treat the literal as only an opaque string.
-- If it is only a selector like `primary_endpoint` or `per_protocol`, keep it as a category value on the relevant axis.
-- If it fuses multiple dimensions, decompose it instead of introducing a single opaque literal unless the paper truly treats that fused label as indivisible.
-
-Examples:
-
-- `endpoint == 'primary_endpoint'` is usually a selector on the `endpoint` axis
-- `endpoint == 'all_cause_mortality'` is acceptable for a claim-specific slice, but `all_cause_mortality` should also exist as a first-class concept
-- `population == 'per_protocol'` is a selector on the analysis-set axis
-- intervention identity, dose, comparator identity, and follow-up usually belong in the paper context rather than on every claim
-
-### Meta rule
-
-When producing artifacts that a downstream tool validates, discover the validation contract from the tool — do not assume you know it. The CEL checker is the authority on what condition expressions are legal, not this skill document.
-
-## Step 3: Review, Enrich, And Write
-
-```yaml
-source:
-  paper: <paper_dir_name>
-
-claims:
-  - id: claim1
-    ...
-```
-
-Read the script's draft proposal in `<paper_dir>/claims.yaml`, then edit that file in place. Preserve good script-produced claims, but do not accept them blindly.
-
-The LLM must:
-
-- add the paper context to every claim or be prepared to pass the context in the `pks` command
-- enrich page-0 or weak provenance using `notes.md` and cited page images
-- add missing high-value claims the script cannot see
-- remove low-value mechanical claims
-- add conditions, uncertainty, notes, quote fragments, and concept lists where needed
-- align concept references with `<paper_dir>/concepts.yaml`
-
-## Step 4: Validate
+If a condition axis such as `endpoint`, `comparison`, `population`, or `analysis_set` is missing, propose it as a category concept first:
 
 ```bash
-ls knowledge/.git 2>/dev/null || echo "MISSING: knowledge/.git"
-pks claim validate-file "$paper_dir"/claims.yaml
+pks source propose-concept "$source_name" \
+  --concept-name endpoint \
+  --definition "Outcome or endpoint selected for a claim-specific result." \
+  --form category \
+  --values "primary_endpoint,all_cause_mortality,major_bleeding"
 ```
 
-If `knowledge/.git` is missing → STOP. Run `pks init` or use `paper-process`, which initializes the source branch first.
+## Step 7: Report
 
-If validation fails, fix and re-validate. **Do not consider extraction complete until validation passes.**
-
-**Note on source-branch workflows:** `validate-file` checks concepts against the master registry (`knowledge/concepts/`). If you are building a new source branch where concepts have been proposed but not yet promoted to master, the master concepts directory may be empty and `validate-file` will report false "Undefined concept" errors. In that case, proceed to Step 5 — `pks source add-claim` validates claims against the **source branch's own concept registry**, which includes proposed concepts. If `add-claim` succeeds, the claims are valid.
-
-## Step 5: LLM Runs The pks Add Step
-
-If a propstore source branch exists for this paper, the LLM now performs the `pks` work and ingests the reviewed proposal:
-
-```bash
-source_name=$(basename "$paper_dir")
-pks source add-claim "$source_name" --batch "$paper_dir/claims.yaml" \
-  --reader "<your model name>" --method "extract-claims" \
-  --context "ctx_<author>_<year>_<slug>"   # default context for claims lacking an inline one
-```
-
-If every claim in the batch already declares `context:` inline, omit `--context`. Inline context always wins over the flag.
-
-If this fails with `unknown concept reference` errors, or if the add succeeds but source auto-finalize reports unknown concepts:
-
-1. note the missing concept names
-2. rerun `register-concepts`
-3. add the missing concepts to `concepts.yaml`
-4. ingest concepts again
-5. retry `pks source add-claim`
-
-This retry loop is expected. Use finalize feedback as the authoritative missing-concept list until the loop converges.
-
-## Step 6: Provenance
-
-Provenance is recorded automatically via `--reader` and `--method` flags on the `pks source add-claim` command in Step 5. No separate stamp step is needed.
-
-If you need to override provenance after the fact, `pks source stamp-provenance` still exists but is deprecated.
-
----
-
-## Claim ID Rules
-
-- Format: `claim` + sequential integer, no padding (claim1, claim2, ... claim103)
-- IDs must be unique within a file
-- Never reuse an ID, even if a claim was removed
-
-## Provenance Rules
-
-- `paper`: paper directory name (e.g., `Gobl_1988`)
-- `page`: integer; use 0 only as last resort
-- `section`: section name or number
-- `table`: table identifier when claim comes from a table
-- `figure`: figure identifier when claim comes from a figure
-- `quote_fragment`: brief quote (1-2 sentences max) directly supporting the claim
-
-## Claim Value Filter
-
-Before extracting a claim, ask: **"Would someone building a system in this domain query this claim?"** and **"Would someone adjudicating between competing approaches query this?"** If neither, skip it.
-
-### EXTRACT (high value)
-- **Architectural insights**: generalizable design principles
-- **Design constraints**: directly usable parameters
-- **Validated thresholds**: parameters the paper showed sensitivity analysis for
-- **Cross-paper findings**: observations that generalize beyond one paper's experiments
-- **Failure modes**: conditions under which approaches break down
-- **Design rationale**: why a choice was made (mechanism)
-- **Positioning against prior work**: what this approach does differently (comparison)
-- **Scope boundaries**: what the approach cannot do (limitation)
-
-### SKIP (low value)
-- **Training hyperparameters without interpretation**: learning rate, batch size — UNLESS studied via ablation
-- **Study logistics**: participant count, session duration, annotator wages
-- **Benchmark metadata**: dataset sizes, category counts — these describe the benchmark, not findings
-- **Implementation details without rationale**: "we used X" without "because Y"
-
-### CONVERT (transform to higher-value claims)
-When a paper reports the same parameter under many conditions:
-- Do NOT create N separate parameter claims
-- DO create 1 observation claim synthesizing the pattern
-
-When a paper reports benchmark numbers across models:
-- Do NOT create N parameter claims per model
-- DO create 1-2 observation claims about what the numbers reveal
-
-## Claim Decomposition
-
-One proposition per claim. If a statement contains multiple independent findings, split it.
-
-**Signals to split:**
-- "and" joining two independent findings
-- Multiple numbers that could each be a parameter claim
-- Claims about different concepts
-- Would need a semicolon to be grammatically correct
-
-**Do not split** when a statement describes a single finding with necessary context (e.g., "X outperforms Y because Z" is one causal claim).
-
-**Definitional claims — do not decompose components:**
-When a paper introduces a formal definition, create one `observation` claim for the top-level definition. Components become `concepts` list entries, not standalone claims. If a component has non-trivial constraints described separately, it gets its own claim with an inline `supports` stance pointing at the parent.
-
-## Duplicate Detection
-
-Do not query master-branch claims from this skill. Create the local equation claim for this source and let propstore deduplicate or reconcile at finalize/promotion time.
-
-## Quality Checklist
-
-- [ ] Every claim has unique sequential ID
-- [ ] Every claim has type, provenance with real page numbers where possible
-- [ ] Parameter claims have `concept`, value (or bounds), and unit (auto-filled for dimensionless forms)
-- [ ] Equation claims have expression, valid sympy, and variable bindings
-- [ ] Observation claims have statement and concepts list
-- [ ] Model claims have name, equations list, and parameter bindings
-- [ ] Measurement claims have target_concept, measure, value, and unit
-- [ ] Mechanism claims have statement with causal/architectural reasoning
-- [ ] Comparison claims name both subject and comparand with evidence
-- [ ] Limitation claims specify the scope boundary
-- [ ] Every name in CEL conditions is a registered concept (not free-form strings)
-- [ ] Conditions use consistent CEL vocabulary across the file
-- [ ] Concept names match the paper's concept inventory where one exists
-- [ ] Reusable outcomes, interventions, populations, and methodological constructs are modeled as concepts instead of being left only as selector literals
-- [ ] **Every claim carries a `context:` field referencing a pre-authored context**
-
-## Output
-
-```
-Claims extracted: papers/[dirname]/claims.yaml
+```text
+Claims extracted for: papers/[dirname]
   Context: [ctx_author_year_slug]
-  Validation: PASS (0 errors, N warnings)
-  Claims: N total (P parameter, E equation, O observation, M model, X measurement, K mechanism, C comparison, L limitation)
+  Claims proposed: N total
+  Missing concepts encountered and fixed: [...]
+  Validation boundary: pks source propose-claim
 ```

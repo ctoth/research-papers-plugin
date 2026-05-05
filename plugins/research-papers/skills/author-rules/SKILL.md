@@ -63,7 +63,6 @@ Do NOT fall back to positive-encoding predicates (e.g. `aspirin_not_indicated/1`
 ```bash
 paper_dir="$ARGUMENTS"
 ls "$paper_dir"/notes.md 2>/dev/null || echo "MISSING: notes.md"
-ls "$paper_dir"/claims.yaml 2>/dev/null
 ls knowledge/.git 2>/dev/null || echo "MISSING: knowledge/.git"
 paper_stem=$(basename "$paper_dir" | tr '[:upper:]' '[:lower:]' | cut -d_ -f1-2)
 ls knowledge/predicates/${paper_stem}.yaml 2>/dev/null || echo "MISSING: predicates file — run register-predicates first"
@@ -73,7 +72,7 @@ If the predicates file is missing, stop and run `register-predicates` first. Rul
 
 ## Step 1: Identify The Paper's Stated Reasoning Steps
 
-Read `notes.md` and `claims.yaml`. Find the paper's core argumentative moves:
+Read `notes.md` and the already-authored source-branch claims for this paper. Find the paper's core argumentative moves:
 
 - "Because X, we conclude Y" → defeasible rule, body has X premises, head has Y.
 - "Our result contradicts the expectation that Z" → `proper_defeater` with head `~Z`.

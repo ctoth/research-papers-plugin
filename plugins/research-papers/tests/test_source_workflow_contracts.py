@@ -50,15 +50,14 @@ class TestSourceWorkflowContracts(unittest.TestCase):
             skill,
         )
 
-    def test_extract_claims_preserves_script_as_draft_proposer(self) -> None:
+    def test_extract_claims_uses_source_proposal_cli(self) -> None:
         skill = (PLUGIN_ROOT / "skills" / "extract-claims" / "SKILL.md").read_text(
             encoding="utf-8"
         )
 
-        self.assertIn("scripts/generate_claims.py", skill)
-        self.assertIn("draft proposal", skill)
-        self.assertIn("LLM", skill)
-        self.assertIn("pks source add-claim", skill)
+        self.assertIn("pks source propose-claim", skill)
+        self.assertIn("Do not create an intermediate claim batch file", skill)
+        self.assertNotIn("pks source add-claim", skill)
 
     def test_claim_skills_document_output_concept_for_parameter_claims(self) -> None:
         extract_skill = (PLUGIN_ROOT / "skills" / "extract-claims" / "SKILL.md").read_text(
@@ -68,10 +67,10 @@ class TestSourceWorkflowContracts(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertIn("output_concept", extract_skill)
-        self.assertIn("output_concept", enrich_skill)
-        self.assertNotIn("Parameter claims have concept", extract_skill)
-        self.assertNotIn("Parameter claims have concept", enrich_skill)
+        self.assertIn("--concept", extract_skill)
+        self.assertIn("--concept", enrich_skill)
+        self.assertIn("Parameter claims", extract_skill)
+        self.assertIn("Parameter enrichment", enrich_skill)
 
     def test_sync_helper_has_no_dead_pyyaml_dependency(self) -> None:
         script = (PLUGIN_ROOT / "scripts" / "sync_propstore_source.py").read_text(
@@ -88,6 +87,7 @@ class TestSourceWorkflowContracts(unittest.TestCase):
         self.assertNotIn("pks source init", skill)
         self.assertNotIn("pks source promote", skill)
         self.assertNotIn("pks init", skill)
+        self.assertNotIn("pks source stamp-provenance", skill)
 
     def test_paper_process_is_a_pure_skill_orchestrator(self) -> None:
         skill = (PLUGIN_ROOT / "skills" / "paper-process" / "SKILL.md").read_text(
@@ -175,7 +175,8 @@ class TestSourceWorkflowContracts(unittest.TestCase):
             PLUGIN_ROOT / "skills" / "reconcile-vocabulary" / "SKILL.md"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("concepts.yaml", skill)
+        self.assertIn("source-branch concept inventory", skill)
+        self.assertIn("Do not hand-edit propstore YAML", skill)
         self.assertNotIn("rewrite all claims.yaml files", skill)
 
     def test_reconcile_stays_notes_layer_only(self) -> None:

@@ -1,6 +1,6 @@
 ---
 name: reconcile-vocabulary
-description: Reconcile paper-local concept inventories across a paper collection. Identifies collision groups, proposes shared canonical names, and optionally rewrites per-paper concepts.yaml files.
+description: Reconcile source-branch concept vocabularies across a paper collection and report collision groups.
 argument-hint: "<papers-directory> [--fix] [--vocabulary <path>]"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI."
@@ -35,9 +35,9 @@ done
 
 ## Step 2: Collect All Concept Names
 
-Read every `concepts.yaml` file under `$papers_dir`:
+Inspect every paper's source-branch concept inventory through propstore. If a filesystem view is needed for reading, use `pks source sync` into a scratch/report directory; do not edit the materialized files.
 ```bash
-find "$papers_dir" -name "concepts.yaml" -type f
+find "$papers_dir" -maxdepth 1 -mindepth 1 -type d
 ```
 
 For each file, extract all concept inventory entries:
@@ -67,7 +67,7 @@ For each collision group, select the canonical name:
 - If the vocabulary specifies one, use it
 - Otherwise, pick the most descriptive (longest) name
 - List all variants as aliases
-- Record per-paper source names so later alignment can map back to individual `concepts.yaml` files
+- Record per-paper source names so later alignment can map back to individual source branches.
 
 ## Step 5: Report
 
@@ -81,10 +81,10 @@ Write a report with:
 ## Step 6: Fix Mode (--fix)
 
 If `--fix` was passed:
-1. For each collision group that is not contested, rewrite the affected `concepts.yaml` files so `proposed_name` matches the selected canonical name
-2. Preserve `local_name`, definitions, forms, and all non-name fields unchanged
-3. Do NOT rewrite `claims.yaml` here; claim rewriting happens later when papers are re-extracted or re-ingested against the updated concept inventory
-4. Report which `concepts.yaml` files were modified
+1. Do not rewrite source materialized files directly.
+2. If propstore exposes a source concept update/alignment command, use that command for uncontested groups.
+3. If no CLI update surface exists for the needed vocabulary rewrite, report the exact source names and concept entries that require a propstore command and stop.
+4. Do not hand-edit propstore YAML.
 
 ## Output
 

@@ -163,18 +163,13 @@ Error: context '<ctx_name>': assumption[N] = '<expr>': Structural concept '<conc
 The concept exists but is declared `physical_dimension_form: structural`. CEL forbids structural concepts on its boundaries — structural is for decorative/referential roles, not truth-valued ones. Two recoveries, in order of preference:
 
 1. **Use a different concept.** Often a boolean or category sibling says the same thing. Run `pks concept list` and `pks concept show <nearby_name>` to look for one. Rewrite the assumption against that sibling.
-2. **Flip the form, if the structural classification is wrong.** Run `pks concept show <concept_name>` and confirm the original form declaration was the mistake (usually: a boolean-shaped fact was authored as structural during early ingest). Then edit `knowledge/concepts/<concept_name>.yaml`:
-   - Change `physical_dimension_form: structural` to the correct form (usually `boolean`).
-   - The concept YAML carries a `version_id: sha256:...` content hash. Changing the form invalidates it. Run `pks build`; the mismatch error prints the expected new hash. Paste it back into the YAML.
-   - Commit both lines (the form edit and the hash update) in one commit.
-
-When committing any YAML inside a propstore-backed `knowledge/` repository: always run `git diff --cached --stat` after `git add` and before `git commit`. The propstore git backend shares the index with user git and can leave unrelated mutations staged; a blind commit can pick them up. Verify the staged set matches your intent every time.
+2. **If the structural classification is wrong, stop and report the missing propstore command.** Do not hand-edit concept YAML or hash fields. The fix must go through a `pks concept update`-style surface; if that surface is unavailable, report the blocker.
 
 ## Step 4: Verify
 
 ```bash
 pks context list | grep <ctx_name>
-cat knowledge/contexts/<ctx_name>.yaml
+pks context show <ctx_name>
 ```
 
 Confirm the file exists and the assumptions/parameters/perspective look right.
@@ -192,6 +187,6 @@ Context authored: <ctx_name>
 
 ## When To Rerun
 
-Rerun this skill if the paper's structural assumptions change (rare — usually only if you discover you misclassified the design). To revise an existing context, edit `knowledge/contexts/<ctx_name>.yaml` directly and commit — `pks context` has `add`, `list`, `search`, `show`, `remove` but no in-place `update` for the assumptions/parameters block today. Use `pks context remove` + re-add for wholesale replacement; hand-edit for a targeted assumption fix (and remember to update `version_id` if the concept YAMLs carry content hashes).
+Rerun this skill if the paper's structural assumptions change. Use `pks context remove` plus `pks context add` for wholesale replacement. If a targeted update is needed and no `pks context update` surface exists, report the missing propstore command and stop; do not hand-edit context YAML.
 
 To revise the lifting-rule block of an existing context, use the `pks context lifting` subcommands (`add`, `update`, `remove`) — no hand-editing required.

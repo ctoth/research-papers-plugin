@@ -1,6 +1,6 @@
 ---
 name: register-concepts
-description: Register a paper-local concept inventory into a propstore source branch. The primary extraction source is notes.md; claims.yaml is supplementary when present.
+description: Register concepts from a paper into its propstore source branch using pks source propose-concept.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI."
@@ -10,7 +10,7 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 Register the concepts needed by one paper into its propstore source branch using per-concept `pks source propose-concept` commands.
 
-This skill is rerunnable. Its primary source is `notes.md`. If `claims.yaml` exists, use it only as a supplementary pass to catch concept references you missed on the first read.
+This skill is rerunnable. Its source is the paper notes plus any missing-concept feedback emitted by `pks source propose-claim`.
 
 Ontology-policy reference:
 
@@ -22,7 +22,6 @@ Ontology-policy reference:
 paper_dir="$ARGUMENTS"
 ls "$paper_dir"/notes.md 2>/dev/null || echo "MISSING: notes.md"
 ls knowledge/.git 2>/dev/null || echo "MISSING: knowledge/.git"
-ls "$paper_dir"/claims.yaml 2>/dev/null || echo "OPTIONAL: claims.yaml not present"
 ```
 
 If `notes.md` is missing, stop and run `paper-reader` first.
@@ -166,22 +165,9 @@ Read the output for each concept:
 - If output says `Proposed new concept '<name>' (form: <form>)`: this is a new concept being proposed, with values stored in `form_parameters.values`.
 - If output says `Unknown form '<form>'`: the form name is wrong. Check `pks form list` and try again with a valid form.
 
-## Step 5: Supplementary Pass (if claims.yaml exists)
+## Step 5: Missing-Concept Feedback Loop
 
-If `claims.yaml` exists in the paper directory, read it and check for concept references in the following fields:
-
-- `concept` (parameter claims — the source-side authoring field)
-- `target_concept`
-- `concepts[]`
-- `variables[].concept`
-- `parameters[].concept`
-- `conditions[]` — extract every LHS name from CEL expressions (e.g., `endpoint` from `endpoint == 'composite_primary'`). These names must be registered concepts.
-
-Schema note:
-
-- Parameter claims are authored with top-level `concept:` — that's the field on `SourceClaimDocument`, the schema `pks source add-claim` validates against. The master-side `ClaimDocument` carries the resolved value as `output_concept_id` after promotion; that's an internal artifact and not something you author.
-
-For any concepts found in `claims.yaml` that were NOT already registered in Step 4, propose them using the same command:
+When `extract-claims` runs, `pks source propose-claim` may reject a claim with `unknown concept reference(s): ...`. Treat that error as authoritative. For each missing concept, propose it with the same command:
 
 ```bash
 pks source propose-concept "$source_name" \
@@ -191,12 +177,14 @@ pks source propose-concept "$source_name" \
   --values "<val1>,<val2>"   # category concepts only; omit for non-category
 ```
 
+Then rerun the failed `pks source propose-claim` command. Do not create or edit a paper-local concept batch file.
+
 ## Step 6: Report
 
 ```text
 Concepts registered for: papers/[dirname]
   From notes: N
-  From claims supplementary pass: N
+  From missing-claim feedback: N
   Linked to existing: N
   Newly proposed: N
   Total: N

@@ -38,6 +38,11 @@ class TestSyncHelperDeprecation(unittest.TestCase):
         )
 
         self.assertIn("DEPRECATED", script)
+        self.assertIn("pks source propose-*", script)
+        self.assertNotIn("add-claim", script)
+        self.assertNotIn("add-justification", script)
+        self.assertNotIn("add-stance", script)
+        self.assertNotIn("claims_path", script)
 
 
 if __name__ == "__main__":
