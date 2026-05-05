@@ -89,9 +89,18 @@ Conventions:
 - Rule IDs: `r_<what_it_concludes>` or `r_<paper_slug>_<what>`. Stable across re-runs.
 - Variables: uppercase single letters (`X`, `Y`) per DeLP convention. All head variables must appear in the body.
 - Use a leading `~` for strong negation. Proper defeaters use this pattern when the paper is arguing against a standard conclusion (head `~L` directly contradicts the attacked rule's head `L`). Blocking defeaters typically negate a premise of the attacked argument in the body instead. **Always use the `--head=<atom>` / `--body=<atom>` equals-form** (see CLI atom DSL above for why).
+- If defeasible rules use a paper applicability predicate such as `study_like_setting(X)` or `<paper>_like_case(X)`, first author a strict fact with a concrete paper-level constant. Otherwise the rule language validates but has no ground instances.
 
 ```bash
 cd knowledge  # or pass -C to each pks call
+
+# Strict fact: seed the paper's applicability setting so later rules ground.
+pks rule add \
+  --file author_2024 \
+  --paper Author_2024_ExamplePaper \
+  --id r_study_setting_fact \
+  --kind strict \
+  --head=study_like_setting(author_2024_setting)
 
 # Defeasible rule: intervention improves target outcome in a comparable setting
 pks rule add \
