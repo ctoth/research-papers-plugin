@@ -44,6 +44,16 @@ Read:
 
 Do not stance claims in the same paper when the relation is really an intra-paper inference; use `extract-justifications` for that.
 
+### Cross-source boundary
+
+When extracting stances for one source, the current source is the only mutable source.
+
+- Do not run `pks source finalize`, `pks source promote`, `pks source propose-*`, or any other mutation command for another paper source.
+- Do not "fix up" another paper so a target claim becomes available.
+- If a cross-source target is not already resolvable by `pks source propose-stance`, skip that stance and report it as unavailable.
+- It is acceptable to read another paper's notes and already-promoted claim artifacts to choose a target.
+- It is acceptable to finalize the current source only if the local claims must be resolvable before writing stances.
+
 ## Step 2: Propose Stances Through pks
 
 Use one command per stance:
