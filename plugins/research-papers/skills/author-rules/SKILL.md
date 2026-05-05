@@ -47,16 +47,16 @@ The equals-form (`--head=~safe(X)`, `--body=~p(X)`) bypasses the expansion entir
 
 ```bash
 pks rule add \
-  --file ikeda_2014 \
-  --paper Ikeda_2014_Low-doseAspirinPrimaryPrevention \
-  --id r_ikeda_not_indicated \
+  --file author_2024 \
+  --paper Author_2024_ExamplePaper \
+  --id r_not_recommended \
   --kind proper_defeater \
-  --head=~aspirin_indicated_for_primary_prevention(X) \
-  --body=~aspirin_has_net_benefit(X) \
-  --body=jppp_like_cohort(X)
+  --head=~intervention_recommended_for_use_case(X) \
+  --body=~intervention_has_net_benefit(X) \
+  --body=study_like_setting(X)
 ```
 
-Do NOT fall back to positive-encoding predicates (e.g. `aspirin_not_indicated/1` instead of `~aspirin_indicated/1`) just to avoid `~`. That loses strong negation semantics. Use the equals form and keep the negation.
+Do NOT fall back to positive-encoding predicates (e.g. `intervention_not_recommended/1` instead of `~intervention_recommended/1`) just to avoid `~`. That loses strong negation semantics. Use the equals form and keep the negation.
 
 ## Step 0: Validate
 
@@ -93,34 +93,34 @@ Conventions:
 ```bash
 cd knowledge  # or pass -C to each pks call
 
-# Defeasible rule: aspirin reduces MI in JPPP-like cohort
+# Defeasible rule: intervention improves target outcome in a comparable setting
 pks rule add \
-  --file ikeda_2014 \
-  --paper Ikeda_2014_Low-doseAspirinPrimaryPrevention \
-  --id r_ikeda_mi_reduction \
+  --file author_2024 \
+  --paper Author_2024_ExamplePaper \
+  --id r_target_outcome_improvement \
   --kind defeasible \
-  --head=aspirin_reduces_nonfatal_mi(X) \
-  --body=jppp_like_cohort(X)
+  --head=intervention_reduces_target_outcome(X) \
+  --body=study_like_setting(X)
 
 # Defeasible rule with negated head: no net benefit conclusion
 pks rule add \
-  --file ikeda_2014 \
-  --paper Ikeda_2014_Low-doseAspirinPrimaryPrevention \
-  --id r_ikeda_no_net_benefit \
+  --file author_2024 \
+  --paper Author_2024_ExamplePaper \
+  --id r_no_net_benefit \
   --kind defeasible \
-  --head=~aspirin_has_net_benefit(X) \
-  --body=aspirin_increases_extracranial_hemorrhage(X) \
-  --body=aspirin_reduces_nonfatal_mi(X)
+  --head=~intervention_has_net_benefit(X) \
+  --body=intervention_increases_adverse_outcome(X) \
+  --body=intervention_reduces_target_outcome(X)
 
 # Proper defeater: paper argues against standard indication with a counter-conclusion
 pks rule add \
-  --file ikeda_2014 \
-  --paper Ikeda_2014_Low-doseAspirinPrimaryPrevention \
-  --id r_ikeda_not_indicated \
+  --file author_2024 \
+  --paper Author_2024_ExamplePaper \
+  --id r_not_recommended \
   --kind proper_defeater \
-  --head=~aspirin_indicated_for_primary_prevention(X) \
-  --body=~aspirin_has_net_benefit(X) \
-  --body=jppp_like_cohort(X)
+  --head=~intervention_recommended_for_use_case(X) \
+  --body=~intervention_has_net_benefit(X) \
+  --body=study_like_setting(X)
 ```
 
 Repeat for every reasoning move you identified. Duplicate rule ids inside the same file are rejected by the CLI.
