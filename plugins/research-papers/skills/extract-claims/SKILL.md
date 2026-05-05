@@ -68,6 +68,52 @@ If `pks source propose-claim` fails with `unknown concept reference(s): ...`, do
 
 Use one `pks source propose-claim` command per claim. This command is the validation boundary and the mutation boundary. It validates source-local concepts, CEL conditions, and numeric value bounds before writing.
 
+## Step 4A: Structured Evidence Contract
+
+For empirical, clinical, statistical, benchmark, or otherwise quantitative papers, extract the quantitative result as structured evidence while reading the paper. Do not postpone this to collection reconciliation.
+
+If the paper reports an endpoint-level estimate, threshold, rate, count, confidence interval, credible interval, standard error, p-value, or uncertainty bound that someone could compare against another paper, author a `parameter` or `measurement` claim for it. A prose `observation` may summarize the authors' interpretation, but it must not be the only representation of the numeric result.
+
+Required behavior:
+
+- For every primary outcome, endpoint, metric, or benchmark result, author at least one structured claim with `--value` and the relevant `--condition` axes.
+- For every major adverse, safety, failure, cost, or risk outcome, author the structured effect, rate, or measurement claim even when the paper's headline emphasizes benefit.
+- Preserve uncertainty with `--lower-bound`, `--upper-bound`, and `--uncertainty-type` whenever reported.
+- Put comparison dimensions in CEL conditions, not only in prose: examples include `endpoint`, `comparison`, `population`, `analysis_set`, `follow_up`, `intervention`, and `comparator`.
+- Extract explicit null or negative findings as claims too. A result like "no significant reduction" is not a reason to skip the endpoint.
+- If no quantitative result is present in a paper that appears empirical, report that explicitly in Step 7.
+
+Bad extraction:
+
+```bash
+pks source propose-claim "$source_name" \
+  --id claim4 \
+  --type observation \
+  --statement "The intervention improved one outcome but worsened another." \
+  --context "ctx_author_year_trial" \
+  --page 5
+```
+
+Good extraction:
+
+```bash
+pks source propose-claim "$source_name" \
+  --id claim4 \
+  --type parameter \
+  --concept effect_estimate \
+  --value 1.25 \
+  --lower-bound 1.05 \
+  --upper-bound 1.49 \
+  --uncertainty-type "95% CI" \
+  --context "ctx_author_year_trial" \
+  --condition "endpoint == 'primary_outcome'" \
+  --condition "comparison == 'intervention_vs_comparator'" \
+  --condition "analysis_set == 'prespecified_analysis'" \
+  --page 5
+```
+
+Also author the corresponding harm endpoint separately rather than folding it into the same prose statement.
+
 Observation, mechanism, comparison, and limitation claims:
 
 ```bash
