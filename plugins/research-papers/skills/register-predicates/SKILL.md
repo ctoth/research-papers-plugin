@@ -28,13 +28,13 @@ ls knowledge/.git 2>/dev/null || echo "MISSING: knowledge/.git"
 
 Read `notes.md`. Identify the paper's causal, mechanistic, or clinical predicates — the atomic predicates the paper's stated reasoning steps turn on. Examples for RCT papers:
 
-- Cohort predicates: `<paper>_like_cohort/1` — "the subject belongs to a cohort like this paper's."
-- Effect predicates: `intervention_reduces_endpoint/1`, `intervention_increases_endpoint/1`, `intervention_has_net_benefit/1`.
-- Indication predicates: `intervention_indicated_for_<use_case>/1`.
+- Study-scope predicates: `<paper>_like_case/1` or `<paper>_like_setting/1` when the paper really needs a source-specific applicability predicate.
+- Effect predicates: `intervention_reduces_outcome/1`, `intervention_increases_outcome/1`, `method_improves_metric/1`, `method_increases_cost/1`.
+- Recommendation predicates: `intervention_indicated_for_use_case/1`, `method_preferred_for_task/1`, or `model_suitable_for_setting/1`.
 
 Arity selection: most clinical-paper predicates are unary (parameterized by cohort). Binary may appear for relations (`supersedes/2`). Arity 0 is for global propositional facts.
 
-Prefer DESCRIPTIVE predicate names over abstract ones. `aspirin_reduces_nonfatal_mi/1` beats `reduces/3`.
+Prefer descriptive predicate names over opaque abstraction. `intervention_reduces_target_outcome/1` beats `reduces/3` when the rule language is source-local. Do not include a paper, author, venue, or collection-specific prefix unless the predicate is genuinely about that source's applicability boundary.
 
 ## Step 2: Choose arg_types
 
@@ -48,18 +48,18 @@ Use the file stem `<author>_<year>` (e.g., `ikeda_2014`). The first `pks predica
 cd knowledge  # or pass -C to each pks call
 
 pks predicate add \
-  --file ikeda_2014 \
-  --id aspirin_reduces_nonfatal_mi \
+  --file author_2024 \
+  --id intervention_reduces_target_outcome \
   --arity 1 \
   --arg-type entity \
-  --description "Aspirin reduces the rate of non-fatal myocardial infarction in this cohort."
+  --description "The studied intervention reduces the rate or level of the target outcome in this setting."
 
 pks predicate add \
-  --file ikeda_2014 \
-  --id jppp_like_cohort \
+  --file author_2024 \
+  --id study_like_setting \
   --arity 1 \
   --arg-type entity \
-  --description "Subject belongs to a cohort comparable to the JPPP trial."
+  --description "Entity belongs to a setting comparable to the paper's study setting."
 ```
 
 Optional flags:
