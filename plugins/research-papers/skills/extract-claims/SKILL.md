@@ -78,7 +78,8 @@ Required behavior:
 
 - For every primary outcome, endpoint, metric, or benchmark result, author at least one structured claim with `--value` and the relevant `--condition` axes.
 - For every major adverse, safety, failure, cost, or risk outcome, author the structured effect, rate, or measurement claim even when the paper's headline emphasizes benefit.
-- Preserve uncertainty with `--lower-bound`, `--upper-bound`, and `--uncertainty-type` whenever reported.
+- Preserve intervals with `--lower-bound` and `--upper-bound` whenever reported.
+- Do not invent a scalar `--uncertainty` for a confidence interval or credible interval. If the paper reports "95% CI" or similar interval metadata, record that wording in `--quote-fragment` or `--notes` unless you also have a separate scalar uncertainty measure such as a standard error or standard deviation.
 - Put comparison dimensions in CEL conditions, not only in prose: examples include `endpoint`, `comparison`, `population`, `analysis_set`, `follow_up`, `intervention`, and `comparator`.
 - Extract explicit null or negative findings as claims too. A result like "no significant reduction" is not a reason to skip the endpoint.
 - If no quantitative result is present in a paper that appears empirical, report that explicitly in Step 7.
@@ -104,11 +105,11 @@ pks source propose-claim "$source_name" \
   --value 1.25 \
   --lower-bound 1.05 \
   --upper-bound 1.49 \
-  --uncertainty-type "95% CI" \
   --context "ctx_author_year_trial" \
   --condition "endpoint == 'primary_outcome'" \
   --condition "comparison == 'intervention_vs_comparator'" \
   --condition "analysis_set == 'prespecified_analysis'" \
+  --quote-fragment "effect estimate 1.25; 95% CI, 1.05 to 1.49" \
   --page 5
 ```
 
@@ -156,7 +157,21 @@ pks source propose-claim "$source_name" \
   --value 0.88 \
   --lower-bound 0.79 \
   --upper-bound 0.97 \
-  --uncertainty-type "95% CI" \
+  --context "ctx_<author>_<year>_<slug>" \
+  --quote-fragment "hazard ratio, 0.88; 95% CI, 0.79 to 0.97" \
+  --page 5
+```
+
+Use `--uncertainty` and `--uncertainty-type` only when the paper reports a scalar uncertainty measure:
+
+```bash
+pks source propose-claim "$source_name" \
+  --id claim4 \
+  --type parameter \
+  --concept effect_estimate \
+  --value 1.25 \
+  --uncertainty 0.08 \
+  --uncertainty-type "standard_error" \
   --context "ctx_<author>_<year>_<slug>" \
   --page 5
 ```
