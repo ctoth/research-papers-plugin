@@ -10,7 +10,7 @@ compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 
 Encode a paper's stated argument structure as DeLP rules. Each rule has a head atom, a body of atoms, and a kind (strict, defeasible, proper_defeater, blocking_defeater).
 
-Use `pks rule add` (propstore >= 0.2.0). The CLI parses a shallow atom DSL, validates the schema, and commits on master. Do NOT hand-author YAML or run `git commit` yourself. Rule-priority pairs (`superiority`) are not yet exposed via CLI; if you need them, stop here and ask Q.
+Use `pks rule add` (propstore >= 0.2.0). The CLI parses a shallow atom DSL, validates the schema, and commits on master. Use `pks rule superiority add` for explicit rule-priority pairs. Do NOT hand-author YAML or run `git commit` yourself.
 
 ## Theoretical Background
 
@@ -151,6 +151,15 @@ Rules authored: knowledge/rules/<author>_<year>.yaml
 
 Rerun if you missed a reasoning move and want to add more rules. Additional `pks rule add` calls with the same `--file` (and matching `--paper`) append. One rules file per paper.
 
-## Superiority pairs (not yet in CLI)
+## Superiority pairs
 
-`RulesFileDocument.superiority` expresses `(superior_rule_id, inferior_rule_id)` pairs for explicit rule priority. No CLI surface exists yet. If a paper requires superiority, stop and ask Q — do not hand-edit the YAML.
+`RulesFileDocument.superiority` expresses `(superior_rule_id, inferior_rule_id)` pairs for explicit rule priority. Add these pairs through the CLI after both referenced rules exist:
+
+```bash
+pks rule superiority add \
+  --file ikeda_2014 \
+  --superior r_ikeda_not_indicated \
+  --inferior r_standard_indicated
+```
+
+Both rule ids must exist in the same rules file, neither may be a strict rule, and the resulting priority relation must remain acyclic. The CLI validates those constraints and commits the update.
