@@ -126,6 +126,19 @@ Examples:
 - `intention_to_treat` -> usually a first-class methodological concept; may also appear as a selected `population` value for specific claims
 - `aspirin_vs_placebo` -> decompose by default; keep as one comparison value only if the paper truly treats it as an indivisible named contrast
 
+### Picking A Form For Numeric Quantities
+
+`pks form list` is the authoritative current set — always consult it before choosing. Common picks for numeric quantities:
+
+- `score` — bounded score-like quantity (kappa, IoU, F1, accuracy, BLEU).
+- `ratio` — proportion or rate-of-occurrence (event_rate, hazard_ratio).
+- `dimensionless` (if `pks form list` includes it) — unbounded dimensionless quantity (effect size, log-odds, z-score, Cohen's d).
+- `probability` (if `pks form list` includes it) — [0,1] probabilities, p-values.
+- `correlation` (if `pks form list` includes it) — [-1,1] correlations (Pearson r, Spearman rho).
+- Dimensional quantities (`mass`, `time`, `pressure`, `length`, `acceleration`, etc.) — use the matching named form.
+
+Do not invent a form name. `dimensionless` as a bare form may not yet exist in your propstore — check `pks form list` and fall back to the closest available form (often `score` for bounded quantities, `ratio` for proportions) if a more specific one isn't registered.
+
 ### Definition Quality
 
 Good: "Ratio of hazard rates between treatment and control arms, measuring relative event risk over time."
@@ -157,16 +170,16 @@ Read the output for each concept:
 
 If `claims.yaml` exists in the paper directory, read it and check for concept references in the following fields:
 
-- `output_concept`
+- `concept` (parameter claims — the source-side authoring field)
 - `target_concept`
 - `concepts[]`
 - `variables[].concept`
 - `parameters[].concept`
 - `conditions[]` — extract every LHS name from CEL expressions (e.g., `endpoint` from `endpoint == 'composite_primary'`). These names must be registered concepts.
 
-Legacy compatibility:
+Schema note:
 
-- If an older `claims.yaml` still uses top-level `concept` on parameter claims, treat it as legacy input and migrate the paper forward. Do not teach new artifacts to emit that field for parameter claims.
+- Parameter claims are authored with top-level `concept:` — that's the field on `SourceClaimDocument`, the schema `pks source add-claim` validates against. The master-side `ClaimDocument` carries the resolved value as `output_concept_id` after promotion; that's an internal artifact and not something you author.
 
 For any concepts found in `claims.yaml` that were NOT already registered in Step 4, propose them using the same command:
 

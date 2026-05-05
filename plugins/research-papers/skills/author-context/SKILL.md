@@ -115,7 +115,15 @@ The LHS name is not in the master concept registry. Before retrying, register it
 - `== true` / `== false` on the RHS → `--form boolean`
 - `== '<string>'` on the RHS → `--form category --values "<a,b,c>"` (leave extensible, i.e. omit `--closed`, unless your domain demands closure)
 - integer `>= N` / `<= N` → `--form count`
-- non-integer numeric, or a dimensional quantity (mass, time, etc.) → whichever quantity form fits. Check `pks form list` for the available set.
+- non-integer numeric, or a dimensional quantity → pick the most specific form available. `pks form list` is authoritative; common picks:
+  - dimensional quantity → matching named form (`mass`, `time`, `pressure`, `length`, `acceleration`, etc.)
+  - bounded score-like quantity (kappa, IoU, F1, accuracy) → `score`
+  - proportion or rate-of-occurrence → `ratio`
+  - unbounded dimensionless quantity (effect size, log-odds, z-score) → `dimensionless` if `pks form list` includes it; otherwise fall back to `score` or `ratio` whichever fits the bounds.
+  - probabilities or p-values in [0,1] → `probability` if available; otherwise `ratio`.
+  - correlations in [-1,1] → `correlation` if available; otherwise `ratio` with a note about sign.
+
+  Do not invent a form name. If `pks form list` doesn't include the form you want, pick the closest available one and proceed.
 
 ```bash
 pks concept add \

@@ -112,7 +112,7 @@ For each parameter, constant, or threshold mentioned in the paper:
 - id: claim1
   type: parameter
   context: <ctx_author_year_slug>
-  output_concept: <local_concept_name or descriptive_name>
+  concept: <local_concept_name or descriptive_name>
   value: <number>
   unit: <unit string>
   conditions:
@@ -126,12 +126,12 @@ For each parameter, constant, or threshold mentioned in the paper:
 ```
 
 Rules:
-- Every parameter needs at minimum: id, type, **context**, `output_concept`, provenance
+- Every parameter needs at minimum: id, type, **context**, `concept`, provenance
 - Include `value` OR `lower_bound`+`upper_bound` (at least one). **Never** use `lower_bound` alone or `upper_bound` alone — the validator rejects unpaired bounds. If only one bound is known, use `value` with a `notes` field explaining the bound direction (e.g., ">85%").
 - Include `unit` for dimensional quantities (mass, time, pressure, etc.). **Omit `unit` for dimensionless forms** (ratio, count, score, boolean, etc.) — propstore auto-fills `unit: '1'` at build time. **Never use compound units that conflate independently-variable dimensions** (e.g., `mg/day` conflates dose and frequency). Split into separate concepts with simple units and express the relationship through CEL conditions. See register-concepts "Compound-Unit Decomposition" for the full rule.
 - For temporal quantities, use clinical time units directly: `mo` (month), `yr` (year), `d` (day), `wk` (week). Do not convert to hours or seconds — the `time` form accepts all of these natively.
 - Use names from the paper's `concepts.yaml` inventory when available; otherwise use descriptive lowercase_underscore names
-- Do not use top-level `concept` for new parameter claims; the current propstore claim schema requires `output_concept`
+- Use top-level `concept:` for parameter claims — the source-side ingest schema (`SourceClaimDocument`) is the validator that runs at `pks source add-claim` time, and it expects `concept`. (Note: master-side `ClaimDocument` carries the resolved value as `output_concept_id` after promotion. That's an internal artifact, not the field you author.)
 
 ### 2.2: Equation Claims
 
@@ -449,7 +449,7 @@ Do not query master-branch claims from this skill. Create the local equation cla
 
 - [ ] Every claim has unique sequential ID
 - [ ] Every claim has type, provenance with real page numbers where possible
-- [ ] Parameter claims have `output_concept`, value (or bounds), and unit (auto-filled for dimensionless forms)
+- [ ] Parameter claims have `concept`, value (or bounds), and unit (auto-filled for dimensionless forms)
 - [ ] Equation claims have expression, valid sympy, and variable bindings
 - [ ] Observation claims have statement and concepts list
 - [ ] Model claims have name, equations list, and parameter bindings
