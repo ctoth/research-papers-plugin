@@ -35,9 +35,9 @@ If any are missing, stop and report.
 
 Convention: `ctx_<author>_<year>_<trial-slug>`. Use lowercase snake_case.
 
-- `ctx_ikeda_2014_jppp` (Japanese Primary Prevention Project)
-- `ctx_bowman_2018_ascend` (A Study of Cardiovascular Events in Diabetes)
-- `ctx_wolfe_2025_aspree_xt` (ASPREE extended follow-up)
+- `ctx_author_2024_trial_acronym`
+- `ctx_author_2024_model_comparison`
+- `ctx_author_2024_extended_followup`
 
 If the paper has no canonical trial acronym, use a short descriptive slug.
 
@@ -55,7 +55,7 @@ Read `notes.md`. Identify the paper's trial design facts that apply to EVERY cla
 
 From these, derive:
 - **CEL assumptions**: boolean or equality CEL expressions over registered concepts (e.g., `primary_prevention == true`, `blinded_outcome_adjudication == true`, `open_label == true`). Any concept name on the LHS must be a registered concept in master OR will be registered during the paper's register-concepts step.
-- **Parameters**: KEY=VALUE scalar bindings that are constant across all paper claims (e.g., `trial_name=JPPP`, `sample_size=14464`, `followup_median_yr=5.02`, `age_range_min_yr=60`).
+- **Parameters**: KEY=VALUE scalar bindings that are constant across all paper claims (e.g., `study_name=trial_acronym`, `sample_size=14464`, `followup_median_yr=5.02`, `age_range_min_yr=60`).
 - **Perspective**: the analysis viewpoint name — usually `authors_primary_analysis` for the paper's headline results. Use a different perspective name (e.g., `per_protocol_analysis`, `subgroup_analysis_<name>`) if you're authoring a separate context for an alternative analysis.
 
 Apply this decision rule before writing any assumption:
