@@ -80,15 +80,15 @@ When in doubt: if two papers could independently measure or define the same thin
 
 When a quantity has a compound unit (mg/day, events/patient-year, dollars/hour), ask: **are the components independently variable?** If yes, they are separate concepts, not one concept with a compound unit.
 
-Example: "aspirin 100 mg daily" is two independent facts — the dose (100 mg, form: mass) and the frequency (once daily, form: category). Another paper might use the same dose at a different frequency, or a different dose at the same frequency. Baking both into one concept with unit `mg/day` collapses two dimensions into one and prevents independent querying.
+Example: "intervention dose 100 mg daily" is two independent facts — the dose (100 mg, form: mass) and the frequency (once daily, form: category). Another paper might use the same dose at a different frequency, or a different dose at the same frequency. Baking both into one concept with unit `mg/day` collapses two dimensions into one and prevents independent querying.
 
-**Test:** If Paper A reports "100 mg daily" and Paper B reports "100 mg twice daily," can you tell them apart? If the concept is `aspirin_dose` with unit `mg/day`, Paper A is 100 mg/day and Paper B is 200 mg/day — you've lost the fact that both use the same tablet. With separate concepts (`aspirin_dose` = 100 mg, `dosing_frequency` = once_daily vs twice_daily), both dimensions are preserved.
+**Test:** If Paper A reports "100 mg daily" and Paper B reports "100 mg twice daily," can you tell them apart? If the concept is `intervention_dose` with unit `mg/day`, Paper A is 100 mg/day and Paper B is 200 mg/day — you've lost the fact that both use the same dose amount. With separate concepts (`intervention_dose` = 100 mg, `dosing_frequency` = once_daily vs twice_daily), both dimensions are preserved.
 
 **Rule:** When you see a compound unit, split it into its independently-variable components. Each component gets its own concept with its own form. The relationship between them is expressed through CEL conditions, not through compound units.
 
 ### Conditioning-Axis Concepts
 
-Claims use CEL conditions like `endpoint == 'composite_primary'` or `comparison == 'aspirin_vs_placebo'`. **Every name on the LHS of a CEL condition must be a registered concept.** The propstore CEL checker validates condition names against the concept registry — unregistered names cause hard validation errors.
+Claims use CEL conditions like `endpoint == 'primary_outcome'` or `comparison == 'intervention_vs_comparator'`. **Every name on the LHS of a CEL condition must be a registered concept.** The propstore CEL checker validates condition names against the concept registry — unregistered names cause hard validation errors.
 
 This means you must register conditioning axes as concepts, not just measurement targets. Common conditioning-axis concepts include:
 
@@ -102,8 +102,8 @@ These are real domain concepts: multiple papers will condition their parameters 
 
 When proposing conditioning-axis concepts, include `--values` with the values this paper actually uses:
 
-- `endpoint` with `--values composite_primary,fatal_or_nonfatal_mi,stroke,gi_bleeding`
-- `comparison` with `--values aspirin_vs_placebo`
+- `endpoint` with `--values primary_outcome,secondary_outcome,adverse_outcome`
+- `comparison` with `--values intervention_vs_comparator`
 - `population` with `--values intention_to_treat,per_protocol`
 
 The value set is extensible by default — listing only this paper's values is correct. Other papers will add theirs when they propose the same concept and get linked.
@@ -120,10 +120,10 @@ Before proposing a concept or category value, classify it using the ontology pol
 
 Examples:
 
-- `all_cause_mortality`, `major_bleeding`, `nonfatal_myocardial_infarction` -> usually first-class concepts
+- `all_cause_mortality`, `adverse_event`, `target_outcome` -> usually first-class concepts
 - `primary_endpoint`, `secondary_endpoint`, `safety_endpoint` -> usually category values on `endpoint`
 - `intention_to_treat` -> usually a first-class methodological concept; may also appear as a selected `population` value for specific claims
-- `aspirin_vs_placebo` -> decompose by default; keep as one comparison value only if the paper truly treats it as an indivisible named contrast
+- `intervention_vs_comparator` -> decompose by default; keep as one comparison value only if the paper truly treats it as an indivisible named contrast
 
 ### Picking A Form For Numeric Quantities
 
