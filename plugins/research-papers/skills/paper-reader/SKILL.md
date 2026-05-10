@@ -46,6 +46,17 @@ Paper extraction is high-stakes and context-heavy. If you dispatch any subagent 
 
 The command examples below use `scripts/...` paths that are relative to this skill's directory. Resolve them against the installed skill location, not the user's project root.
 
+## Git and Binary Artifact Policy
+
+This skill creates required local binary paper artifacts, but those artifacts are **not source-control artifacts**.
+
+- Keep `paper.pdf` inside its own paper directory as the canonical local reading source.
+- Keep `pngs/page-*.png` inside the paper directory as the canonical page-image lane.
+- Never stage or commit `paper.pdf`, `*.pdf`, `pngs/`, `*.png`, `_reading_montage/`, or other generated page-image outputs.
+- Never delete `paper.pdf` or page images merely because they must not be committed. If they are in the wrong place, move them to the correct local paper directory or stop and report the blocker.
+- Before any `git add` or `git commit` in a repo that has paper artifacts, inspect the exact paths being staged. The commit must include only markdown, JSON metadata, indexes, rules, or other intentional text artifacts.
+- If `paper.pdf` or page images are already tracked or already committed, stop and report the exact tracked paths and commits. Do not repair by deleting the local files.
+
 ## Step 0: Check for Existing Paper
 
 If the argument is a directory, use it directly. If it's a PDF file, use `paper_hash.py lookup` to find a matching paper directory:
