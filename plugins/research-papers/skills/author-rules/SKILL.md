@@ -1,6 +1,6 @@
 ---
 name: author-rules
-description: Author the DeLP rules (strict, defeasible, proper_defeater, blocking_defeater) encoding a paper's stated argument structure. Per-paper rules file in knowledge/rules/. Runs after register-predicates.
+description: Author the DeLP rule artifacts (strict, defeasible, proper_defeater, blocking_defeater) encoding a paper's stated argument structure. Runs after register-predicates.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI."
@@ -64,11 +64,10 @@ Do NOT fall back to positive-encoding predicates (e.g. `intervention_not_recomme
 paper_dir="$ARGUMENTS"
 ls "$paper_dir"/notes.md 2>/dev/null || echo "MISSING: notes.md"
 ls knowledge/.git 2>/dev/null || echo "MISSING: knowledge/.git"
-paper_stem=$(basename "$paper_dir" | tr '[:upper:]' '[:lower:]' | cut -d_ -f1-2)
-ls knowledge/predicates/${paper_stem}.yaml 2>/dev/null || echo "MISSING: predicates file — run register-predicates first"
+ls knowledge/predicates/*.yaml 2>/dev/null || echo "MISSING: predicate artifacts — run register-predicates first"
 ```
 
-If the predicates file is missing, stop and run `register-predicates` first. Rule heads and bodies must reference declared predicates.
+If predicate artifacts are missing, stop and run `register-predicates` first. Rule heads and bodies must reference declared predicates.
 
 ## Step 1: Identify The Paper's Stated Reasoning Steps
 
@@ -82,7 +81,7 @@ Read `notes.md` and the already-authored source-branch claims for this paper. Fi
 
 ## Step 2: Add Rules Via CLI
 
-Use the file stem `<author>_<year>` (e.g. `author_2024`). The first `pks rule add` call creates `knowledge/rules/<stem>.yaml` with `source.paper = <paper-directory-name>` from `--paper`; subsequent calls append (the `--paper` must match).
+Use the authoring group stem `<author>_<year>` (e.g. `author_2024`) as optional source metadata with `--file`. Each `pks rule add` call writes one canonical rule artifact named for the rule id under the `knowledge/rules/` directory with `source.paper = <paper-directory-name>` from `--paper`.
 
 Conventions:
 
@@ -132,7 +131,7 @@ pks rule add \
   --body=study_like_setting(X)
 ```
 
-Repeat for every reasoning move you identified. Duplicate rule ids inside the same file are rejected by the CLI.
+Repeat for every reasoning move you identified. Duplicate rule ids are rejected across canonical rule artifacts.
 
 ## Step 3: Verify
 
@@ -151,17 +150,17 @@ Note: DeLP rules and predicates are not materialized as sidecar tables — they 
 ## Output
 
 ```
-Rules authored: knowledge/rules/<author>_<year>.yaml
+Rules authored as one artifact per rule id
   Rules: N total (one emit_success per add)
 ```
 
 ## When To Rerun
 
-Rerun if you missed a reasoning move and want to add more rules. Additional `pks rule add` calls with the same `--file` (and matching `--paper`) append. One rules file per paper.
+Rerun if you missed a reasoning move and want to add more rules. Additional `pks rule add` calls with the same `--file` authoring group metadata keep the paper grouping readable. Canonical storage is one rule artifact per rule id, not a per-paper rules bucket.
 
 ## Superiority pairs
 
-`RulesFileDocument.superiority` expresses `(superior_rule_id, inferior_rule_id)` pairs for explicit rule priority. Add these pairs through the CLI after both referenced rules exist:
+Rule-superiority artifacts express `(superior_rule_id, inferior_rule_id)` pairs for explicit rule priority. Add these artifacts through the CLI after both referenced rules exist:
 
 ```bash
 pks rule superiority add \
@@ -170,4 +169,4 @@ pks rule superiority add \
   --inferior r_standard_recommendation
 ```
 
-Both rule ids must exist in the same rules file, neither may be a strict rule, and the resulting priority relation must remain acyclic. The CLI validates those constraints and commits the update.
+Both rule ids must exist as canonical rule artifacts, neither may be a strict rule, and the resulting priority relation must remain acyclic. The CLI validates those constraints and commits the update.

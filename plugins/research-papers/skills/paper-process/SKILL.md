@@ -98,7 +98,7 @@ Do not invent a different recovery path. The intended loop is:
 
 ## Step 9: Register Predicates
 
-Concepts and claims are stable at this point, so the paper now has a fixed vocabulary for DeLP/Datalog predicate declarations. This step authors the per-paper predicate inventory in `knowledge/predicates/<paper-stem>.yaml` via `pks predicate add`. Those predicates are the symbol table the next step's rules reference; without them, rule heads and bodies have nothing to bind to.
+Concepts and claims are stable at this point, so the paper now has a fixed vocabulary for DeLP/Datalog predicate declarations. This step authors one canonical predicate artifact per predicate id via `pks predicate add`, using paper/source metadata for readability. Those predicates are the symbol table the next step's rules reference; without them, rule heads and bodies have nothing to bind to.
 
 Invoke:
 
@@ -110,7 +110,7 @@ Follow the nested skill literally. Do not invent predicates outside its workflow
 
 ## Step 10: Author Rules
 
-With predicates declared, this step encodes the paper's stated argument structure as DeLP strict, defeasible, proper-defeater, and blocking-defeater rules in `knowledge/rules/<paper-stem>.yaml` via `pks rule add`. These rules are what makes the DeLP layer non-empty for this paper; the later justification and stance passes describe the paper's argumentation in prose-aligned form, but only the rules authored here participate in propstore's defeasible reasoning.
+With predicates declared, this step encodes the paper's stated argument structure as DeLP strict, defeasible, proper-defeater, and blocking-defeater rule artifacts via `pks rule add`. These rules are what makes the DeLP layer non-empty for this paper; the later justification and stance passes describe the paper's argumentation in prose-aligned form, but only the rules authored here participate in propstore's defeasible reasoning.
 
 Invoke:
 

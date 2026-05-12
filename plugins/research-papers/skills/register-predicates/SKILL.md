@@ -1,6 +1,6 @@
 ---
 name: register-predicates
-description: Author the DeLP/Datalog predicate declarations a paper's rules will use. Per-paper predicates file in knowledge/predicates/. Required before author-rules if the paper's rules reference predicates not yet declared.
+description: Author the DeLP/Datalog predicate declaration artifacts a paper's rules will use. Required before author-rules if the paper's rules reference predicates not yet declared.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI."
@@ -42,7 +42,7 @@ Prefer descriptive predicate names over opaque abstraction. `intervention_reduce
 
 ## Step 3: Register Predicates Via CLI
 
-Use the file stem `<author>_<year>` (e.g., `author_2024`). The first `pks predicate add` call creates `knowledge/predicates/<stem>.yaml`; subsequent calls append to it. Duplicate predicate ids inside the same file are rejected.
+Use the authoring group stem `<author>_<year>` (e.g., `author_2024`) as optional source metadata with `--file`. Each `pks predicate add` call writes one canonical predicate artifact named for the predicate id under the `knowledge/predicates/` directory. Duplicate predicate ids are rejected across canonical predicate artifacts.
 
 ```bash
 cd knowledge  # or pass -C to each pks call
@@ -78,10 +78,10 @@ Expect: `Build rebuilt:` or `Build unchanged:` with zero warnings. If build fail
 ## Output
 
 ```
-Predicates registered: knowledge/predicates/<author>_<year>.yaml
+Predicates registered as one artifact per predicate id
   Predicates: N total (one emit_success per add)
 ```
 
 ## When To Rerun
 
-Rerun this skill if author-rules needs predicates you haven't declared. Use additional `pks predicate add` calls with the same `--file` to append — one predicates file per paper is the convention. Duplicate ids inside a single file are rejected by the CLI.
+Rerun this skill if author-rules needs predicates you haven't declared. Use additional `pks predicate add` calls with the same `--file` authoring group metadata for readability. Canonical storage is one predicate artifact per predicate id, not a per-paper predicates bucket.
