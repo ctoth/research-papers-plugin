@@ -91,7 +91,7 @@ Use the repo itself as a Claude Code marketplace source. The marketplace manifes
 ```bash
 git clone https://github.com/ctoth/research-papers-plugin
 cd research-papers-plugin
-claude plugin marketplace add . --scope user
+claude plugin marketplace add ./. --scope user
 claude plugin install research-papers@research-papers-marketplace --scope user
 ```
 
