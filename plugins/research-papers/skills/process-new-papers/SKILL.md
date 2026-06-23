@@ -16,6 +16,25 @@ Default execution mode:
 
 This skill is a batch wrapper around `paper-reader`. It does not initialize or mutate propstore source branches.
 
+## Adoption Mode (`--from-pdf`)
+
+When the loose PDFs in `papers/` root are user-supplied, already-correct PDFs (not
+the output of retrieval), run `--from-pdf` adoption for each one:
+
+1. **Verify identity (F6).** Render `page-000` and check it against the expected
+   title/DOI with `scripts/pdf_adoption.py identity`. On a mismatch, **HALT** for
+   that PDF and report it rather than processing the wrong paper.
+2. **Copy-verify into the canonical dir (F3).** Use a cloud-sync-safe
+   **copy-verify**-then-remove (`_fsutil.safe_move` / `copy_verify`), never a raw
+   `mv`, into `papers/Author_Year_ShortTitle/paper.pdf`. The `papers/` tree may be
+   in a synced folder (`.research-papers.toml` `[sync] synced_root = true`); when
+   synced, copy-not-move and cap parallel file-mutating workers.
+3. **Run the light flow.** Then read, tag, and reconcile (the `paper-process
+   --light` chain), chaining `tag-papers` and `reconcile`.
+
+If `synced_root` is set, run reconcile **single-writer** (sequentially), never
+from parallel workers, because it edits shared files bidirectionally.
+
 ## Execution Discipline
 
 This skill is a checklist, not an outcome sketch.
