@@ -41,7 +41,8 @@ META = {
 }
 
 
-def _write_epub(dest, *_a, **_k):
+def _write_epub(_title_id, dest, *_a, **_k):
+    # Matches download_epub(title_id, dest, ...): dest is the SECOND positional arg.
     Path(dest).write_bytes(b"PK\x03\x04" + b"\x00" * 32)
     return True
 
@@ -63,8 +64,11 @@ class FetchBookContractTest(unittest.TestCase):
             self.assertEqual(result["dirname"], "Author_2024_ExampleBook")
             self.assertTrue(result["downloaded"])
             self.assertEqual(result["artifact_type"], "epub")
-            self.assertTrue(Path(result["artifact_path"]).exists())
-            self.assertTrue(Path(result["artifact_path"]).name == "book.epub")
+            artifact = Path(result["artifact_path"])
+            self.assertTrue(artifact.exists())
+            self.assertEqual(artifact.name, "book.epub")
+            # The real EPUB bytes must land in the artifact (not an empty temp file).
+            self.assertTrue(artifact.read_bytes().startswith(b"PK\x03\x04"))
             meta = json.loads(Path(result["metadata_path"]).read_text(encoding="utf-8"))
             self.assertEqual(meta["source"], "bookshare")
             self.assertEqual(meta["title"], "Example Book")
