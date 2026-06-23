@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # /// script
 # requires-python = ">=3.10"
-# dependencies = ["requests>=2.28"]
+# dependencies = ["requests>=2.28", "playwright>=1.40"]
 # ///
 """Fetch a book (EPUB3) from Bookshare into the papers/ collection.
 
@@ -35,6 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from _paper_id import generate_dirname  # noqa: E402
 import credential_store  # noqa: E402
 import bookshare_auth  # noqa: E402
+import bookshare_browser  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -146,12 +147,23 @@ def download_epub(title_id: str, dest: Path, api_key: str | None = None,
 def fetch_book(identifier: str, papers_dir: Path, root: str = ".",
                output_dir: str | None = None, metadata_only: bool = False,
                guest: bool = False, auth_method: str | None = None) -> dict:
+    # Bookshare defaults to the browser backend (works without a developer api_key).
+    method = auth_method or credential_store.auth_method(SOURCE, root, default="browser")
+    if method == "browser" and not guest:
+        try:
+            return bookshare_browser.download_via_browser(
+                identifier, papers_dir, root=root,
+                output_dir=output_dir, metadata_only=metadata_only)
+        except credential_store.CredentialError as exc:
+            return {"success": False, "source": SOURCE, "error": str(exc),
+                    "identifier": identifier, "fallback_needed": True}
+
+    # --- official API backend (needs a developer api_key) ---
     api_base = _api_base(root)
     api_key = credential_store.get_secret(SOURCE, "api_key", root)
     token = None
     try:
         if not guest:
-            method = auth_method or credential_store.auth_method(SOURCE, root)
             token = bookshare_auth.get_token_or_authenticate(root=root, auth_method=method)
     except credential_store.CredentialError as exc:
         return {"success": False, "source": SOURCE, "error": str(exc),

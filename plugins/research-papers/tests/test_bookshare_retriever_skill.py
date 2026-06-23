@@ -21,10 +21,16 @@ class SkillProseTest(unittest.TestCase):
     def test_frontmatter_names_the_skill(self) -> None:
         self.assertIn("name: bookshare-retriever", self.text)
 
-    def test_drives_the_three_scripts(self) -> None:
+    def test_drives_the_scripts(self) -> None:
         self.assertIn("credential_store.py show bookshare", self.text)
-        self.assertIn("bookshare_auth.py token", self.text)
         self.assertIn("fetch_book.py", self.text)
+
+    def test_browser_is_the_default_backend(self) -> None:
+        # Browser is the default experience: works with just username/password.
+        self.assertIn("browser", self.text.lower())
+        self.assertIn("bookshare_browser.py", self.text)
+        # The API path (api_key) is documented as the alternative.
+        self.assertIn("--auth-method api", self.text)
 
     def test_documents_epub_and_flags(self) -> None:
         self.assertIn("book.epub", self.text)

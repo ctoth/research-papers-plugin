@@ -228,6 +228,16 @@ def auth_method(
     return default
 
 
+def set_auth_method(
+    source: str, method: str, root: str | os.PathLike[str] = "."
+) -> None:
+    """Persist the auth backend selection without disturbing stored secrets."""
+    record = load(source, root)
+    record.setdefault("source", source)
+    record["auth_method"] = method
+    save(source, record, root)
+
+
 # ---------------------------------------------------------------------------
 # CLI (setup / inspection — never prints secret values)
 # ---------------------------------------------------------------------------
@@ -276,6 +286,12 @@ def _cmd_path(args) -> int:
     return 0
 
 
+def _cmd_auth_method(args) -> int:
+    set_auth_method(args.source, args.method, args.root)
+    print(f"set auth_method={args.method} for {args.source}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Credential store setup/inspection")
     parser.add_argument("--root", default=".", help="Project root (default: .)")
@@ -300,6 +316,12 @@ def main(argv: list[str] | None = None) -> int:
                             help="Print the credential file path")
     p_path.add_argument("source")
     p_path.set_defaults(func=_cmd_path)
+
+    p_method = sub.add_parser("auth-method", parents=[common],
+                              help="Set the auth backend (api|browser)")
+    p_method.add_argument("source")
+    p_method.add_argument("method", choices=["api", "browser"])
+    p_method.set_defaults(func=_cmd_auth_method)
 
     args = parser.parse_args(argv)
     return args.func(args)
