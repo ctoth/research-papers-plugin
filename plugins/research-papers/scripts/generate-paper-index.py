@@ -11,9 +11,18 @@ import yaml
 
 
 def resolve_project_root() -> Path:
-    """Resolve project root from CLI arg or default to plugin-relative path."""
-    if len(sys.argv) > 1:
-        return Path(sys.argv[1]).resolve()
+    """Resolve project root from the first positional CLI arg (skipping flags)."""
+    args = sys.argv[1:]
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a in ("--insert", "--refresh"):
+            i += 2  # skip the flag and its value
+            continue
+        if a.startswith("-"):
+            i += 1
+            continue
+        return Path(a).resolve()
     return Path(__file__).resolve().parent.parent
 
 
@@ -35,6 +44,32 @@ def read_description_body(description_path: Path) -> str:
     # Strip legacy Tags: line
     text = re.sub(r"\n?Tags:\s*.+$", "", text, flags=re.MULTILINE)
     return text.strip()
+
+
+def load_notes_title(notes_path: Path) -> str:
+    """Read the pretty `title:` from a notes.md YAML frontmatter (empty if absent)."""
+    if not notes_path.exists():
+        return ""
+    text = notes_path.read_text(encoding="utf-8")
+    fm = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
+    if not fm:
+        return ""
+    m = re.search(r"^title:\s*(.+)$", fm.group(1), re.MULTILINE)
+    if not m:
+        return ""
+    return m.group(1).strip().strip('"').strip("'")
+
+
+def render_index_header(name: str, title: str, tags: list[str]) -> str:
+    """Build a linked index header: ``## [title](name/notes.md)  (tags)``.
+
+    The header text is a markdown link to the paper's notes.md (not the bare
+    directory name), with two spaces before the tag parenthesis. Falls back to
+    the directory name when no pretty title is available.
+    """
+    display = title or name
+    tag_str = f"  ({', '.join(tags)})" if tags else ""
+    return f"## [{display}]({name}/notes.md){tag_str}"
 
 
 def parse_tags(description_path: Path) -> list[str]:
@@ -119,7 +154,106 @@ def validate_tags(
     return warnings
 
 
+def parse_index_entries(text: str) -> tuple[str, list[tuple[str | None, str]]]:
+    """Split index.md into (preamble, [(dir_name, verbatim_block), ...]).
+
+    Each block runs from one ``## `` header to the next (or EOF) and is kept
+    byte-for-byte so untouched entries are never reformatted.
+    """
+    matches = list(re.finditer(r"(?m)^## ", text))
+    if not matches:
+        return text, []
+    preamble = text[: matches[0].start()]
+    entries: list[tuple[str | None, str]] = []
+    for i, m in enumerate(matches):
+        start = m.start()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        block = text[start:end]
+        nm = re.search(r"^## \[.*?\]\(([^/]+)/notes\.md\)", block)
+        entries.append((nm.group(1) if nm else None, block))
+    return preamble, entries
+
+
+def render_entry_block(name: str, title: str, tags: list[str], desc: str = "") -> str:
+    """Render one index entry block (header + optional desc + trailing blank)."""
+    header = render_index_header(name, title, tags)
+    if desc:
+        return f"{header}\n{desc}\n\n"
+    return f"{header}\n\n"
+
+
+def insert_entry(index_text: str, name: str, title: str,
+                 tags: list[str], desc: str = "") -> str:
+    """Insert or replace one entry in place, sorted by dir name (case-sensitive).
+
+    Every other entry's bytes are preserved exactly.
+    """
+    preamble, entries = parse_index_entries(index_text)
+    entries = [(n, b) for (n, b) in entries if n != name]
+    entries.append((name, render_entry_block(name, title, tags, desc)))
+    entries.sort(key=lambda nb: nb[0] or "")
+    return preamble + "".join(b for _, b in entries)
+
+
+def bump_tag_counts(tags_yaml_text: str, tags: list[str], delta: int = 1) -> str:
+    """Increment per-tag `count:` for each tag, registering new tags in sort order."""
+    data = yaml.safe_load(tags_yaml_text) or {}
+    tagmap = dict(data.get("tags") or {})
+    for tag in tags:
+        entry = tagmap.get(tag)
+        if isinstance(entry, dict):
+            entry = dict(entry)
+            entry["count"] = int(entry.get("count", 0)) + delta
+            tagmap[tag] = entry
+        else:
+            tagmap[tag] = {"count": delta}
+    data["tags"] = {k: tagmap[k] for k in sorted(tagmap)}
+    return yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
+
+
+def insert_paper(papers_dir: Path, name: str) -> None:
+    """Idempotently insert/refresh one paper's index entry and bump tag counts.
+
+    Does NOT rebuild the tagged/ tree.
+    """
+    papers_dir = Path(papers_dir)
+    d = papers_dir / name
+    title = load_notes_title(d / "notes.md")
+    desc = read_description_body(d / "description.md")
+    tags = parse_tags(d / "description.md")
+
+    index_path = papers_dir / "index.md"
+    index_text = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
+    index_path.write_text(insert_entry(index_text, name, title, tags, desc), encoding="utf-8")
+
+    tags_path = papers_dir / "tags.yaml"
+    if tags_path.exists() and tags:
+        tags_path.write_text(
+            bump_tag_counts(tags_path.read_text(encoding="utf-8"), tags), encoding="utf-8")
+
+
 def main():
+    argv = sys.argv[1:]
+    insert_dir = None
+    rebuild_tagged = False
+    i = 0
+    while i < len(argv):
+        a = argv[i]
+        if a in ("--insert", "--refresh"):
+            insert_dir = argv[i + 1] if i + 1 < len(argv) else None
+            i += 2
+            continue
+        if a == "--rebuild-tagged":
+            rebuild_tagged = True
+            i += 1
+            continue
+        i += 1
+
+    if insert_dir:
+        insert_paper(PAPERS_DIR, insert_dir)
+        print(f"Updated index entry for {insert_dir}")
+        return
+
     if not PAPERS_DIR.is_dir():
         print(f"No papers/ directory found at {PAPERS_DIR}")
         return
@@ -158,33 +292,36 @@ def main():
             for w in all_warnings:
                 print(w)
 
-    # Write index.md
+    # Write index.md (linked headers: ## [title](dir/notes.md)  (tags))
     lines = []
     for name, desc, tags in papers:
-        tag_str = f"  ({', '.join(tags)})" if tags else ""
-        lines.append(f"## {name}{tag_str}")
+        title = load_notes_title(PAPERS_DIR / name / "notes.md")
+        lines.append(render_index_header(name, title, tags))
         if desc:
             lines.append(desc)
         lines.append("")
     INDEX_MD.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    # Build tagged-papers/ symlink tree
-    if TAGGED_DIR.exists():
-        shutil.rmtree(TAGGED_DIR)
-    TAGGED_DIR.mkdir()
-
-    for tag, dirnames in sorted(tag_map.items()):
-        tag_dir = TAGGED_DIR / tag
-        tag_dir.mkdir(exist_ok=True)
-        for dirname in sorted(dirnames):
-            link = tag_dir / dirname
-            target = os.path.relpath(PAPERS_DIR / dirname, tag_dir)
-            link.symlink_to(target, target_is_directory=True)
+    # Build tagged-papers/ symlink tree only when explicitly requested.
+    # The unconditional rmtree+recreate is destructive, and symlink creation is
+    # unreliable on Windows; not all collections use the tagged/ tree (B2/F5).
+    if rebuild_tagged:
+        if TAGGED_DIR.exists():
+            shutil.rmtree(TAGGED_DIR)
+        TAGGED_DIR.mkdir()
+        for tag, dirnames in sorted(tag_map.items()):
+            tag_dir = TAGGED_DIR / tag
+            tag_dir.mkdir(exist_ok=True)
+            for dirname in sorted(dirnames):
+                link = tag_dir / dirname
+                target = os.path.relpath(PAPERS_DIR / dirname, tag_dir)
+                link.symlink_to(target, target_is_directory=True)
 
     # Report
     untagged = [name for name, _, tags in papers if not tags]
     print(f"Generated papers/index.md with {len(papers)} papers")
-    print(f"Generated tagged-papers/ with {len(tag_map)} tags")
+    if rebuild_tagged:
+        print(f"Generated tagged-papers/ with {len(tag_map)} tags")
     for tag in sorted(tag_map):
         print(f"  {tag}: {len(tag_map[tag])} papers")
     if untagged:
