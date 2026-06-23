@@ -93,6 +93,51 @@ def page_count(pdf_path) -> int:
         return doc.page_count
 
 
+# Minimum characters on a page for it to count as having a real text layer.
+_TEXT_LAYER_MIN_CHARS = 50
+# Fraction of pages that must carry a text layer to take the text-first path.
+_TEXT_LAYER_RATIO = 0.9
+
+
+def should_use_text_path(stats: dict) -> bool:
+    """Decide the text-first path from page stats (F7).
+
+    ``stats`` carries ``total_pages``, ``text_pages`` (pages with a clean
+    extractable text layer), and optional ``figure_dense``. Text-first wins when
+    almost every page has a text layer (born-digital OR well-OCR'd) and the work
+    is not figure-dense.
+    """
+    total = stats.get("total_pages", 0)
+    if not total:
+        return False
+    if stats.get("figure_dense", False):
+        return False
+    return stats.get("text_pages", 0) / total >= _TEXT_LAYER_RATIO
+
+
+def extractable_text_ratio(pdf_path) -> float:
+    """Fraction of pages carrying a clean extractable text layer (PyMuPDF)."""
+    import fitz
+
+    with fitz.open(pdf_path) as doc:
+        total = doc.page_count
+        if not total:
+            return 0.0
+        text_pages = sum(
+            1 for page in doc if len(page.get_text().strip()) >= _TEXT_LAYER_MIN_CHARS
+        )
+        return text_pages / total
+
+
+def get_text(pdf_path, first=None, last=None) -> str:
+    """Extract the text layer (optionally a 0-based page range) via PyMuPDF."""
+    import fitz
+
+    with fitz.open(pdf_path) as doc:
+        pages = _page_range(doc.page_count, first, last)
+        return "\n".join(doc.load_page(i).get_text() for i in pages)
+
+
 def _page_range(total: int, first, last) -> range:
     lo = 0 if first is None else max(0, first)
     hi = total - 1 if last is None else min(total - 1, last)

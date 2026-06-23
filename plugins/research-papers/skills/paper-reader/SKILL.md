@@ -180,6 +180,41 @@ ls "$paper_dir"/pngs/page-*.png | wc -l
 - **≤300 pages**: Read all page images yourself (Step 2A). This is the default path. Modern long-context models hold a full academic paper in working memory without chunking.
 - **>300 pages**: Chunk protocol (Step 2B). Only book-length works should reach this branch.
 
+### Text-first path for large documents with a clean text layer (F7)
+
+Before rasterizing every page of a large work (300+ page books, dissertations),
+check whether it has a clean extractable **text layer**. This is keyed on "has a
+clean extractable text layer" (born-digital **or** well-OCR'd scanned), not on
+born-digital alone:
+
+```bash
+PYTHON=$(command -v python3 || command -v python)
+"$PYTHON" - "$work_pdf" <<'PY'
+import sys, render_pages
+pdf = sys.argv[1]
+ratio = render_pages.extractable_text_ratio(pdf)
+total = render_pages.page_count(pdf)
+text_pages = round(ratio * total)
+use_text = render_pages.should_use_text_path(
+    {"total_pages": total, "text_pages": text_pages, "figure_dense": False})
+print("text-first" if use_text else "page-image")
+PY
+```
+
+When `should_use_text_path` is true, take the **hybrid** text-first lane instead
+of rendering every page:
+
+- Pull verbatim quotes and exact printed page numbers from the text layer with
+  `render_pages.get_text` (optionally a page range) - no full `pngs/` needed.
+- Render to PNG **only** the figure-dense or in-scope pages that need a visual
+  lane (use `render_pages.py render ... --first N --last M`).
+- Record in the `notes.md` provenance line **which lane supplied what** (text
+  layer vs rendered image), since 150-dpi images of dense book pages are legible
+  but too small to transcribe reliably.
+
+If the text layer is absent or dirty (scanned without OCR), fall back to the
+page-image lane (Step 2A / 2B).
+
 ## Step 1.5: Prove the Page-Image Lane Works
 
 Before long extraction, inspect `page-000.png` from the paper's `pngs/` directory using the platform's local image-reading capability (for example, `Read Image` in Claude Code or `view_image` in Codex).
