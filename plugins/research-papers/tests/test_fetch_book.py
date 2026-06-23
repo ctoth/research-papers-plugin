@@ -16,11 +16,15 @@ from unittest.mock import MagicMock, patch
 
 SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
 
-if "requests" not in sys.modules:
-    _stub = types.ModuleType("requests")
-    _stub.get = None
-    _stub.post = None
-    sys.modules["requests"] = _stub
+# Ensure a `requests` module exists with get/post attrs, regardless of whether a
+# sibling test already installed a partial stub (order-independent).
+_req = sys.modules.get("requests")
+if _req is None:
+    _req = types.ModuleType("requests")
+    sys.modules["requests"] = _req
+for _attr in ("get", "post"):
+    if not hasattr(_req, _attr):
+        setattr(_req, _attr, None)
 
 
 def load_module(name: str, path: Path):
