@@ -12,6 +12,28 @@ Retrieve one paper, extract the paper artifacts, and run the per-paper propstore
 
 This is a pure orchestrator. It calls nested skills. It does not inline propstore source-branch mutation commands.
 
+## Light Flow (`--light` / `--notes-only`)
+
+If `$ARGUMENTS` includes `--light` (or `--notes-only`), run the **notes-layer-only**
+flow and stop. This is the supported path for notes-layer lit reviews that do not
+use the propstore.
+
+Run, in order, skipping every propstore step:
+
+1. `/research-papers:paper-retriever <input>` — retrieve the PDF.
+2. `/research-papers:paper-reader <path-from-step-1>` — extract the paper artifacts.
+3. `/research-papers:tag-papers <paper-directory>` — tag and update `tags.yaml` counts.
+4. `/research-papers:reconcile <paper-directory>` — cross-reference into the collection.
+
+Then stop. In `--light` mode you **skip** Steps 4 onward of the full flow — i.e.
+**skip** `source-bootstrap`, `author-context`, `register-concepts`,
+`extract-claims`, `extract-justifications`, `extract-stances`, `source-promote`,
+and every `pks` source-branch command. The notes layer (notes/description/abstract/
+citations + index + cross-references) is the complete deliverable here; no
+propstore branch is created or mutated.
+
+If `--light` is not present, ignore this section and run the full flow below.
+
 ## Execution Discipline
 
 - Follow the steps in order.
