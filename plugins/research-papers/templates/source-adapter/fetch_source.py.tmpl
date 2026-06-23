@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["requests>=2.28"]
+# ///
+"""Fetch an artifact from {{SOURCE_TITLE}} (unauthenticated source adapter).
+
+Conforms to the source-adapter contract (see templates/source-adapter/HOWTO.md):
+resolves metadata, downloads {{ARTIFACT_NAME}} into papers/<dirname>/, writes
+metadata.json, prints one JSON result, exits 0/1. No credentials involved.
+
+Usage:
+  uv run fetch_{{SOURCE_NAME}}.py "<{{IDENTIFIER_HINT}}>" --papers-dir papers/
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import logging
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+import requests
+
+# Reuse the canonical directory-naming helper; resolves from the scripts dir.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from _paper_id import generate_dirname  # noqa: E402
+
+logger = logging.getLogger(__name__)
+
+SOURCE = "{{SOURCE_NAME}}"
+API_BASE = "{{API_BASE}}"
+ARTIFACT_NAME = "{{ARTIFACT_NAME}}"
+
+
+def resolve_metadata(identifier: str) -> dict | None:
+    """Return {title, authors, year, first_author_surname, url, ...} or None.
+
+    TODO: query {{API_BASE}} and map the response into this shape.
+    """
+    raise NotImplementedError("fill in {{SOURCE_TITLE}} metadata resolution")
+
+
+def download_artifact(identifier: str, metadata: dict, dest: Path) -> bool:
+    """Download the artifact to dest. Return True on success.
+
+    TODO: fetch from {{API_BASE}} and validate the bytes look right.
+    """
+    raise NotImplementedError("fill in {{SOURCE_TITLE}} artifact download")
+
+
+def fetch(identifier: str, papers_dir: Path, output_dir: str | None = None,
+          metadata_only: bool = False) -> dict:
+    metadata = resolve_metadata(identifier)
+    if not metadata:
+        return {"success": False, "source": SOURCE, "error": "metadata not resolved",
+                "identifier": identifier, "fallback_needed": True}
+
+    dirname = output_dir or generate_dirname(
+        metadata.get("first_author_surname"),
+        metadata.get("year"),
+        metadata.get("title"),
+    ) or f"{SOURCE}_{identifier}".replace("/", "_")
+    paper_dir = papers_dir / dirname
+    meta_out = {k: v for k, v in metadata.items()
+                if k != "first_author_surname" and v is not None}
+    meta_out["source"] = SOURCE
+
+    result = {
+        "success": True, "source": SOURCE,
+        "directory": str(paper_dir), "dirname": dirname,
+        "title": metadata.get("title"), "authors": metadata.get("authors"),
+        "year": metadata.get("year"),
+        "artifact_path": None, "artifact_type": None, "metadata_path": None,
+        "downloaded": False, "fallback_needed": False,
+    }
+
+    if metadata_only:
+        paper_dir.mkdir(parents=True, exist_ok=True)
+        meta_path = paper_dir / "metadata.json"
+        meta_path.write_text(json.dumps(meta_out, indent=2, ensure_ascii=False),
+                             encoding="utf-8")
+        result["metadata_path"] = str(meta_path)
+        return result
+
+    fd, tmp = tempfile.mkstemp(prefix="temp_fetch_", suffix=Path(ARTIFACT_NAME).suffix,
+                               dir=str(papers_dir) if papers_dir.exists() else None)
+    os.close(fd)
+    tmp_path = Path(tmp)
+    downloaded = False
+    try:
+        downloaded = download_artifact(identifier, metadata, tmp_path)
+    finally:
+        if not downloaded:
+            tmp_path.unlink(missing_ok=True)
+
+    if downloaded:
+        paper_dir.mkdir(parents=True, exist_ok=True)
+        artifact_path = paper_dir / ARTIFACT_NAME
+        tmp_path.replace(artifact_path)
+        meta_path = paper_dir / "metadata.json"
+        meta_path.write_text(json.dumps(meta_out, indent=2, ensure_ascii=False),
+                             encoding="utf-8")
+        result.update({
+            "artifact_path": str(artifact_path),
+            "artifact_type": Path(ARTIFACT_NAME).suffix.lstrip("."),
+            "metadata_path": str(meta_path), "downloaded": True,
+        })
+    else:
+        result["fallback_needed"] = True
+
+    return result
+
+
+def main(argv: list[str] | None = None) -> None:
+    p = argparse.ArgumentParser(description=f"Fetch from {SOURCE}")
+    p.add_argument("identifier", help="{{IDENTIFIER_HINT}}")
+    p.add_argument("--papers-dir", default="papers/")
+    p.add_argument("--output-dir")
+    p.add_argument("--metadata-only", action="store_true")
+    args = p.parse_args(argv)
+
+    result = fetch(args.identifier, Path(args.papers_dir),
+                   output_dir=args.output_dir, metadata_only=args.metadata_only)
+    print(json.dumps(result, indent=2))
+    if not result.get("success"):
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+    main()

@@ -1,0 +1,68 @@
+---
+name: {{SKILL_NAME}}
+description: Retrieve an artifact from {{SOURCE_TITLE}} given {{IDENTIFIER_HINT}}. Authenticates with stored credentials (see scripts/credential_store.py), downloads {{ARTIFACT_NAME}} into papers/, and writes metadata.json. Conforms to the shared source-adapter contract.
+argument-hint: "<{{IDENTIFIER_HINT}}> [--guest]"
+disable-model-invocation: false
+compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires shell access. Authenticated retrieval needs credentials stored under .secrets/{{SOURCE_NAME}}.json."
+---
+
+# {{SOURCE_TITLE}} Retriever: $ARGUMENTS
+
+Retrieve an artifact from {{SOURCE_TITLE}} and place it in the `papers/` collection.
+
+## Script Paths
+
+The `scripts/...` paths below are relative to this skill's directory. Resolve them
+against the installed skill location, not the user's project root.
+
+## Step 1: Ensure credentials are present
+
+```bash
+uv run scripts/credential_store.py show {{SOURCE_NAME}} --root .
+```
+
+If required secrets are missing, STOP and tell the user to populate the file printed
+by `uv run scripts/credential_store.py path {{SOURCE_NAME}} --root .`. Never print
+secret values. Skip this step for `--guest` (public artifacts only).
+
+## Step 2: Authenticate
+
+```bash
+uv run scripts/{{SOURCE_NAME}}_auth.py token --root .
+```
+
+Caches a token via the credential store. The command prints validity only, never the
+token. Use `--auth-method browser` for the driven-login backend; `--guest` skips this.
+
+## Step 3: Resolve the identifier
+
+```bash
+uv run scripts/fetch_{{SOURCE_NAME}}.py "<{{IDENTIFIER_HINT}}>" --metadata-only --root . --papers-dir papers/
+```
+
+If the match is ambiguous, present the candidates and ask the user which to retrieve.
+
+## Step 4: Download
+
+```bash
+uv run scripts/fetch_{{SOURCE_NAME}}.py "<resolved-id>" --root . --papers-dir papers/
+```
+
+Writes `papers/<dirname>/{{ARTIFACT_NAME}}` and `papers/<dirname>/metadata.json`.
+
+## Output
+
+Report the retrieved artifact path, the source, and the size. The JSON result on
+stdout carries the source-adapter contract keys (`success`, `directory`, `dirname`,
+`artifact_path`, `artifact_type`, `metadata_path`, `downloaded`, `fallback_needed`).
+
+## Error Handling
+
+- Missing credentials → STOP at Step 1 with the file path to populate.
+- Auth failure → report the error from Step 2 (no secret values) and stop.
+- Download failure → `fallback_needed: true`; no directory is created. Report and stop.
+
+## Execution Discipline
+
+Follow the steps in order. Do not substitute alternate tools or download paths. If a
+step is blocked, stop at that step and report the blocker.

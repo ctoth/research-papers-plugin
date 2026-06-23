@@ -1,0 +1,85 @@
+#!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["requests>=2.28"]
+# ///
+"""Token acquisition + caching for {{SOURCE_TITLE}} (authenticated adapter).
+
+Sits between the fetch script and scripts/credential_store.py so the fetch script
+never touches .secrets/ directly. Implements the pluggable auth backends:
+  - "api"     : OAuth2 against {{AUTH_BASE}} using stored secrets
+  - "browser" : returns a captured session marker (wire up your driven login)
+
+CLI:
+  uv run {{SOURCE_NAME}}_auth.py token --root . [--auth-method api|browser]
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+import time
+from pathlib import Path
+
+import requests
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import credential_store  # noqa: E402
+
+SOURCE = "{{SOURCE_NAME}}"
+AUTH_BASE = "{{AUTH_BASE}}"
+SECRET_KEYS = {{SECRET_KEYS}}
+
+
+def acquire_token_api(secrets: dict) -> dict:
+    """Exchange stored secrets for an access token at {{AUTH_BASE}}.
+
+    TODO: shape the request to your provider. Return a dict containing at least
+    `access_token`; include `expires_in` so credential_store can cache expiry.
+    """
+    raise NotImplementedError("fill in {{SOURCE_TITLE}} token request")
+
+
+def get_token_or_authenticate(root: str = ".", auth_method: str = "api") -> dict | None:
+    """Return a valid cached token, or authenticate and cache a fresh one."""
+    cached = credential_store.get_token(SOURCE, root)
+    if cached:
+        return cached
+
+    if auth_method == "browser":
+        # Drive a real login (e.g. Playwright) and capture a session here.
+        return {"auth_method": "browser", "session": "TODO"}
+
+    secrets = credential_store.require_secrets(SOURCE, SECRET_KEYS, root)
+    token = acquire_token_api(secrets)
+    credential_store.set_token(SOURCE, token, root)
+    return token
+
+
+def main(argv: list[str] | None = None) -> int:
+    p = argparse.ArgumentParser(description=f"{SOURCE} authentication")
+    sub = p.add_subparsers(dest="cmd", required=True)
+    p_tok = sub.add_parser("token", help="Acquire/refresh a token; print validity only")
+    p_tok.add_argument("--root", default=".")
+    p_tok.add_argument("--auth-method", choices=["api", "browser"], default="api")
+    args = p.parse_args(argv)
+
+    try:
+        token = get_token_or_authenticate(root=args.root, auth_method=args.auth_method)
+    except credential_store.CredentialError as exc:
+        print(json.dumps({"success": False, "error": str(exc)}, indent=2))
+        return 1
+
+    exp = (token or {}).get("expires_at")
+    when = (time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(exp))
+            if isinstance(exp, (int, float)) else None)
+    # Never print the token itself.
+    print(json.dumps({"success": bool(token), "auth_method": args.auth_method,
+                      "token_valid_until": when}, indent=2))
+    return 0 if token else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
