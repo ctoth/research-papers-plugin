@@ -127,6 +127,19 @@ magick -density 150 "$work_pdf[0]" -quality 90 -resize '1960x1960>' "$tmpdir/pag
 
 Read either the existing `pngs/page-000.png` or `$tmpdir/page0.png` to extract author, year, and title. Determine directory name: `LastName_Year_2-4WordTitle` (e.g., `Mack_2021_AccessibilityResearchSurvey`).
 
+**Identity verification (F6).** If the caller passed an expected title or DOI (for
+a retrieved or adopted PDF), verify that the rendered `page-000` matches it before
+proceeding. Title-fallback retrieval and loose user PDFs can be the wrong paper:
+
+```bash
+PYTHON=$(command -v python3 || command -v python)
+# extract page-000 text however the platform allows, then:
+"$PYTHON" scripts/pdf_adoption.py identity --expected "$EXPECTED_TITLE_OR_DOI" --page0 page0.txt
+```
+
+If `compare_identity` reports `MISMATCH`, **HALT** and report the mismatch with a
+clear message; do not process a paper whose title page does not match the request.
+
 For a new paper, set:
 
 ```bash

@@ -34,9 +34,10 @@ SKILLS_DIR = PLUGIN_ROOT / "skills"
 # canonical scripts dir when a canonical script runs (its __file__ is canonical),
 # so no per-skill copy is needed.
 MANIFEST = {
-    "paper-reader": ["paper_hash.py"],
+    "paper-reader": ["paper_hash.py", "pdf_adoption.py"],
     "paper-retriever": ["fetch_paper.py", "search_papers.py"],
     "process-leads": ["get_citations.py", "paper_hash.py"],
+    "process-new-papers": ["pdf_adoption.py"],
 }
 
 # Per-skill files that the old symlink layout created but the launcher layout no

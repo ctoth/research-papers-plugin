@@ -12,6 +12,12 @@ Cross-reference a paper (or all papers) against the collection, ensuring every c
 
 This is a notes-layer skill. It updates paper notes and collection cross-references only; it does not initialize or mutate propstore source branches.
 
+**Cloud-sync safety (F3).** Reconcile edits shared files (`index.md` and multiple
+papers' `notes.md`) bidirectionally. When `papers/` is in a synced folder
+(`.research-papers.toml` `[sync] synced_root = true`), it MUST run **single-writer**
+(sequentially, never from parallel workers), and any file relocation must
+copy-verify-then-remove rather than move, to avoid racing the sync daemon.
+
 ## Step 0: Determine Mode
 
 Parse `$ARGUMENTS`:
