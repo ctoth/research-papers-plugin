@@ -39,6 +39,7 @@ MANIFEST = {
     "process-leads": ["get_citations.py", "paper_hash.py"],
     "process-new-papers": ["pdf_adoption.py"],
     "verify-citations": ["verify_citations.py"],
+    "bookshare-retriever": ["bookshare_auth.py", "fetch_book.py"],
 }
 
 # Per-skill files that the old symlink layout created but the launcher layout no

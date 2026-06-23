@@ -1,0 +1,37 @@
+# Example .research-papers.toml — copy to `.research-papers.toml` and edit.
+#
+# This file holds NON-SECRET, per-user configuration only. It is safe to read,
+# but is git-ignored by convention since it is user-specific. SECRETS NEVER GO
+# HERE — credentials and OAuth tokens live in the git-ignored `.secrets/`
+# directory, written via `credential_store.py set <source> <key> --from-stdin`.
+
+# --- Bookshare source adapter -------------------------------------------------
+
+[sources.bookshare]
+# Which authentication backend the bookshare-retriever skill uses:
+#   "api"     official Bookshare API OAuth2 password grant (needs a developer
+#             api_key + trusted-client approval from partner-support@bookshare.org)
+#   "browser" driven browser login (username/password only, no api_key)
+auth_method = "api"
+
+# Download format requested from Bookshare.
+download_format = "EPUB3"
+
+# Download-only by default. Set true (or pass --convert) to also produce a
+# paper.pdf (via headless Chrome) so the paper-reader pipeline can ingest it.
+convert_to_pdf = false
+
+# Optional EPUB->PDF converter: "chrome" (default, reuses the repo's Chrome
+# dependency) or "calibre" (higher fidelity, requires `ebook-convert` installed).
+# converter = "chrome"
+
+[bookshare]
+# API + auth endpoints. Override only if Bookshare changes them.
+api_base = "https://api.bookshare.org/v2"
+auth_base = "https://auth.bookshare.org/oauth/token"
+
+# Secrets for the API backend (the developer api_key, plus your Bookshare
+# username and password) are NOT configured here. Store them with, e.g.:
+#   printf '%s' "<value>" | uv run scripts/credential_store.py set bookshare api_key --from-stdin --root .
+# and inspect presence (never values) with:
+#   uv run scripts/credential_store.py show bookshare --root .

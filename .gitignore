@@ -11,3 +11,6 @@ knowledge
 prompts
 pyghidra_mcp_projects/
 **/pyghidra_mcp_projects/
+
+# Credential store — secrets/tokens for authenticated source adapters. Never commit.
+.secrets
