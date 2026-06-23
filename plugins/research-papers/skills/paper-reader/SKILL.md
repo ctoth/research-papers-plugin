@@ -215,6 +215,53 @@ of rendering every page:
 If the text layer is absent or dirty (scanned without OCR), fall back to the
 page-image lane (Step 2A / 2B).
 
+### Scoped ingestion of one chapter or page range (F14)
+
+Foundational books are usually cited for a single chapter, not the whole volume.
+If the caller passes `--chapter "<title or N>"` or `--pages <start-end>`, ingest
+only that scope instead of the whole book:
+
+1. Resolve the boundary from the embedded TOC:
+   ```bash
+   PYTHON=$(command -v python3 || command -v python)
+   "$PYTHON" - "$work_pdf" "<chapter title or N>" <<'PY'
+   import sys, render_pages
+   toc = render_pages.get_toc(sys.argv[1])
+   start, end = render_pages.resolve_chapter_range(toc, sys.argv[2])
+   print(start, end)
+   PY
+   ```
+   (`--pages X-Y` skips the TOC step and uses the given range directly.)
+2. Render only that printed range plus the front matter for metadata
+   (`render_pages.py render ... --first <front> --last <end>`), not all pages.
+3. Keep `paper.pdf` as the **whole book** on disk; only the notes are scoped.
+4. Write an **Ingestion scope** banner at the top of `notes.md` stating exactly
+   which chapter / page range was ingested and that the rest is intentionally
+   unextracted.
+5. Mark the entry as a partial / chapter ingestion in `metadata.json`.
+
+### Document type (article | book | book_chapter | thesis | report) (F15)
+
+Set `document_type` in `metadata.json`. For `book_chapter`, also carry
+`container_title`, `chapter`, `pages`, `publisher`, and `address`. Naming: the
+directory names the **chapter** (`Geertz_1973_ThickDescription`) while
+`paper.pdf` is the **whole book** - record this in the scope banner. `abstract.md`
+is optional and clearly marked for book chapters (substitute the author's
+one-clause thesis with a note saying so). Emit the right BibTeX entry type via
+`scripts/export_bibtex.py` (`@incollection` for a chapter with `booktitle` /
+`publisher` / `pages`, `@book` for a whole book).
+
+### Theory / humanities notes profile (`--profile theory`) (F16)
+
+For non-empirical interpretive-theory works, the empirical scaffold (Study Design,
+Key Equations, Parameters, Effect Sizes, Testable Properties) is dead weight. When
+`--profile theory` is passed (or the work is clearly non-empirical), swap those
+sections for: **Key Concepts and Definitions**, **Core Argument / Thesis**,
+**Arguments Against Prior Work**, **Design Rationale**,
+**Load-Bearing Propositions** (in place of Testable Properties), and
+**Relevance to Project**.
+Keep page-cited verbatim quotes mandatory.
+
 ## Step 1.5: Prove the Page-Image Lane Works
 
 Before long extraction, inspect `page-000.png` from the paper's `pngs/` directory using the platform's local image-reading capability (for example, `Read Image` in Claude Code or `view_image` in Codex).
