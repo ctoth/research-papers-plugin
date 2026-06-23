@@ -70,11 +70,22 @@ For each paper directory, run all checks and collect results.
 
 ### Index Checks
 
-6. **In index**: Is the paper listed in `papers/index.md`?
+6. **In index**: Is the paper listed in `papers/index.md` with a valid linked header?
+   The header must be a markdown link to the paper's `notes.md`
+   (`## [Pretty Title](Author_Year_ShortTitle/notes.md)␣␣(tags)`), not a bare
+   directory name. A substring match on the directory name is too weak — it
+   always matches inside the link target and cannot catch a malformed header,
+   stale title, wrong link target, or missing two-space gap. Match structurally
+   on the link target instead:
    ```bash
-   grep -c "## $(basename $paper_dir)" papers/index.md
+   dir="$(basename "$paper_dir")"
+   # Linked header whose target resolves to THIS paper's notes.md:
+   grep -E "^## \[.+\]\(${dir}/notes\.md\)" papers/index.md
    ```
-   Missing → report as `NOT_INDEXED`
+   - No match → report as `NOT_INDEXED` (missing, or a malformed/bare-dirname header).
+   - Confirm the link target file exists: `test -f "papers/${dir}/notes.md"`.
+   - Confirm the two-space gap before the tag parenthesis (`](...)␣␣(tags)`),
+     not a single space, when tags are present.
 
 7. **Index description matches**: Does the description in `index.md` match `description.md`?
    Only check if both exist — flag `INDEX_STALE` if they differ.
