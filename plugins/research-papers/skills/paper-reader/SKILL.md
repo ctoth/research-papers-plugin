@@ -629,6 +629,25 @@ The header is a **markdown link**, not plain text and not a `[[wikilink]]`. GitH
 
 ---
 
+## Step 8.5: Record the processed-ledger entry
+
+Append a canonical line to `papers/_reader_done.tsv` (`cite_key<TAB>dir`) so the
+collection has a durable record that this paper is fully processed. `lint-paper`
+and the collection verify cross-check this ledger against the directories and the
+index, so it must not be skipped.
+
+```bash
+dir="<Author_Year_ShortTitle>"
+cite_key=$(grep -o '"cite_key"[[:space:]]*:[[:space:]]*"[^"]*"' "papers/$dir/metadata.json" | head -1 | sed 's/.*"cite_key"[[:space:]]*:[[:space:]]*"//; s/"$//')
+ledger="papers/_reader_done.tsv"
+# Idempotent: only append if this dir is not already recorded.
+if ! grep -q "	$dir$" "$ledger" 2>/dev/null; then
+  printf '%s\t%s\n' "$cite_key" "$dir" >> "$ledger"
+fi
+```
+
+---
+
 ## Step 9: Stop At Paper Artifacts
 
 `paper-reader` does not mutate propstore source branches. Source initialization, claim authoring, provenance on semantic assertions, and promotion are handled by later source-oriented skills.
