@@ -113,9 +113,9 @@ def validate_tags(
         if tag in canonical:
             continue
         if tag in aliases:
-            warnings.append(f"Tag '{tag}' is an alias for '{aliases[tag]}' — consider updating")
+            warnings.append(f"Tag '{tag}' is an alias for '{aliases[tag]}' - consider updating")
         else:
-            warnings.append(f"Tag '{tag}' is not in tags.yaml — consider adding it")
+            warnings.append(f"Tag '{tag}' is not in tags.yaml - consider adding it")
     return warnings
 
 
