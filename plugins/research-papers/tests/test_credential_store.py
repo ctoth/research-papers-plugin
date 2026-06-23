@@ -168,6 +168,20 @@ class ConfigTest(unittest.TestCase):
             CRED.save("bookshare", {"auth_method": "api"}, td)
             self.assertEqual(CRED.auth_method("bookshare", td), "api")
 
+    def test_auth_method_honors_explicit_default_argument(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            self.assertEqual(CRED.auth_method("bookshare", td, default="browser"), "browser")
+
+    def test_set_auth_method_persists_and_preserves_secrets(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            CRED.set_secret("bookshare", "username", "u", td)
+            CRED.set_auth_method("bookshare", "browser", td)
+            record = CRED.load("bookshare", td)
+            self.assertEqual(record["auth_method"], "browser")
+            # setting auth_method must not clobber existing secrets
+            self.assertEqual(record["secrets"]["username"], "u")
+            self.assertEqual(CRED.auth_method("bookshare", td), "browser")
+
 
 class GitignoreSafetyTest(unittest.TestCase):
     """Regression guard: the credential dir must stay out of version control."""

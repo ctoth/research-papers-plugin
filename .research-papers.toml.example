@@ -9,10 +9,11 @@
 
 [sources.bookshare]
 # Which authentication backend the bookshare-retriever skill uses:
+#   "browser" (default) driven browser login (username/password only, no api_key) —
+#             logs into your Bookshare account and downloads the EPUB
 #   "api"     official Bookshare API OAuth2 password grant (needs a developer
 #             api_key + trusted-client approval from partner-support@bookshare.org)
-#   "browser" driven browser login (username/password only, no api_key)
-auth_method = "api"
+auth_method = "browser"
 
 # Download format requested from Bookshare.
 download_format = "EPUB3"

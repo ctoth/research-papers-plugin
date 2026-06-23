@@ -61,7 +61,7 @@ class FetchBookContractTest(unittest.TestCase):
                 with patch.object(FETCH, "download_epub", side_effect=_write_epub):
                     with patch.object(FETCH.bookshare_auth, "get_token_or_authenticate",
                                       return_value={"access_token": "T"}):
-                        result = FETCH.fetch_book("Example Book", papers, root=td)
+                        result = FETCH.fetch_book("Example Book", papers, root=td, auth_method="api")
 
             self.assertTrue(result["success"])
             self.assertEqual(result["source"], "bookshare")
@@ -85,7 +85,7 @@ class FetchBookContractTest(unittest.TestCase):
                 with patch.object(FETCH, "download_epub", return_value=False):
                     with patch.object(FETCH.bookshare_auth, "get_token_or_authenticate",
                                       return_value={"access_token": "T"}):
-                        result = FETCH.fetch_book("Example Book", papers, root=td)
+                        result = FETCH.fetch_book("Example Book", papers, root=td, auth_method="api")
             self.assertTrue(result["fallback_needed"])
             self.assertFalse(result["downloaded"])
             self.assertFalse(Path(result["directory"]).exists())
@@ -140,7 +140,7 @@ class GracefulErrorTest(unittest.TestCase):
             err = CRED.CredentialError("Missing bookshare credential(s): api_key.")
             with patch.object(FETCH.bookshare_auth, "get_token_or_authenticate",
                               side_effect=err):
-                result = FETCH.fetch_book("The Way of Kings", papers, root=td)
+                result = FETCH.fetch_book("The Way of Kings", papers, root=td, auth_method="api")
             self.assertFalse(result["success"])
             self.assertTrue(result["fallback_needed"])
             self.assertIn("api_key", result["error"])
@@ -157,6 +157,44 @@ class GracefulErrorTest(unittest.TestCase):
             self.assertTrue(result["fallback_needed"])
             self.assertIn("403", result["error"])
             self.assertFalse(any(papers.iterdir()))
+
+
+class BrowserRoutingTest(unittest.TestCase):
+    """Browser is the default backend and delegates to bookshare_browser."""
+
+    def test_browser_method_delegates_to_browser_backend(self) -> None:
+        sentinel = {"success": True, "source": "bookshare", "downloaded": True,
+                    "dirname": "X", "fallback_needed": False}
+        with tempfile.TemporaryDirectory() as td:
+            papers = Path(td) / "papers"
+            papers.mkdir()
+            with patch.object(FETCH.bookshare_browser, "download_via_browser",
+                              return_value=sentinel) as m:
+                result = FETCH.fetch_book("Alice", papers, root=td, auth_method="browser")
+            m.assert_called_once()
+            self.assertIs(result, sentinel)
+
+    def test_default_auth_method_is_browser(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            papers = Path(td) / "papers"
+            papers.mkdir()
+            with patch.object(FETCH.bookshare_browser, "download_via_browser",
+                              return_value={"success": True, "fallback_needed": False}) as m:
+                # No auth_method, no config, no record -> defaults to browser.
+                FETCH.fetch_book("Alice", papers, root=td)
+            m.assert_called_once()
+
+    def test_guest_stays_on_api_path(self) -> None:
+        # guest never uses the browser backend (no login).
+        with tempfile.TemporaryDirectory() as td:
+            papers = Path(td) / "papers"
+            papers.mkdir()
+            with patch.object(FETCH.bookshare_browser, "download_via_browser") as m:
+                with patch.object(FETCH, "resolve_metadata", return_value=META):
+                    with patch.object(FETCH, "download_epub", side_effect=_write_epub):
+                        result = FETCH.fetch_book("Alice", papers, root=td, guest=True)
+            m.assert_not_called()
+            self.assertTrue(result["success"])
 
 
 class MainExitCodeTest(unittest.TestCase):
