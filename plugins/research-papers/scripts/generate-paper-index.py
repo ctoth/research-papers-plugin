@@ -37,6 +37,32 @@ def read_description_body(description_path: Path) -> str:
     return text.strip()
 
 
+def load_notes_title(notes_path: Path) -> str:
+    """Read the pretty `title:` from a notes.md YAML frontmatter (empty if absent)."""
+    if not notes_path.exists():
+        return ""
+    text = notes_path.read_text(encoding="utf-8")
+    fm = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
+    if not fm:
+        return ""
+    m = re.search(r"^title:\s*(.+)$", fm.group(1), re.MULTILINE)
+    if not m:
+        return ""
+    return m.group(1).strip().strip('"').strip("'")
+
+
+def render_index_header(name: str, title: str, tags: list[str]) -> str:
+    """Build a linked index header: ``## [title](name/notes.md)  (tags)``.
+
+    The header text is a markdown link to the paper's notes.md (not the bare
+    directory name), with two spaces before the tag parenthesis. Falls back to
+    the directory name when no pretty title is available.
+    """
+    display = title or name
+    tag_str = f"  ({', '.join(tags)})" if tags else ""
+    return f"## [{display}]({name}/notes.md){tag_str}"
+
+
 def parse_tags(description_path: Path) -> list[str]:
     """Extract tags from YAML frontmatter or legacy Tags: line in description.md."""
     if not description_path.exists():
@@ -158,11 +184,11 @@ def main():
             for w in all_warnings:
                 print(w)
 
-    # Write index.md
+    # Write index.md (linked headers: ## [title](dir/notes.md)  (tags))
     lines = []
     for name, desc, tags in papers:
-        tag_str = f"  ({', '.join(tags)})" if tags else ""
-        lines.append(f"## {name}{tag_str}")
+        title = load_notes_title(PAPERS_DIR / name / "notes.md")
+        lines.append(render_index_header(name, title, tags))
         if desc:
             lines.append(desc)
         lines.append("")
