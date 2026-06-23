@@ -1,0 +1,78 @@
+"""Tests for the {{SOURCE_TITLE}} source adapter (fetch_{{SOURCE_NAME}}.py).
+
+Mirrors test_fetch_paper.py: load the script by path, stub `requests` so import
+works offline, patch the network-touching functions, and assert the source-adapter
+contract. No real network.
+"""
+
+import importlib.util
+import json
+import sys
+import tempfile
+import types
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+SCRIPTS_DIR = Path(__file__).resolve().parent.parent / "scripts"
+
+if "requests" not in sys.modules:
+    sys.modules["requests"] = types.ModuleType("requests")
+
+
+def load_module(name: str, path: Path):
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+FETCH = load_module("fetch_{{SOURCE_NAME}}_module", SCRIPTS_DIR / "fetch_{{SOURCE_NAME}}.py")
+
+CONTRACT_KEYS = {
+    "success", "source", "directory", "dirname", "artifact_path",
+    "artifact_type", "metadata_path", "downloaded", "fallback_needed",
+}
+
+META = {
+    "title": "Example Work", "authors": ["A. Author"], "year": "2024",
+    "first_author_surname": "Author",
+}
+
+
+class ContractTest(unittest.TestCase):
+    def test_success_writes_artifact_and_metadata(self) -> None:
+        def fake_download(*_a, **_k):
+            dest = _a[2] if len(_a) > 2 else _k["dest"]
+            Path(dest).write_bytes(b"PK\x03\x04 example")
+            return True
+
+        with tempfile.TemporaryDirectory() as td:
+            papers = Path(td) / "papers"
+            papers.mkdir()
+            with patch.object(FETCH, "resolve_metadata", return_value=META):
+                with patch.object(FETCH, "download_artifact", side_effect=fake_download):
+                    result = FETCH.fetch("id", papers)
+            self.assertTrue(CONTRACT_KEYS.issubset(result))
+            self.assertTrue(result["success"])
+            self.assertTrue(result["downloaded"])
+            self.assertTrue(Path(result["artifact_path"]).exists())
+            meta = json.loads(Path(result["metadata_path"]).read_text(encoding="utf-8"))
+            self.assertEqual(meta["source"], FETCH.SOURCE)
+
+    def test_failed_download_creates_nothing(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            papers = Path(td) / "papers"
+            papers.mkdir()
+            with patch.object(FETCH, "resolve_metadata", return_value=META):
+                with patch.object(FETCH, "download_artifact", return_value=False):
+                    result = FETCH.fetch("id", papers)
+            self.assertTrue(result["fallback_needed"])
+            self.assertFalse(result["downloaded"])
+            self.assertFalse(Path(result["directory"]).exists())
+
+
+if __name__ == "__main__":
+    unittest.main()
