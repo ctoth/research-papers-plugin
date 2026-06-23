@@ -85,23 +85,29 @@ Use that pretty title as the link text. The path is relative — from `papers/<A
 
 ### 2.3: Write/Update Forward Cross-References
 
-In `notes.md`, write or update the `## Collection Cross-References` section:
+In `notes.md`, write or update the `## Collection Cross-References` section.
+
+**House style:** use the cross-reference separator ` - ` (hyphen-space), **not**
+an em-dash (U+2014). House style forbids the em-dash in generated prose, and
+`lint-paper` / the collection verify flag any em-dash in content `.md`. The
+separator is configurable via `.research-papers.toml` `[house_style] separator`;
+honor that value when set (default ` - `).
 
 ```markdown
 ## Collection Cross-References
 
 ### Already in Collection
-- [<Pretty Title of AuthorA>](../AuthorA_Year_ShortTitle/notes.md) — cited for [reason from citations.md context]
+- [<Pretty Title of AuthorA>](../AuthorA_Year_ShortTitle/notes.md) - cited for [reason from citations.md context]
 
 ### New Leads (Not Yet in Collection)
-- AuthorB (Year) — "Paper title" — relevant for [reason]
+- AuthorB (Year) - "Paper title" - relevant for [reason]
 
 ### Supersedes or Recontextualizes
 - [If this paper extends/corrects/supersedes an existing collection paper, note it here]
-- [Only genuine relationships — not every citation]
+- [Only genuine relationships - not every citation]
 
 ### Conceptual Links (not citation-based)
-- [<Pretty Title of PaperC>](../PaperC_Year_Title/notes.md) — [specific topical connection: what claim/finding/method links these papers]
+- [<Pretty Title of PaperC>](../PaperC_Year_Title/notes.md) - [specific topical connection: what claim/finding/method links these papers]
 ```
 
 ### 2.4: Backward Annotation (Supersedes Only)
