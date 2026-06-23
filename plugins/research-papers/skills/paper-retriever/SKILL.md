@@ -1,6 +1,6 @@
 ---
 name: paper-retriever
-description: Retrieve a scientific paper PDF given an arxiv URL, DOI, or paper title. Downloads to papers/ directory. Uses direct download for arxiv, Chrome + sci-hub for paywalled papers.
+description: Retrieve a scientific paper PDF given an arxiv URL, DOI, or paper title. Downloads to papers/ directory. Uses direct download for arxiv, Chrome print-to-pdf for publisher-direct HTML, and a title-based open-repository search (arXiv / Semantic Scholar / Unpaywall) for paywalled papers; reports "supply a PDF" when no open-access copy exists.
 argument-hint: "<arxiv-url-or-doi> [optional-output-name]"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires shell access; browser automation is optional for paywalled papers."
@@ -89,7 +89,7 @@ If fetch_paper.py returns `"fallback_needed": true`, the paper couldn't be downl
 
 ### Option 0: Publisher-hosted HTML document (W3C TR, ECMA / ISO specs, some tech reports)
 
-Papers with **no DOI and no arxiv ID** that live at a canonical publisher URL as HTML (and possibly also as PDF) should use headless Chrome print-to-pdf, not sci-hub. W3C Recommendations (`https://www.w3.org/TR/...`) are the canonical example. Sci-hub will not have them.
+Papers with **no DOI and no arxiv ID** that live at a canonical publisher URL as HTML (and possibly also as PDF) should use headless Chrome print-to-pdf. W3C Recommendations (`https://www.w3.org/TR/...`) are the canonical example.
 
 Detect this case when:
 - The input was a `w3.org/TR/...`, `ecma-international.org`, or similar publisher URL, OR
@@ -124,34 +124,29 @@ uv run scripts/fetch_paper.py "<identifier>" --papers-dir papers/ --output-dir "
 
 If metadata resolution already failed and no DOI/arxiv lookup can produce fields, write `metadata.json` by hand from the paper's title page (title, authors, year required; `doi` and `arxiv_id` as `null`; `url` set to the canonical URL).
 
-If this path succeeds, STOP. Do not try sci-hub — sci-hub will not have publisher-direct-HTML documents, and trying wastes time.
+If this path succeeds, STOP.
 
-### Option 1: Any available browser automation (preferred for paywalled journal papers)
+### Option 1: Title-based open-repository search (terminal fallback for paywalled papers)
 
-If you have browser automation available, use it to:
+For a paywalled DOI with no open-access copy from the steps above, do **not** use
+shadow-library mirrors (they are unusable here: policy plus captcha walls, and
+they waste latency). Instead, search the open repositories by **title**:
 
-1. Open `https://sci-hub.st/`
-2. Find the input field and enter the URL or DOI
-3. Submit the form
-4. Inspect the result page for an iframe, embed, or direct PDF link
-5. If needed, evaluate JavaScript in the page to extract the PDF URL:
-   ```js
-   const iframe = document.querySelector('#pdf');
-   if (iframe) return iframe.src;
-   const embed = document.querySelector('embed[type="application/pdf"]');
-   if (embed) return embed.src;
-   const links = [...document.querySelectorAll('a')].filter(a => a.href.includes('.pdf'));
-   return links.map(a => a.href);
+1. Search arXiv, Semantic Scholar, and institutional / preprint repositories for
+   the paper's exact title (`uv run scripts/search_papers.py "<title>"`).
+2. Query Unpaywall by title/DOI for a legal open-access PDF location.
+3. If an open-access copy is found, download it to the paper directory and
+   materialize `metadata.json`:
+   ```bash
+   mkdir -p "./papers/<dirname>" && curl -L -o "./papers/<dirname>/paper.pdf" "OPEN_ACCESS_URL"
+   uv run scripts/fetch_paper.py "<identifier>" --papers-dir papers/ --output-dir "<dirname>" --metadata-only
    ```
-6. Create the paper directory and download the PDF: `mkdir -p "./papers/<dirname>" && curl -L -o "./papers/<dirname>/paper.pdf" "EXTRACTED_URL" 2>&1`
-7. Materialize `metadata.json` only after `paper.pdf` exists:
-   `uv run scripts/fetch_paper.py "<identifier>" --papers-dir papers/ --output-dir "<dirname>" --metadata-only`
 
-If browser automation or a direct PDF URL yields the intended paper's PDF, retrieval succeeded. Finalize metadata afterward.
+### Option 2: No open-access copy found
 
-### Option 2: No browser automation
-
-Report the DOI/URL and ask the user to download the PDF manually to the paper directory.
+If no open-access copy exists, STOP and report cleanly: "open-access copy not
+found, supply a PDF." Ask the user to download the PDF manually into the paper
+directory; do not attempt shadow-library mirrors.
 
 ## Step 5: Verify
 
@@ -172,7 +167,7 @@ The core success condition is that the intended paper's PDF exists at `./papers/
 When done, report:
 ```
 Retrieved: papers/<dirname>/paper.pdf
-Source: [arxiv/aclanthology/unpaywall/sci-hub]
+Source: [arxiv/aclanthology/unpaywall/open-repository]
 Size: [file size]
 ```
 
