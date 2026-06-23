@@ -130,6 +130,35 @@ class DownloadEpubValidationTest(unittest.TestCase):
             self.assertTrue(dest.exists())
 
 
+class GracefulErrorTest(unittest.TestCase):
+    """Auth and network failures must return the clean contract, not raise."""
+
+    def test_missing_api_key_returns_fallback_not_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            papers = Path(td) / "papers"
+            papers.mkdir()
+            err = CRED.CredentialError("Missing bookshare credential(s): api_key.")
+            with patch.object(FETCH.bookshare_auth, "get_token_or_authenticate",
+                              side_effect=err):
+                result = FETCH.fetch_book("The Way of Kings", papers, root=td)
+            self.assertFalse(result["success"])
+            self.assertTrue(result["fallback_needed"])
+            self.assertIn("api_key", result["error"])
+            self.assertFalse(any(papers.iterdir()))
+
+    def test_api_http_error_returns_fallback_not_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            papers = Path(td) / "papers"
+            papers.mkdir()
+            with patch.object(FETCH, "resolve_metadata",
+                              side_effect=Exception("403 Client Error: Forbidden")):
+                result = FETCH.fetch_book("Alice in Wonderland", papers, root=td, guest=True)
+            self.assertFalse(result["success"])
+            self.assertTrue(result["fallback_needed"])
+            self.assertIn("403", result["error"])
+            self.assertFalse(any(papers.iterdir()))
+
+
 class MainExitCodeTest(unittest.TestCase):
     def test_main_exits_zero_on_success(self) -> None:
         with patch.object(FETCH, "fetch_book", return_value={"success": True}):

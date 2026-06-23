@@ -149,11 +149,20 @@ def fetch_book(identifier: str, papers_dir: Path, root: str = ".",
     api_base = _api_base(root)
     api_key = credential_store.get_secret(SOURCE, "api_key", root)
     token = None
-    if not guest:
-        method = auth_method or credential_store.auth_method(SOURCE, root)
-        token = bookshare_auth.get_token_or_authenticate(root=root, auth_method=method)
+    try:
+        if not guest:
+            method = auth_method or credential_store.auth_method(SOURCE, root)
+            token = bookshare_auth.get_token_or_authenticate(root=root, auth_method=method)
+    except credential_store.CredentialError as exc:
+        return {"success": False, "source": SOURCE, "error": str(exc),
+                "identifier": identifier, "fallback_needed": True}
 
-    metadata = resolve_metadata(identifier, api_key, token, api_base)
+    try:
+        metadata = resolve_metadata(identifier, api_key, token, api_base)
+    except Exception as exc:  # noqa: BLE001 - surface Bookshare API/network errors cleanly
+        return {"success": False, "source": SOURCE,
+                "error": f"Bookshare API request failed: {exc}",
+                "identifier": identifier, "fallback_needed": True}
     if not metadata:
         return {"success": False, "source": SOURCE, "error": "title not resolved",
                 "identifier": identifier, "fallback_needed": True}
