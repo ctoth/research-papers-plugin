@@ -497,6 +497,7 @@ Use this schema and fill every field you can from the paper/frontmatter:
 
 ```json
 {
+  "cite_key": "lastname2024shorttitle",
   "title": "Full Paper Title",
   "authors": ["Author One", "Author Two"],
   "year": "2024",
@@ -509,11 +510,23 @@ Use this schema and fill every field you can from the paper/frontmatter:
 ```
 
 Rules:
+- `cite_key` is required and must be the **first** key. It is the published-form
+  citation key (e.g. `hirota2025societal`), which may use a different year than the
+  directory name (directories encode the preprint/first-seen year). Never parse the
+  directory name for the year or the key.
 - `title`, `authors`, and `year` are required.
 - `authors` must be a JSON array, not a single string.
 - Use `null` for unknown fields rather than omitting them.
 - `doi` should be the DOI string without `https://doi.org/` when possible.
 - If the paper is on arXiv, fill `arxiv_id`.
+
+After writing `metadata.json`, refresh the collection's `papers/keymap.tsv`
+(`cite_key<TAB>dir`) so downstream tools resolve `@key` -> directory reliably:
+
+```bash
+PYTHON=$(command -v python3 || command -v python)
+"$PYTHON" scripts/build_keymap.py build --papers-dir papers/ -o papers/keymap.tsv
+```
 
 ---
 

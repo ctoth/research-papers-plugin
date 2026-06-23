@@ -21,6 +21,10 @@ class PaperDbManifest:
     canonical_notes_recommended: tuple[str, ...]
     canonical_notes_optional: tuple[str, ...]
     legacy_aliases: dict[str, str]
+    # metadata.json schema (distinct from the notes.md frontmatter above).
+    # cite_key is mandatory and must be the first key (B5).
+    metadata_required: tuple[str, ...] = ("cite_key", "title", "authors", "year")
+    metadata_first_key: str = "cite_key"
 
 
 DEFAULT_MANIFEST = PaperDbManifest(
@@ -83,4 +87,10 @@ def load_paper_db_manifest(project_root: Path) -> PaperDbManifest:
             raw.get("canonical_notes_optional", DEFAULT_MANIFEST.canonical_notes_optional)
         ),
         legacy_aliases=dict(raw.get("legacy_aliases", DEFAULT_MANIFEST.legacy_aliases)),
+        metadata_required=tuple(
+            raw.get("metadata_required", DEFAULT_MANIFEST.metadata_required)
+        ),
+        metadata_first_key=str(
+            raw.get("metadata_first_key", DEFAULT_MANIFEST.metadata_first_key)
+        ),
     )
