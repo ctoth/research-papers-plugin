@@ -1,6 +1,6 @@
 ---
 name: paper-retriever
-description: Retrieve a scientific paper PDF given an arxiv URL, DOI, or paper title. Downloads to papers/ directory. Uses direct download for arxiv, Chrome print-to-pdf for publisher-direct HTML, and browser automation via sci-hub for paywalled papers (with institutional access and a title-based open-repository search as fallbacks).
+description: Retrieve a scientific paper PDF given an arxiv URL, DOI, or paper title. Downloads to papers/ directory. Handles open-access retrieval (arxiv direct, Chrome print-to-pdf for publisher-direct HTML, Unpaywall, title-based open-repository search); for paywalled papers it hands off to whichever paper-retriever-* access skill is enabled (sci-hub by default, or institutional).
 argument-hint: "<arxiv-url-or-doi> [optional-output-name]"
 disable-model-invocation: false
 compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires shell access; browser automation is optional for paywalled papers."
@@ -126,37 +126,29 @@ If metadata resolution already failed and no DOI/arxiv lookup can produce fields
 
 If this path succeeds, STOP.
 
-### Option 1: Browser automation via sci-hub (preferred for paywalled journal papers)
+### Option 1: Paywalled paper — hand off to an enabled access skill
 
-If you have browser automation available, use it to:
+For a paywalled DOI/URL, retrieval depends on what access *this install* has. The access
+methods live in separate `paper-retriever-*` skills so each user enables only the ones
+they have. Invoke the enabled access skill(s), in order, until one places the PDF:
 
-1. Open `https://sci-hub.st/`
-2. Find the input field and enter the URL or DOI
-3. Submit the form
-4. Inspect the result page for an iframe, embed, or direct PDF link
-5. If needed, evaluate JavaScript in the page to extract the PDF URL:
-   ```js
-   const iframe = document.querySelector('#pdf');
-   if (iframe) return iframe.src;
-   const embed = document.querySelector('embed[type="application/pdf"]');
-   if (embed) return embed.src;
-   const links = [...document.querySelectorAll('a')].filter(a => a.href.includes('.pdf'));
-   return links.map(a => a.href);
-   ```
-6. Create the paper directory and download the PDF: `mkdir -p "./papers/<dirname>" && curl -L -o "./papers/<dirname>/paper.pdf" "EXTRACTED_URL" 2>&1`
-7. Materialize `metadata.json` only after `paper.pdf` exists:
-   `uv run scripts/fetch_paper.py "<identifier>" --papers-dir papers/ --output-dir "<dirname>" --metadata-only`
+- `/research-papers:paper-retriever-scihub "<identifier>" "<dirname>"` — sci-hub (enabled by default)
+- `/research-papers:paper-retriever-institutional "<identifier>" "<dirname>"` — institutional / library proxy (enable only if configured)
 
-If browser automation yields the intended paper's PDF, retrieval succeeded. Finalize metadata afterward.
+Same nested-skill convention as the rest of the plugin: if nested skill invocation works
+on this platform, invoke the named skill directly; otherwise open that skill's `SKILL.md`
+and follow its steps inline. A disabled or absent access skill is simply skipped.
 
-### Option 2: Institutional / library access
+Each access skill's only job is to place the intended paper's PDF at
+`./papers/<dirname>/paper.pdf`. When one reports success, materialize metadata and verify:
 
-If the install has institutional or library access configured (e.g. a library
-proxy such as EZproxy / OpenAthens, or an institutional login), resolve the
-paywalled DOI through it and download the PDF to the paper directory, then
-materialize `metadata.json` (`--metadata-only`).
+```bash
+uv run scripts/fetch_paper.py "<identifier>" --papers-dir papers/ --output-dir "<dirname>" --metadata-only
+```
 
-### Option 3: Title-based open-repository search
+Then STOP. If no enabled access skill yields the PDF, continue to Option 2.
+
+### Option 2: Title-based open-repository search
 
 If the paper is not retrievable above (e.g. a very new paper not yet mirrored),
 search the open repositories by **title**:
@@ -171,7 +163,7 @@ search the open repositories by **title**:
    uv run scripts/fetch_paper.py "<identifier>" --papers-dir papers/ --output-dir "<dirname>" --metadata-only
    ```
 
-### Option 4: No copy found
+### Option 3: No copy found
 
 If none of the above yields the PDF, STOP and report cleanly: "copy not found,
 supply a PDF." Ask the user to download the PDF manually into the paper directory.
