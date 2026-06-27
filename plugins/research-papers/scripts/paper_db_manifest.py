@@ -25,6 +25,12 @@ class PaperDbManifest:
     # cite_key is mandatory and must be the first key (B5).
     metadata_required: tuple[str, ...] = ("cite_key", "title", "authors", "year")
     metadata_first_key: str = "cite_key"
+    # Document type drives metadata schema, naming, abstract optionality, and the
+    # BibTeX entry type (F15). book_chapter entries additionally carry
+    # container_title / chapter / pages / publisher / address.
+    document_types: tuple[str, ...] = ("article", "book", "book_chapter", "thesis", "report")
+    document_type_default: str = "article"
+    book_chapter_fields: tuple[str, ...] = ("container_title", "chapter", "pages", "publisher", "address")
 
 
 DEFAULT_MANIFEST = PaperDbManifest(

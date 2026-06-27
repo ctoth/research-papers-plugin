@@ -98,6 +98,50 @@ def page_count(pdf_path) -> int:
         return doc.page_count
 
 
+def get_toc(pdf_path) -> list:
+    """Return the embedded table of contents as [[level, title, start_page], ...].
+
+    The TOC/outline is navigation metadata (bookmarks), not page body text, so it
+    is used to scope which pages to *render* (F14) without extracting page content.
+    """
+    import fitz
+
+    with fitz.open(pdf_path) as doc:
+        return doc.get_toc()
+
+
+def resolve_chapter_range(toc: list, target) -> "tuple[int, int | None] | None":
+    """Resolve a chapter's printed page range from a TOC (F14).
+
+    ``target`` is a chapter-title substring (case-insensitive) or an int / digit
+    string selecting the Nth top-level entry (1-based). Returns
+    (start_page, end_page) where end_page is the page before the next entry at
+    the same-or-higher level, or None for the last chapter (runs to the end).
+    Returns None if the target is not found.
+    """
+    idx = None
+    if isinstance(target, int) or (isinstance(target, str) and target.isdigit()):
+        n = int(target)
+        top_level = [i for i, e in enumerate(toc) if e[0] == 1]
+        if 1 <= n <= len(top_level):
+            idx = top_level[n - 1]
+    else:
+        needle = str(target).lower()
+        for i, e in enumerate(toc):
+            if needle in e[1].lower():
+                idx = i
+                break
+    if idx is None:
+        return None
+    level, _title, start = toc[idx]
+    end = None
+    for j in range(idx + 1, len(toc)):
+        if toc[j][0] <= level:
+            end = toc[j][2] - 1
+            break
+    return (start, end)
+
+
 def _page_range(total: int, first, last) -> range:
     lo = 0 if first is None else max(0, first)
     hi = total - 1 if last is None else min(total - 1, last)
