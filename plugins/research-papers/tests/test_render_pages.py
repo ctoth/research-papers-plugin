@@ -1,9 +1,9 @@
 """Unit tests for scripts/render_pages.py (B1 rendering + B6 portability).
 
-render_pages.py is a new helper that makes PyMuPDF/pdftoppm the primary PDF
-rasterizer (dropping the hard Ghostscript-via-ImageMagick dependency), detects
-the Python interpreter name, and forces UTF-8 stdout so text extraction does not
-crash on a cp1252 Windows console.
+render_pages.py keeps the house ImageMagick ``magick`` workflow as the primary
+rasterizer and cascades to pdftoppm then PyMuPDF (the Ghostscript-free safety net)
+when magick is missing or fails. It also detects the Python interpreter name and
+forces UTF-8 stdout so text extraction does not crash on a cp1252 Windows console.
 """
 from __future__ import annotations
 
@@ -34,10 +34,11 @@ def test_module_imports(rp):
     assert rp is not None
 
 
-def test_pick_rasterizer_prefers_pymupdf_then_pdftoppm_then_magick(rp):
-    assert rp.pick_rasterizer({"pymupdf", "pdftoppm", "magick"}) == "pymupdf"
-    assert rp.pick_rasterizer({"pdftoppm", "magick"}) == "pdftoppm"
-    assert rp.pick_rasterizer({"magick"}) == "magick"
+def test_pick_rasterizer_prefers_magick_then_pdftoppm_then_pymupdf(rp):
+    # House workflow: magick first; PyMuPDF is the guaranteed Ghostscript-free fallback.
+    assert rp.pick_rasterizer({"pymupdf", "pdftoppm", "magick"}) == "magick"
+    assert rp.pick_rasterizer({"pymupdf", "pdftoppm"}) == "pdftoppm"
+    assert rp.pick_rasterizer({"pymupdf"}) == "pymupdf"
     assert rp.pick_rasterizer(set()) is None
 
 
@@ -53,6 +54,27 @@ def test_configure_utf8_stdout_allows_non_latin1(rp, capsys):
     print("em-dash — and o-macron ō")
     out = capsys.readouterr().out
     assert "—" in out
+
+
+def test_render_cascades_when_primary_rasterizer_fails(rp, tmp_path, monkeypatch):
+    # magick present but failing (e.g. no Ghostscript delegate) must fall through.
+    calls: list[str] = []
+
+    def boom(pdf, out, dpi, first, last):
+        calls.append("magick")
+        raise RuntimeError("no Ghostscript delegate")
+
+    def ok(pdf, out, dpi, first, last):
+        calls.append("pdftoppm")
+        return [out / "page-000.png"]
+
+    monkeypatch.setattr(rp, "_available_rasterizers", lambda: {"magick", "pdftoppm"})
+    monkeypatch.setitem(rp._RENDERERS, "magick", boom)
+    monkeypatch.setitem(rp._RENDERERS, "pdftoppm", ok)
+
+    result = rp.render("x.pdf", tmp_path)
+    assert calls == ["magick", "pdftoppm"]  # magick tried first, then cascaded
+    assert result == [tmp_path / "page-000.png"]
 
 
 def test_page_count_via_pymupdf(rp, tmp_path):

@@ -5,10 +5,13 @@
 # ///
 """Cross-platform PDF page rendering and counting (B1, B6).
 
-The primary rasterizer is PyMuPDF (``fitz``): pure-Python, needs no Ghostscript.
-It falls back to ``pdftoppm`` (poppler), then ImageMagick ``magick`` (which
-delegates PDF decoding to Ghostscript) only when neither is available. This
-removes the hard Ghostscript dependency that blocked the reader on Windows.
+The primary rasterizer is ImageMagick ``magick`` with the reader's tuned settings
+(``-density 150 -quality 90 -resize 1960x1960>``): it is the house workflow and
+produces the page images the reading pipeline is calibrated to. ``magick``
+delegates PDF decoding to Ghostscript, absent on some machines, so ``render``
+falls through to ``pdftoppm`` (poppler) and then PyMuPDF (``fitz``, pure-Python,
+always installed as a script dep) when magick is missing OR fails at render time.
+PyMuPDF is the guaranteed Ghostscript-free safety net, not the default.
 
 The module also provides ``detect_python`` (so callers can invoke the right
 interpreter name) and ``configure_utf8_stdout`` (so printing extracted text does
@@ -27,8 +30,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Preference order: pure-Python first, Ghostscript-dependent last.
-RASTERIZER_PREFERENCE = ("pymupdf", "pdftoppm", "magick")
+# Preference order: the house magick workflow first; PyMuPDF is the guaranteed
+# Ghostscript-free fallback. render() also cascades at runtime if a higher-priority
+# rasterizer is present but fails (e.g. magick installed without a Ghostscript delegate).
+RASTERIZER_PREFERENCE = ("magick", "pdftoppm", "pymupdf")
 
 
 def configure_utf8_stdout() -> None:
@@ -152,21 +157,41 @@ def _render_magick(pdf_path, out: Path, dpi: int, first, last) -> list[Path]:
     return _renumber_zero_based(out, 0 if first is None else first)
 
 
+_RENDERERS = {
+    "magick": _render_magick,
+    "pdftoppm": _render_pdftoppm,
+    "pymupdf": _render_pymupdf,
+}
+
+
 def render(pdf_path, out_dir, dpi: int = 150, first=None, last=None,
            rasterizer=None) -> list[Path]:
-    """Render PDF pages to ``out_dir/page-%03d.png`` (0-based). Returns written paths."""
+    """Render PDF pages to ``out_dir/page-%03d.png`` (0-based). Returns written paths.
+
+    With no explicit ``rasterizer``, tries every available rasterizer in preference
+    order (magick first), cascading to the next if one fails at render time — so a
+    box with ImageMagick but no Ghostscript still renders via pdftoppm/PyMuPDF.
+    """
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    rasterizer = rasterizer or pick_rasterizer()
-    if rasterizer == "pymupdf":
-        return _render_pymupdf(pdf_path, out, dpi, first, last)
-    if rasterizer == "pdftoppm":
-        return _render_pdftoppm(pdf_path, out, dpi, first, last)
-    if rasterizer == "magick":
-        return _render_magick(pdf_path, out, dpi, first, last)
+    if rasterizer is not None:
+        order = [rasterizer]
+    else:
+        available = _available_rasterizers()
+        order = [name for name in RASTERIZER_PREFERENCE if name in available]
+    if not order:
+        raise RuntimeError(
+            "No PDF rasterizer available. Install ImageMagick + Ghostscript (the house "
+            "default), poppler (`pdftoppm`), or PyMuPDF (`pip install pymupdf`)."
+        )
+    errors: list[str] = []
+    for name in order:
+        try:
+            return _RENDERERS[name](pdf_path, out, dpi, first, last)
+        except Exception as exc:  # noqa: BLE001 — cascade to the next rasterizer
+            errors.append(f"{name}: {exc}")
     raise RuntimeError(
-        "No PDF rasterizer available. Install PyMuPDF (`pip install pymupdf`) or "
-        "poppler (`pdftoppm`), or ImageMagick + Ghostscript as a last resort."
+        "All available rasterizers failed:\n  " + "\n  ".join(errors)
     )
 
 

@@ -116,11 +116,12 @@ fi
 
 If you are in a rerun/regeneration case and `"$paper_dir"/pngs/page-000.png` already exists, **reuse the existing page images**. Do not reconvert just because `notes.md` is missing.
 
-**Rasterization is via `scripts/render_pages.py` (PyMuPDF first), not raw `magick`.**
-`render_pages.py` prefers PyMuPDF (`fitz`, pure-Python, no Ghostscript), falls back to
-`pdftoppm` (poppler), and only then to ImageMagick `magick -density` (which delegates PDF
-decoding to Ghostscript and fails on machines without it, e.g. Windows). Set the
-interpreter once:
+**Rasterization is via `scripts/render_pages.py`, which keeps the house `magick` workflow.**
+`render_pages.py` uses ImageMagick `magick -density 150 -quality 90 -resize '1960x1960>'`
+as the primary rasterizer (the tuned house settings), and **cascades** to `pdftoppm`
+(poppler) and then PyMuPDF (`fitz`, pure-Python, no Ghostscript) when `magick` is missing
+or fails at render time — so a machine without Ghostscript (e.g. Windows) still renders.
+Set the interpreter once:
 
 ```bash
 PYTHON=$(command -v python3 || command -v python)
