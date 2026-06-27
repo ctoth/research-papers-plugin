@@ -445,6 +445,7 @@ Use this schema and fill every field you can from the paper/frontmatter:
 
 ```json
 {
+  "cite_key": "lastname2024shorttitle",
   "title": "Full Paper Title",
   "authors": ["Author One", "Author Two"],
   "year": "2024",
@@ -457,11 +458,23 @@ Use this schema and fill every field you can from the paper/frontmatter:
 ```
 
 Rules:
+- `cite_key` is required and must be the **first** key. It is the published-form
+  citation key (e.g. `hirota2025societal`), which may use a different year than the
+  directory name (directories encode the preprint/first-seen year). Never parse the
+  directory name for the year or the key.
 - `title`, `authors`, and `year` are required.
 - `authors` must be a JSON array, not a single string.
 - Use `null` for unknown fields rather than omitting them.
 - `doi` should be the DOI string without `https://doi.org/` when possible.
 - If the paper is on arXiv, fill `arxiv_id`.
+
+After writing `metadata.json`, refresh the collection's `papers/keymap.tsv`
+(`cite_key<TAB>dir`) so downstream tools resolve `@key` -> directory reliably:
+
+```bash
+PYTHON=$(command -v python3 || command -v python)
+"$PYTHON" scripts/build_keymap.py build --papers-dir papers/ -o papers/keymap.tsv
+```
 
 ---
 
@@ -613,6 +626,25 @@ Append:
 The header is a **markdown link**, not plain text and not a `[[wikilink]]`. GitHub does not render wikilinks in repo files, so cross-paper references use real markdown links pointing at the target paper's `notes.md`. Display text is the pretty title from the paper's frontmatter.
 
 **This step is NOT optional.** Without it, future sessions won't know this paper exists.
+
+---
+
+## Step 8.5: Record the processed-ledger entry
+
+Append a canonical line to `papers/_reader_done.tsv` (`cite_key<TAB>dir`) so the
+collection has a durable record that this paper is fully processed. `lint-paper`
+and the collection verify cross-check this ledger against the directories and the
+index, so it must not be skipped.
+
+```bash
+dir="<Author_Year_ShortTitle>"
+cite_key=$(grep -o '"cite_key"[[:space:]]*:[[:space:]]*"[^"]*"' "papers/$dir/metadata.json" | head -1 | sed 's/.*"cite_key"[[:space:]]*:[[:space:]]*"//; s/"$//')
+ledger="papers/_reader_done.tsv"
+# Idempotent: only append if this dir is not already recorded.
+if ! grep -q "	$dir$" "$ledger" 2>/dev/null; then
+  printf '%s\t%s\n' "$cite_key" "$dir" >> "$ledger"
+fi
+```
 
 ---
 
