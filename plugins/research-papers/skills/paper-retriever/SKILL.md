@@ -126,7 +126,15 @@ If metadata resolution already failed and no DOI/arxiv lookup can produce fields
 
 If this path succeeds, STOP.
 
-### Option 1: Title-based open-repository search (terminal fallback for paywalled papers)
+### Option 1: Institutional / library access (try first, if configured)
+
+If the install has institutional or library access configured (e.g. a library
+proxy such as EZproxy / OpenAthens, or an institutional login), resolve the
+paywalled DOI through it and download the PDF to the paper directory, then
+materialize `metadata.json` (`--metadata-only`). Most installs will not have this
+configured; if so, continue to Option 2.
+
+### Option 2: Title-based open-repository search
 
 For a paywalled DOI with no open-access copy from the steps above, do **not** use
 shadow-library mirrors (they are unusable here: policy plus captcha walls, and
@@ -142,11 +150,12 @@ they waste latency). Instead, search the open repositories by **title**:
    uv run scripts/fetch_paper.py "<identifier>" --papers-dir papers/ --output-dir "<dirname>" --metadata-only
    ```
 
-### Option 2: No open-access copy found
+### Option 3: No open-access copy found
 
 If no open-access copy exists, STOP and report cleanly: "open-access copy not
 found, supply a PDF." Ask the user to download the PDF manually into the paper
-directory; do not attempt shadow-library mirrors.
+directory (via their institutional access or whatever route they use); do not
+attempt shadow-library mirrors from here.
 
 ## Step 5: Verify
 
