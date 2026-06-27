@@ -67,9 +67,12 @@ if [ -d "$paper_path" ]; then
   paper_dir="$paper_path"
 elif [ -f "$paper_path" ]; then
   HASH_SCRIPT="scripts/paper_hash.py"
-  if [ -f "$HASH_SCRIPT" ]; then
-    paper_dir=$(python3 "$HASH_SCRIPT" --papers-dir papers/ lookup "$(basename "$paper_path" .pdf)" 2>/dev/null)
-    [ $? -ne 0 ] && paper_dir=""
+  # Detect the interpreter: Windows ships only `python` (pyenv-win shim), not `python3`.
+  PYTHON=$(command -v python3 || command -v python)
+  if [ -f "$HASH_SCRIPT" ] && [ -n "$PYTHON" ]; then
+    # No 2>/dev/null swallow: a missing interpreter or real error must surface,
+    # otherwise the lookup silently returns empty and every paper looks new.
+    paper_dir=$("$PYTHON" "$HASH_SCRIPT" --papers-dir papers/ lookup "$(basename "$paper_path" .pdf)")
     [ -n "$paper_dir" ] && paper_dir="papers/$paper_dir"
   else
     basename=$(basename "$paper_path" .pdf)
@@ -113,19 +116,33 @@ fi
 
 If you are in a rerun/regeneration case and `"$paper_dir"/pngs/page-000.png` already exists, **reuse the existing page images**. Do not reconvert just because `notes.md` is missing.
 
-Get page count:
+**Rasterization is via `scripts/render_pages.py`, which keeps the house `magick` workflow.**
+`render_pages.py` uses ImageMagick `magick -density 150 -quality 90 -resize '1960x1960>'`
+as the primary rasterizer (the tuned house settings), and **cascades** to `pdftoppm`
+(poppler) and then PyMuPDF (`fitz`, pure-Python, no Ghostscript) when `magick` is missing
+or fails at render time — so a machine without Ghostscript (e.g. Windows) still renders.
+Set the interpreter once:
+
 ```bash
-pdfinfo "$work_pdf" 2>/dev/null | grep Pages || echo "pdfinfo not available"
+PYTHON=$(command -v python3 || command -v python)
+```
+
+Get page count (PyMuPDF, no poppler needed; `pdfinfo` only as a fallback):
+```bash
+"$PYTHON" scripts/render_pages.py count "$work_pdf" 2>/dev/null \
+  || pdfinfo "$work_pdf" 2>/dev/null | grep Pages \
+  || echo "page count unavailable"
 ```
 
 If `pngs/page-000.png` does not already exist, extract page 0 first in a temp dir for metadata:
 
 ```bash
 tmpdir=$(mktemp -d)
-magick -density 150 "$work_pdf[0]" -quality 90 -resize '1960x1960>' "$tmpdir/page0.png"
+"$PYTHON" scripts/render_pages.py render "$work_pdf" "$tmpdir" --dpi 150 --first 0 --last 0
+# -> $tmpdir/page-000.png
 ```
 
-Read either the existing `pngs/page-000.png` or `$tmpdir/page0.png` to extract author, year, and title. Determine directory name: `LastName_Year_2-4WordTitle` (e.g., `Mack_2021_AccessibilityResearchSurvey`).
+Read either the existing `pngs/page-000.png` or `$tmpdir/page-000.png` to extract author, year, and title. Determine directory name: `LastName_Year_2-4WordTitle` (e.g., `Mack_2021_AccessibilityResearchSurvey`).
 
 For a new paper, set:
 
@@ -140,14 +157,14 @@ mkdir -p "$paper_dir/pngs"
 if [ "$(realpath "$work_pdf")" != "$(realpath "$paper_dir/paper.pdf")" ]; then
   mv "$work_pdf" "$paper_dir/paper.pdf"  # MUST be mv, NEVER cp
 fi
-magick -density 150 "$paper_dir/paper.pdf" -quality 90 -resize '1960x1960>' "$paper_dir/pngs/page-%03d.png"
+"$PYTHON" scripts/render_pages.py render "$paper_dir/paper.pdf" "$paper_dir/pngs" --dpi 150
 rm -rf "$tmpdir"
 ```
 
 If this is an existing paper directory with `paper.pdf` present but missing/incomplete `pngs/`, regenerate:
 ```bash
 mkdir -p "$paper_dir/pngs"
-magick -density 150 "$paper_dir/paper.pdf" -quality 90 -resize '1960x1960>' "$paper_dir/pngs/page-%03d.png"
+"$PYTHON" scripts/render_pages.py render "$paper_dir/paper.pdf" "$paper_dir/pngs" --dpi 150
 rm -rf "$tmpdir"
 ```
 
@@ -201,7 +218,8 @@ Before dispatching anything, inspect the table of contents to learn the chapter 
 ```bash
 # Quick low-res extract of the front matter / TOC pages to a temp dir
 tmp=$(mktemp -d)
-magick -density 100 "$paper_dir/paper.pdf[0-32]" -quality 80 -resize '1400x1400>' "$tmp/toc-%03d.png"
+"$PYTHON" scripts/render_pages.py render "$paper_dir/paper.pdf" "$tmp" --dpi 100 --first 0 --last 32
+# -> $tmp/page-000.png .. page-032.png
 ```
 
 Read the TOC pages and extract: every chapter number, its title, its starting **printed book page number**, and the page count of the book overall. This locks down the chapter boundaries, even though the *PDF index* offset may not be constant — front matter (roman numerals), Part dividers, and blank pages introduce drift between PDF idx and printed book page (typical drift: +16 to +25 across an 800-page Springer monograph). Chunk workers will be told to cite the **printed page number from the page header**, not the PDF index, so the offset drift does not propagate downstream.

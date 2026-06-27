@@ -34,7 +34,7 @@ SKILLS_DIR = PLUGIN_ROOT / "skills"
 # canonical scripts dir when a canonical script runs (its __file__ is canonical),
 # so no per-skill copy is needed.
 MANIFEST = {
-    "paper-reader": ["paper_hash.py", "build_keymap.py"],
+    "paper-reader": ["paper_hash.py", "build_keymap.py", "render_pages.py"],
     "paper-retriever": ["fetch_paper.py", "search_papers.py"],
     "process-leads": ["get_citations.py", "paper_hash.py"],
     "verify-citations": ["verify_citations.py"],
