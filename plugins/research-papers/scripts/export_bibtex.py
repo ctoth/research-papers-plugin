@@ -40,8 +40,19 @@ def _escape_bibtex(s: str) -> str:
     return s.replace('&', r'\&').replace('%', r'\%')
 
 
+_DOC_TYPE_TO_BIBTEX = {
+    'book': 'book',
+    'book_chapter': 'incollection',
+    'thesis': 'phdthesis',
+    'report': 'techreport',
+}
+
+
 def _entry_type(metadata: dict) -> str:
-    """Guess BibTeX entry type from venue_type or defaults."""
+    """BibTeX entry type from document_type (F15), then venue_type, then default."""
+    doc_type = metadata.get('document_type')
+    if doc_type in _DOC_TYPE_TO_BIBTEX:
+        return _DOC_TYPE_TO_BIBTEX[doc_type]
     vtype = metadata.get('venue_type', '')
     if vtype == 'journal':
         return 'article'
@@ -73,6 +84,17 @@ def _synthesize_bibtex(metadata: dict, dirname: str) -> str:
     if venue:
         field = 'journal' if etype == 'article' else 'booktitle'
         lines.append(f"  {field} = {{{_escape_bibtex(venue)}}},")
+
+    # Book-chapter fields (F15): the containing book's title + imprint.
+    container = metadata.get('container_title')
+    if container and etype in ('incollection', 'inbook'):
+        lines.append(f"  booktitle = {{{_escape_bibtex(container)}}},")
+    publisher = metadata.get('publisher')
+    if publisher:
+        lines.append(f"  publisher = {{{_escape_bibtex(publisher)}}},")
+    address = metadata.get('address')
+    if address:
+        lines.append(f"  address = {{{_escape_bibtex(address)}}},")
 
     volume = metadata.get('volume')
     if volume:
