@@ -11,3 +11,6 @@ knowledge
 prompts
 pyghidra_mcp_projects/
 **/pyghidra_mcp_projects/
+
+# Credentialed-source secrets (e.g. .secrets/bookshare.json) — never commit
+.secrets/
