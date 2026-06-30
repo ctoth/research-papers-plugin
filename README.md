@@ -37,6 +37,7 @@ This provides the `pks` executable on your PATH. Skills that do not touch the pr
 | `paper-reader` | Read a paper and extract structured notes (handles small/medium/large papers) |
 | `paper-process` | Full per-paper flow: retrieve, read, and run the propstore ingestion pipeline |
 | `process-new-papers` | Batch `paper-reader` over every unprocessed PDF in `papers/` root |
+| `book-process` | Process a book as a parent of per-chapter papers (`chapters/<key>/`) plus the whole book, with a chapter `index.md` and one BibTeX entry per chapter (`@incollection`) plus one `@book` |
 
 ### Propstore ingestion
 
@@ -69,6 +70,14 @@ This provides the `pks` executable on your PATH. Skills that do not touch the pr
 |-------|-------------|
 | `research` | Web research on a topic, structured findings report |
 
+### Writing and verification
+
+| Skill | Description |
+|-------|-------------|
+| `create-lit-review` | Drive the `/goal` loop end to end (research → retrieve → process → write → verify) until a `--mode full\|intro` deliverable passes every gate; unretrievable papers go to `wanted-papers.md` and are excluded without halting |
+| `write-lit-review` | Write a standalone lit review (`--mode full`) or an introduction + related-work section (`--mode intro`) from the processed collection, driven by the vendored house guides; cites only resolvable `@key`s and runs the presence + reality gates |
+| `verify-citations` | Grade a drafted review against the cited papers' notes for faithfulness (presence gate + per-claim grading) |
+
 ## Scripts
 
 Repository-level installer utilities live in `scripts/`. Paper-collection helper scripts live in `plugins/research-papers/scripts/`.
@@ -79,6 +88,8 @@ Repository-level installer utilities live in `scripts/`. Paper-collection helper
 | `generate-paper-index.py` | Rebuild papers/index.md and papers/tagged/ symlinks |
 | `cross-reference-papers.py` | Find cross-references between papers in the collection |
 | `migrate-format.py` | Convert legacy Tags: lines → YAML frontmatter, bold refs → wikilinks |
+| `rename_to_cite_key.py` | Migrate paper folders so each name equals its bibtex `cite_key` (F4); dry-run by default, `--write` to apply |
+| `verify_citations_real.py` | Final gate (F7): confirm every citation is a real paper via DOI/URL resolution or scholarly title search; exits 2 on any `MISMATCH`/`NOT_FOUND` |
 
 The claims, justifications, stances, and concepts pipeline is driven by the skills (`extract-claims`, `extract-justifications`, `extract-stances`, `register-concepts`, `enrich-claims`) together with `pks source` commands from [propstore](https://github.com/ctoth/propstore). Invoke the skills rather than running pipeline scripts directly.
 

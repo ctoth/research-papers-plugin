@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["pyyaml"]
+# ///
 """Generate papers/index.md and tagged-papers/ symlinks from paper directories."""
 
 import os
@@ -8,6 +12,9 @@ import sys
 from pathlib import Path
 
 import yaml
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paper_discovery import discover_notes_dirs, relpath as _relpath  # noqa: E402
 
 
 def resolve_project_root() -> Path:
@@ -169,7 +176,7 @@ def parse_index_entries(text: str) -> tuple[str, list[tuple[str | None, str]]]:
         start = m.start()
         end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
         block = text[start:end]
-        nm = re.search(r"^## \[.*?\]\(([^/]+)/notes\.md\)", block)
+        nm = re.search(r"^## \[.*?\]\(([^)]+)/notes\.md\)", block)
         entries.append((nm.group(1) if nm else None, block))
     return preamble, entries
 
@@ -262,15 +269,16 @@ def main():
     papers: list[tuple[str, str, list[str]]] = []
     tag_map: dict[str, list[str]] = {}
 
-    for d in sorted(PAPERS_DIR.iterdir()):
-        if not d.is_dir() or d.name == "tagged" or not (d / "notes.md").exists():
-            continue
+    # Recursive (F1): include nested book chapters, keyed by their relative path so
+    # the index link target resolves and the COUNT_MISMATCH gate stays consistent.
+    for d in discover_notes_dirs(PAPERS_DIR):
+        name = _relpath(d, PAPERS_DIR)
         desc_path = d / "description.md"
         desc = read_description_body(desc_path)
         tags = parse_tags(desc_path)
-        papers.append((d.name, desc, tags))
+        papers.append((name, desc, tags))
         for tag in tags:
-            tag_map.setdefault(tag, []).append(d.name)
+            tag_map.setdefault(tag, []).append(name)
 
     # Load tag registry and validate/canonicalize
     canonical_tags, tag_aliases = load_tag_registry(PAPERS_DIR)

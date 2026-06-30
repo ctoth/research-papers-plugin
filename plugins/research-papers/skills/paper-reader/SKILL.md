@@ -142,7 +142,7 @@ tmpdir=$(mktemp -d)
 # -> $tmpdir/page-000.png
 ```
 
-Read either the existing `pngs/page-000.png` or `$tmpdir/page-000.png` to extract author, year, and title. Determine directory name: `LastName_Year_2-4WordTitle` (e.g., `Mack_2021_AccessibilityResearchSurvey`).
+Read either the existing `pngs/page-000.png` or `$tmpdir/page-000.png` to extract author, year, and title. Determine the **cite key** `LastName_Year_2-4WordTitle` (e.g., `Mack_2021_AccessibilityResearchSurvey`) and use it **verbatim as the directory name** — the folder name must always equal the bibtex `cite_key` (F4: `dir == cite_key`). Prefer the published year when it is known.
 
 **Identity verification (F6).** If the caller passed an expected title or DOI (for
 a retrieved or adopted PDF), verify that the rendered `page-000` matches it before
@@ -537,9 +537,9 @@ Use this schema and fill every field you can from the paper/frontmatter:
 
 Rules:
 - `cite_key` is required and must be the **first** key. It is the published-form
-  citation key (e.g. `hirota2025societal`), which may use a different year than the
-  directory name (directories encode the preprint/first-seen year). Never parse the
-  directory name for the year or the key.
+  citation key and **must equal the paper's directory name** (F4: `dir == cite_key`).
+  If a published year differs from a preprint/first-seen year, pick one published-form
+  key and use it for **both** the directory and `cite_key` so they never diverge.
 - `title`, `authors`, and `year` are required.
 - `authors` must be a JSON array, not a single string.
 - Use `null` for unknown fields rather than omitting them.
@@ -547,7 +547,8 @@ Rules:
 - If the paper is on arXiv, fill `arxiv_id`.
 
 After writing `metadata.json`, refresh the collection's `papers/keymap.tsv`
-(`cite_key<TAB>dir`) so downstream tools resolve `@key` -> directory reliably:
+(`cite_key<TAB>dir`, now an identity cache since `dir == cite_key`) so downstream
+tools resolve `@key` -> directory reliably:
 
 ```bash
 PYTHON=$(command -v python3 || command -v python)

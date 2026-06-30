@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -89,6 +90,32 @@ def test_bibtex_book_for_book(eb):
 def test_bibtex_article_default(eb):
     out = eb._synthesize_bibtex({"title": "X", "authors": ["A B"], "year": "2020"}, "B_2020_X")
     assert out.startswith("@article{")
+
+
+def test_export_collection_book_and_chapters(eb, tmp_path):
+    # F1: collection export discovers the whole book + each nested chapter, emitting
+    # one @book and one @incollection per chapter, each keyed by its cite_key.
+    papers = tmp_path / "papers"
+    book = papers / "Geertz_1973_Interpretation"
+    book.mkdir(parents=True)
+    (book / "metadata.json").write_text(json.dumps({
+        "cite_key": "Geertz_1973_Interpretation", "document_type": "book",
+        "title": "The Interpretation of Cultures", "authors": ["Clifford Geertz"],
+        "year": "1973", "publisher": "Basic Books"}), encoding="utf-8")
+    for ch, title in [("Geertz_1973_ThickDescription", "Thick Description"),
+                      ("Geertz_1973_DeepPlay", "Deep Play")]:
+        c = book / "chapters" / ch
+        c.mkdir(parents=True)
+        (c / "metadata.json").write_text(json.dumps({
+            "cite_key": ch, "document_type": "book_chapter", "title": title,
+            "authors": ["Clifford Geertz"], "year": "1973",
+            "container_title": "The Interpretation of Cultures",
+            "publisher": "Basic Books", "pages": "1-30"}), encoding="utf-8")
+    out = eb.export_collection(papers)
+    assert out.count("@book{") == 1
+    assert out.count("@incollection{") == 2
+    assert "@incollection{Geertz_1973_ThickDescription" in out
+    assert "@incollection{Geertz_1973_DeepPlay" in out
 
 
 def test_reader_documents_chapter_scope_and_theory_profile():

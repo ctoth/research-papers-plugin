@@ -28,7 +28,22 @@ For each PDF found, invoke:
 
 If subagents are available, parallelize by paper. If subagents are unavailable, process the PDFs sequentially.
 
-## Step 3: Report
+## Step 3: Completeness gate (REQUIRED — F3)
+
+Before reporting the wave done, run the mechanical completeness gate over the
+collection. It exits non-zero (2) if any paper is incomplete:
+
+```bash
+# Run from the collection root (the directory containing papers/).
+uv run scripts/lint_paper_schema.py .
+echo "exit=$?"   # 0 = complete, 2 = BLOCKED: repair the flagged papers and re-run
+```
+
+A non-zero exit is a **hard blocker** — repair each flagged paper (missing required
+file, or `abstract.md` lacking its verbatim/interpretation sections) and re-run until
+it exits 0.
+
+## Step 4: Report
 
 Report:
 

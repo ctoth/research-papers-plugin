@@ -17,9 +17,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paper_discovery import discover_metadata_dirs  # noqa: E402
 
 
 def _citation_key(metadata: dict, dirname: str) -> str:
@@ -64,7 +68,10 @@ def _entry_type(metadata: dict) -> str:
 
 def _synthesize_bibtex(metadata: dict, dirname: str) -> str:
     """Build a BibTeX entry from metadata.json fields."""
-    key = _citation_key(metadata, dirname)
+    # Prefer the explicit cite_key (== dir name under F4); only fall back to a
+    # generated Surname_Year key when metadata carries none. This keys each book
+    # chapter by its own cite_key (F1) rather than a colliding Surname_Year.
+    key = metadata.get('cite_key') or _citation_key(metadata, dirname)
     etype = _entry_type(metadata)
     lines = [f"@{etype}{{{key},"]
 
@@ -113,11 +120,15 @@ def _synthesize_bibtex(metadata: dict, dirname: str) -> str:
 
 
 def export_collection(papers_dir: Path) -> str:
-    """Generate BibTeX for all papers with metadata.json."""
+    """Generate BibTeX for all papers with metadata.json.
+
+    Discovery is recursive (F1): the whole-book paper and each nested chapter paper
+    each get one entry (``@book`` / ``@incollection``), keyed by its cite_key.
+    """
     entries = []
-    for meta_path in sorted(papers_dir.glob('*/metadata.json')):
-        dirname = meta_path.parent.name
-        with open(meta_path, encoding='utf-8') as f:
+    for d in discover_metadata_dirs(Path(papers_dir)):
+        dirname = d.name
+        with open(d / 'metadata.json', encoding='utf-8') as f:
             metadata = json.load(f)
 
         bibtex = metadata.get('bibtex')
