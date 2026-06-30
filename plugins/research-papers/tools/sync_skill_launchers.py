@@ -38,7 +38,10 @@ MANIFEST = {
     "paper-retriever": ["fetch_paper.py", "search_papers.py"],
     "process-leads": ["get_citations.py", "paper_hash.py"],
     "verify-citations": ["verify_citations.py"],
-    "process-new-papers": ["pdf_adoption.py"],
+    "process-new-papers": ["pdf_adoption.py", "lint_paper_schema.py"],
+    "ingest-new-papers": ["lint_paper_schema.py"],
+    "ingest-collection": ["lint_paper_schema.py"],
+    "lint-paper": ["lint_paper_schema.py"],
 }
 
 # Per-skill files that the old symlink layout created but the launcher layout no
