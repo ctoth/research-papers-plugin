@@ -74,6 +74,7 @@ This provides the `pks` executable on your PATH. Skills that do not touch the pr
 
 | Skill | Description |
 |-------|-------------|
+| `create-lit-review` | Drive the `/goal` loop end to end (research → retrieve → process → write → verify) until a `--mode full\|intro` deliverable passes every gate; unretrievable papers go to `wanted-papers.md` and are excluded without halting |
 | `write-lit-review` | Write a standalone lit review (`--mode full`) or an introduction + related-work section (`--mode intro`) from the processed collection, driven by the vendored house guides; cites only resolvable `@key`s and runs the presence + reality gates |
 | `verify-citations` | Grade a drafted review against the cited papers' notes for faithfulness (presence gate + per-claim grading) |
 

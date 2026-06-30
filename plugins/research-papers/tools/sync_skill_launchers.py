@@ -45,6 +45,7 @@ MANIFEST = {
     "write-lit-review": ["lit_review.py", "export_bibtex.py", "verify_citations_real.py"],
     "book-process": ["book_scaffold.py", "build_keymap.py", "generate-paper-index.py",
                      "lint_paper_schema.py", "export_bibtex.py"],
+    "create-lit-review": ["lint_paper_schema.py", "lit_review.py", "verify_citations_real.py"],
 }
 
 # Per-skill files that the old symlink layout created but the launcher layout no
