@@ -218,6 +218,42 @@ class CompletenessGateTests(unittest.TestCase):
             self.assertEqual(rc, 2)
 
 
+class NestedChapterLintTests(unittest.TestCase):
+    """F1: nested book/chapters/<dir> paper dirs are discovered and linted."""
+
+    def test_nested_chapter_is_discovered_and_linted_clean(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            papers = Path(tmp) / "papers"
+            book = papers / "Geertz_1973_Interpretation"
+            _write_complete_paper(book, cite_key="Geertz_1973_Interpretation")
+            chapter = book / "chapters" / "Geertz_1973_ThickDescription"
+            _write_complete_paper(chapter, cite_key="Geertz_1973_ThickDescription")
+
+            audits = AUDIT_MODULE.collect_audits(papers)
+            relpaths = {a.relpath for a in audits}
+            self.assertIn("Geertz_1973_Interpretation/chapters/Geertz_1973_ThickDescription", relpaths)
+
+            violations = []
+            for audit in audits:
+                violations.extend(LINT_MODULE.lint_paper(audit, papers))
+            self.assertEqual(violations, [], violations)
+
+    def test_count_mismatch_includes_chapters(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            papers = Path(tmp) / "papers"
+            book = papers / "Geertz_1973_Interpretation"
+            _write_complete_paper(book, cite_key="Geertz_1973_Interpretation")
+            chapter = book / "chapters" / "Geertz_1973_ThickDescription"
+            _write_complete_paper(chapter, cite_key="Geertz_1973_ThickDescription")
+            # index.md lists only the book (1 header), but there are 2 paper dirs.
+            (papers / "index.md").write_text(
+                "## [Book](Geertz_1973_Interpretation/notes.md)\nd\n\n", encoding="utf-8")
+            violations = LINT_MODULE.lint_collection(papers)
+            mismatch = [v for v in violations if v.code == "COUNT_MISMATCH"]
+            self.assertTrue(mismatch)
+            self.assertIn("dirs=2", mismatch[0].detail)
+
+
 def _write_complete_paper(paper_dir: Path, cite_key: str) -> None:
     """Write a minimal but lint-complete paper dir with the given cite_key."""
     paper_dir.mkdir(parents=True, exist_ok=True)

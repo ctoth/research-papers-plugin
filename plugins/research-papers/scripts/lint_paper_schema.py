@@ -41,6 +41,7 @@ from audit_paper_corpus import (
 )
 from paper_db_manifest import load_paper_db_manifest
 from build_keymap import validate_cite_key_first, derive_cite_key
+from paper_discovery import discover_notes_dirs
 from _textutil import find_em_dashes
 
 CONTENT_MD_FILES = ("notes.md", "description.md", "abstract.md", "citations.md")
@@ -72,7 +73,11 @@ def notes_frontmatter_keys(notes_path: Path) -> tuple[str, ...]:
 
 def lint_paper(audit: PaperAudit, papers_root: Path) -> list[Violation]:
     violations: list[Violation] = []
-    paper_dir = papers_root / audit.name
+    # relpath locates nested book chapters (Book/chapters/Chapter); for a top-level
+    # paper it is just the directory name. Fall back to name for audits built
+    # without a papers_root.
+    loc = getattr(audit, "relpath", "") or audit.name
+    paper_dir = papers_root / loc
     notes_path = paper_dir / "notes.md"
     manifest = load_paper_db_manifest(papers_root.parent)
     canonical_keys = set(
@@ -138,10 +143,9 @@ def lint_paper(audit: PaperAudit, papers_root: Path) -> list[Violation]:
 
 
 def _collection_paper_dirs(papers_root: Path) -> list[Path]:
-    return [
-        d for d in sorted(papers_root.iterdir())
-        if d.is_dir() and d.name != "tagged" and (d / "notes.md").exists()
-    ]
+    # Recursive (F1): top-level papers plus nested book chapters, so collection
+    # invariants (COUNT_MISMATCH, abstract sections, tags) cover chapters too.
+    return discover_notes_dirs(papers_root)
 
 
 def _canonical_tags(papers_root: Path) -> set[str] | None:

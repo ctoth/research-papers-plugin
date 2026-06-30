@@ -37,6 +37,7 @@ This provides the `pks` executable on your PATH. Skills that do not touch the pr
 | `paper-reader` | Read a paper and extract structured notes (handles small/medium/large papers) |
 | `paper-process` | Full per-paper flow: retrieve, read, and run the propstore ingestion pipeline |
 | `process-new-papers` | Batch `paper-reader` over every unprocessed PDF in `papers/` root |
+| `book-process` | Process a book as a parent of per-chapter papers (`chapters/<key>/`) plus the whole book, with a chapter `index.md` and one BibTeX entry per chapter (`@incollection`) plus one `@book` |
 
 ### Propstore ingestion
 
