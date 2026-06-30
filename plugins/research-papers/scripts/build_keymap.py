@@ -3,13 +3,14 @@
 # requires-python = ">=3.10"
 # dependencies = []
 # ///
-"""Build and maintain papers/keymap.tsv and backfill cite_key (B5).
+"""Build and maintain papers/keymap.tsv and backfill cite_key (B5, F4).
 
-cite_key must be the first key of every metadata.json. Directory names encode
-the preprint/first-seen year while the published cite key uses the published
-year, so no tool should parse directory names for years. ``keymap.tsv`` maps
-``cite_key<TAB>dir`` for reliable @key -> directory resolution downstream
-(F8 verify, F10 citation audit, F13 adopt).
+cite_key must be the first key of every metadata.json. As of F4 (overturning the
+original B5 decoupling) a paper's directory name must equal its cite_key
+(`dir == cite_key`); ``rename_to_cite_key.py`` migrates any divergent folders and
+``lint_paper_schema.py`` enforces the invariant (`DIR_KEY_MISMATCH`). ``keymap.tsv``
+maps ``cite_key<TAB>dir`` and is therefore now an identity cache, kept for reliable
+@key -> directory resolution downstream (F8 verify, F10 citation audit, F13 adopt).
 
 Usage:
   uv run scripts/build_keymap.py build   [--papers-dir papers/] [-o papers/keymap.tsv]

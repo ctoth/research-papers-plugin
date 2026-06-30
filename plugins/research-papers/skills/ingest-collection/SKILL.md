@@ -92,9 +92,25 @@ Examples:
 
 This step is optional. Do not treat it as a required second promotion ceremony.
 
-## Step 4: Final Build
+## Step 4: Completeness gate (REQUIRED — F3)
 
-After the paper-process wave is complete, run one final build:
+After the paper-process wave is complete and **before** the final build, run the
+mechanical completeness gate over the collection. It exits non-zero (2) if any paper
+is incomplete (missing a required file, an `abstract.md` lacking its
+verbatim/interpretation sections, or `dir != cite_key`):
+
+```bash
+# Run from the collection root (the directory containing papers/).
+uv run scripts/lint_paper_schema.py .
+echo "exit=$?"   # 0 = complete, 2 = BLOCKED: repair the flagged papers and re-run
+```
+
+A non-zero exit is a **hard blocker**: do not proceed to the build or report. Repair
+each flagged paper and re-run until the gate exits 0.
+
+## Step 5: Final Build
+
+After the completeness gate passes, run one final build:
 
 ```bash
 pks build
@@ -106,7 +122,7 @@ Then verify the resulting store:
 pks world status
 ```
 
-## Step 5: Report
+## Step 6: Report
 
 Write `reports/ingest-collection-report.md` summarizing:
 
