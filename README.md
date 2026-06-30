@@ -80,6 +80,7 @@ Repository-level installer utilities live in `scripts/`. Paper-collection helper
 | `cross-reference-papers.py` | Find cross-references between papers in the collection |
 | `migrate-format.py` | Convert legacy Tags: lines → YAML frontmatter, bold refs → wikilinks |
 | `rename_to_cite_key.py` | Migrate paper folders so each name equals its bibtex `cite_key` (F4); dry-run by default, `--write` to apply |
+| `verify_citations_real.py` | Final gate (F7): confirm every citation is a real paper via DOI/URL resolution or scholarly title search; exits 2 on any `MISMATCH`/`NOT_FOUND` |
 
 The claims, justifications, stances, and concepts pipeline is driven by the skills (`extract-claims`, `extract-justifications`, `extract-stances`, `register-concepts`, `enrich-claims`) together with `pks source` commands from [propstore](https://github.com/ctoth/propstore). Invoke the skills rather than running pipeline scripts directly.
 
