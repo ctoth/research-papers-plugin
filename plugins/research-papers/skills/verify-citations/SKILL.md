@@ -12,6 +12,23 @@ Grade every claim in a drafted review against what the cited papers actually say
 The notes layer exists to be written from; this is the check that catches
 substantive misattribution and misreading before a draft ships.
 
+## Step 0: Presence gate (REQUIRED pre-ship — F2)
+
+Before grading faithfulness, run the blocking presence gate. It exits non-zero (2)
+if any cited `@key` is missing from the deliverable's `citations.bibtex` **or** from
+`papers/` (a key counts as "in papers/" only if it resolves to a directory that
+passes the F3 completeness gate). This catches keys the model invented but never
+retrieved/processed — grading must not start until it passes:
+
+```bash
+PYTHON=$(command -v python3 || command -v python)
+uv run scripts/lit_review.py gate "$(dirname "$DRAFT")" --draft "$(basename "$DRAFT")" --papers-dir papers/
+echo "exit=$?"   # 0 = every cited key is present; 2 = BLOCKED (MISSING_FROM_BIBTEX / MISSING_FROM_PAPERS)
+```
+
+A `MISSING_FROM_PAPERS` or `MISSING_FROM_BIBTEX` line is a hard blocker: add/retrieve
+the paper, fix the bibtex, or remove the citation — do not grade an absent source.
+
 ## Step 1: Extract and resolve citations
 
 ```bash
@@ -22,7 +39,7 @@ PYTHON=$(command -v python3 || command -v python)
 
 `resolve` maps each `@key` to its paper directory via `papers/keymap.tsv`. Any
 `UNRESOLVED` key is a blocker: fix the keymap (`build_keymap.py`) or the citation
-before grading.
+before grading. (The Step 0 gate is the authoritative, exit-2 form of this check.)
 
 ## Step 2: Fan out one subagent per cited paper
 

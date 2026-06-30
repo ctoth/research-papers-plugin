@@ -30,9 +30,13 @@ For each paper directory, run all checks and collect results.
 |------|--------|
 | `notes.md` | REQUIRED — run paper-reader if missing |
 | `description.md` | REQUIRED — run paper-reader if missing |
-| `abstract.md` | recommended |
-| `citations.md` | recommended |
+| `abstract.md` | REQUIRED — must contain **both** an `## Original Text (Verbatim)` section and an `## Our Interpretation` section |
+| `citations.md` | REQUIRED |
 | `paper.pdf` or `pngs/` | REQUIRED — at least one source artifact must exist. Notes without a verifiable source are untrustworthy. |
+
+These severities match the mechanical linter (`scripts/lint_paper_schema.py`), which
+is the single source of truth (F3). `abstract.md` and `citations.md` are **required**,
+not recommended — a paper folder missing either is incomplete and must not be cited.
 
 ### Format Checks
 
@@ -170,8 +174,24 @@ Then a summary line:
 Summary: M complete, N issues across K papers
 ```
 
+## Step 3: Authoritative mechanical gate (F3)
+
+The grep checks above are a human-readable surface. The **binding completeness
+verdict** comes from the mechanical linter, which is the single source of truth and
+**exits non-zero (2)** when any paper in the collection is incomplete:
+
+```bash
+# Run from the collection root (the directory containing papers/).
+uv run scripts/lint_paper_schema.py .
+echo "exit=$?"   # 0 = clean, 2 = at least one paper is incomplete
+```
+
+A non-zero exit is a **hard blocker**: the wave is not complete and drafting must
+not start until every paper passes. Treat this script's required-file and
+`abstract.md` section rules as authoritative; this skill's tables mirror them.
+
 ## Do NOT:
 
 - Modify any files (this is read-only audit)
 - Read PDF content or page images
-- Use AI/LLM features (this is pure file/grep checks)
+- Use AI/LLM features for the grep checks above (they are pure file/grep checks)

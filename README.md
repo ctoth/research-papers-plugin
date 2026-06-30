@@ -69,6 +69,13 @@ This provides the `pks` executable on your PATH. Skills that do not touch the pr
 |-------|-------------|
 | `research` | Web research on a topic, structured findings report |
 
+### Writing and verification
+
+| Skill | Description |
+|-------|-------------|
+| `write-lit-review` | Write a standalone lit review (`--mode full`) or an introduction + related-work section (`--mode intro`) from the processed collection, driven by the vendored house guides; cites only resolvable `@key`s and runs the presence + reality gates |
+| `verify-citations` | Grade a drafted review against the cited papers' notes for faithfulness (presence gate + per-claim grading) |
+
 ## Scripts
 
 Repository-level installer utilities live in `scripts/`. Paper-collection helper scripts live in `plugins/research-papers/scripts/`.
@@ -79,6 +86,8 @@ Repository-level installer utilities live in `scripts/`. Paper-collection helper
 | `generate-paper-index.py` | Rebuild papers/index.md and papers/tagged/ symlinks |
 | `cross-reference-papers.py` | Find cross-references between papers in the collection |
 | `migrate-format.py` | Convert legacy Tags: lines → YAML frontmatter, bold refs → wikilinks |
+| `rename_to_cite_key.py` | Migrate paper folders so each name equals its bibtex `cite_key` (F4); dry-run by default, `--write` to apply |
+| `verify_citations_real.py` | Final gate (F7): confirm every citation is a real paper via DOI/URL resolution or scholarly title search; exits 2 on any `MISMATCH`/`NOT_FOUND` |
 
 The claims, justifications, stances, and concepts pipeline is driven by the skills (`extract-claims`, `extract-justifications`, `extract-stances`, `register-concepts`, `enrich-claims`) together with `pks source` commands from [propstore](https://github.com/ctoth/propstore). Invoke the skills rather than running pipeline scripts directly.
 
