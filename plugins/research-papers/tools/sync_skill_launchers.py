@@ -42,6 +42,7 @@ MANIFEST = {
     "ingest-new-papers": ["lint_paper_schema.py"],
     "ingest-collection": ["lint_paper_schema.py"],
     "lint-paper": ["lint_paper_schema.py"],
+    "write-lit-review": ["lit_review.py", "export_bibtex.py", "verify_citations_real.py"],
 }
 
 # Per-skill files that the old symlink layout created but the launcher layout no

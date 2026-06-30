@@ -69,6 +69,13 @@ This provides the `pks` executable on your PATH. Skills that do not touch the pr
 |-------|-------------|
 | `research` | Web research on a topic, structured findings report |
 
+### Writing and verification
+
+| Skill | Description |
+|-------|-------------|
+| `write-lit-review` | Write a standalone lit review (`--mode full`) or an introduction + related-work section (`--mode intro`) from the processed collection, driven by the vendored house guides; cites only resolvable `@key`s and runs the presence + reality gates |
+| `verify-citations` | Grade a drafted review against the cited papers' notes for faithfulness (presence gate + per-claim grading) |
+
 ## Scripts
 
 Repository-level installer utilities live in `scripts/`. Paper-collection helper scripts live in `plugins/research-papers/scripts/`.
