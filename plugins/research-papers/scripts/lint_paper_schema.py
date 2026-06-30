@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["pyyaml"]
+# ///
 """Schema linter for the paper database.
 
 This is a read-only mechanical linter over papers/ that enforces:
   - canonical notes.md frontmatter fields
-  - required file presence
+  - required file presence (incl. abstract.md with both verbatim + interpretation)
   - canonical description.md tag frontmatter
+  - paper folder name == cite_key (F4)
   - cross-reference section status
+
+It is the single source of truth for paper-folder completeness (F3). It exits 2
+when any violation exists, so it can be wired as a hard gate after each
+processing wave and as a precondition before drafting.
+
+Usage:
+  uv run scripts/lint_paper_schema.py [PROJECT_ROOT]   # lints PROJECT_ROOT/papers
 """
 
 from __future__ import annotations

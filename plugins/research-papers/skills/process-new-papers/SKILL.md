@@ -110,9 +110,26 @@ Anti-patterns to avoid:
 - Do not interpret "do the minimum thing" as permission to ignore the explicit parallelization requirement.
 - Do not serialize the work when subagents are available.
 
-## Step 3: Summary
+## Step 3: Completeness gate (REQUIRED — F3)
 
-After all papers are processed:
+After the processing wave finishes and **before** declaring it complete, run the
+mechanical completeness gate over the collection. It exits non-zero (2) if any paper
+is incomplete (missing a required file, or an `abstract.md` lacking its verbatim /
+interpretation sections, or `dir != cite_key`):
+
+```bash
+# Run from the collection root (the directory containing papers/).
+uv run scripts/lint_paper_schema.py .
+echo "exit=$?"   # 0 = wave complete, 2 = BLOCKED: fix the listed papers and re-run
+```
+
+A non-zero exit is a **hard blocker**: do not report the wave as done. Re-process or
+repair each flagged paper (re-run paper-reader for missing files, add the missing
+`abstract.md` sections) until the gate exits 0.
+
+## Step 4: Summary
+
+After all papers are processed and the completeness gate passes:
 
 ```
 Processed N paper(s):
