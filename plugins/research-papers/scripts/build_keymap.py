@@ -3,13 +3,14 @@
 # requires-python = ">=3.10"
 # dependencies = []
 # ///
-"""Build and maintain papers/keymap.tsv and backfill cite_key (B5).
+"""Build and maintain papers/keymap.tsv and backfill cite_key (B5, F4).
 
-cite_key must be the first key of every metadata.json. Directory names encode
-the preprint/first-seen year while the published cite key uses the published
-year, so no tool should parse directory names for years. ``keymap.tsv`` maps
-``cite_key<TAB>dir`` for reliable @key -> directory resolution downstream
-(F8 verify, F10 citation audit, F13 adopt).
+cite_key must be the first key of every metadata.json. As of F4 (overturning the
+original B5 decoupling) a paper's directory name must equal its cite_key
+(`dir == cite_key`); ``rename_to_cite_key.py`` migrates any divergent folders and
+``lint_paper_schema.py`` enforces the invariant (`DIR_KEY_MISMATCH`). ``keymap.tsv``
+maps ``cite_key<TAB>dir`` and is therefore now an identity cache, kept for reliable
+@key -> directory resolution downstream (F8 verify, F10 citation audit, F13 adopt).
 
 Usage:
   uv run scripts/build_keymap.py build   [--papers-dir papers/] [-o papers/keymap.tsv]
@@ -27,6 +28,7 @@ from pathlib import Path
 # Reuse the canonical citation-key generator instead of inventing a parallel one.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from export_bibtex import _citation_key  # noqa: E402
+from paper_discovery import discover_metadata_dirs, relpath  # noqa: E402
 
 BIBTEX_KEY_RE = re.compile(r"@\w+\s*\{\s*([^,\s]+)\s*,")
 
@@ -62,13 +64,17 @@ def validate_cite_key_first(metadata) -> bool:
 
 
 def keymap_entries(papers_dir: Path) -> list[tuple[str, str]]:
-    """Return sorted (cite_key, dirname) pairs for every metadata.json."""
+    """Return sorted (cite_key, dir) pairs for every metadata.json.
+
+    Discovery is recursive (F1): top-level papers and nested book chapters are both
+    found. The dir value is the posix path relative to papers_dir, so a chapter maps
+    to ``Book/chapters/Chapter`` and a normal paper to its single directory name.
+    """
     papers_dir = Path(papers_dir)
     entries: list[tuple[str, str]] = []
-    for meta_path in sorted(papers_dir.glob("*/metadata.json")):
-        dirname = meta_path.parent.name
-        metadata = json.loads(meta_path.read_text(encoding="utf-8"))
-        entries.append((derive_cite_key(metadata, dirname), dirname))
+    for d in discover_metadata_dirs(papers_dir):
+        metadata = json.loads((d / "metadata.json").read_text(encoding="utf-8"))
+        entries.append((derive_cite_key(metadata, d.name), relpath(d, papers_dir)))
     return sorted(entries)
 
 
@@ -98,13 +104,15 @@ def backfill(papers_dir: Path, write: bool = False) -> list[str]:
     """
     papers_dir = Path(papers_dir)
     changed: list[str] = []
-    for meta_path in sorted(papers_dir.glob("*/metadata.json")):
-        dirname = meta_path.parent.name
+    for d in discover_metadata_dirs(papers_dir):
+        meta_path = d / "metadata.json"
+        dirname = relpath(d, papers_dir)
         text = meta_path.read_text(encoding="utf-8")
         metadata = json.loads(text)
         if validate_cite_key_first(metadata):
             continue
-        cite_key = derive_cite_key(metadata, dirname)
+        # derive_cite_key's generated fallback keys off the leaf name, not the path.
+        cite_key = derive_cite_key(metadata, d.name)
         reordered = {"cite_key": cite_key}
         for k, v in metadata.items():
             if k != "cite_key":

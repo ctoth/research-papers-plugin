@@ -11,11 +11,15 @@ This is a read-only mechanical audit. It reports:
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from paper_discovery import candidate_paper_dirs, relpath as _relpath  # noqa: E402
 
 
 def resolve_project_root() -> Path:
@@ -47,6 +51,7 @@ class NotesFormat:
 @dataclass(frozen=True)
 class PaperAudit:
     name: str
+    relpath: str
     has_notes: bool
     has_description: bool
     has_abstract: bool
@@ -165,7 +170,7 @@ def looks_like_paper_dir(paper_dir: Path) -> bool:
     return (paper_dir / "pngs").is_dir()
 
 
-def audit_paper_dir(paper_dir: Path) -> PaperAudit:
+def audit_paper_dir(paper_dir: Path, papers_root: Path | None = None) -> PaperAudit:
     notes_path = paper_dir / "notes.md"
     description_path = paper_dir / "description.md"
     abstract_path = paper_dir / "abstract.md"
@@ -182,8 +187,10 @@ def audit_paper_dir(paper_dir: Path) -> PaperAudit:
     )
     crossref_status = analyze_crossrefs(notes_text) if notes_text else "missing-notes"
 
+    rel = _relpath(paper_dir, papers_root) if papers_root is not None else paper_dir.name
     return PaperAudit(
         name=paper_dir.name,
+        relpath=rel,
         has_notes=notes_path.exists(),
         has_description=description_path.exists(),
         has_abstract=abstract_path.exists(),
@@ -198,11 +205,18 @@ def audit_paper_dir(paper_dir: Path) -> PaperAudit:
 
 
 def collect_audits(papers_dir: Path) -> list[PaperAudit]:
+    """Audit every paper dir, recursing into nested book chapters (F1).
+
+    Each audit carries its posix ``relpath`` under papers_dir so downstream tools
+    can locate a nested chapter (``Book/chapters/Chapter``) as well as a top-level
+    paper.
+    """
+    papers_dir = Path(papers_dir)
     audits: list[PaperAudit] = []
-    for paper_dir in sorted(papers_dir.iterdir()):
+    for paper_dir in candidate_paper_dirs(papers_dir):
         if not looks_like_paper_dir(paper_dir):
             continue
-        audits.append(audit_paper_dir(paper_dir))
+        audits.append(audit_paper_dir(paper_dir, papers_dir))
     return audits
 
 

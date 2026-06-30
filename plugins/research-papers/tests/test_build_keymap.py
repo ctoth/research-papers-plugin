@@ -100,6 +100,24 @@ def test_backfill_uses_embedded_bibtex_key(bk, tmp_path):
     assert md["cite_key"] == "Lee2022ImageExplorerMT"
 
 
+def test_keymap_discovers_nested_chapters(bk, tmp_path):
+    # F1: a book dir plus nested chapter paper dirs are all discovered, and each
+    # chapter cite_key maps to its book/chapters/<dir> relative path (not the leaf).
+    papers = tmp_path / "papers"
+    _write_paper(papers, "Geertz_1973_Interpretation",
+                 {"cite_key": "Geertz_1973_Interpretation", "title": "Book"})
+    book = papers / "Geertz_1973_Interpretation"
+    ch_a = book / "chapters" / "Geertz_1973_ThickDescription"
+    ch_a.mkdir(parents=True)
+    (ch_a / "metadata.json").write_text(
+        json.dumps({"cite_key": "Geertz_1973_ThickDescription", "title": "Ch"}), encoding="utf-8")
+    tsv = {ln.split("\t")[0]: ln.split("\t")[1] for ln in bk.build_keymap(papers).splitlines() if ln.strip()}
+    assert tsv["Geertz_1973_ThickDescription"] == "Geertz_1973_Interpretation/chapters/Geertz_1973_ThickDescription"
+    assert tsv["Geertz_1973_Interpretation"] == "Geertz_1973_Interpretation"
+    # Book counted once; chapters add to (not replace) the book entry.
+    assert len(tsv) == 2
+
+
 def test_manifest_declares_cite_key_first():
     mod = _load("paper_db_manifest", "paper_db_manifest.py")
     assert mod.DEFAULT_MANIFEST.metadata_first_key == "cite_key"
