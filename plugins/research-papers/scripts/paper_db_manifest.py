@@ -25,6 +25,10 @@ class PaperDbManifest:
     # cite_key is mandatory and must be the first key (B5).
     metadata_required: tuple[str, ...] = ("cite_key", "title", "authors", "year")
     metadata_first_key: str = "cite_key"
+    # Optional metadata.json blocks written by tools (never displace cite_key).
+    # verification: F7 reality-check stamp {status, doi, title} so re-runs of
+    # verify_citations_real.py skip the network for an already-verified paper.
+    metadata_optional_blocks: tuple[str, ...] = ("verification",)
     # Document type drives metadata schema, naming, abstract optionality, and the
     # BibTeX entry type (F15). book_chapter entries additionally carry
     # container_title / chapter / pages / publisher / address.

@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["pyyaml"]
+# ///
 """Schema linter for the paper database.
 
 This is a read-only mechanical linter over papers/ that enforces:
   - canonical notes.md frontmatter fields
-  - required file presence
+  - required file presence (incl. abstract.md with both verbatim + interpretation)
   - canonical description.md tag frontmatter
+  - paper folder name == cite_key (F4)
   - cross-reference section status
+
+It is the single source of truth for paper-folder completeness (F3). It exits 2
+when any violation exists, so it can be wired as a hard gate after each
+processing wave and as a precondition before drafting.
+
+Usage:
+  uv run scripts/lint_paper_schema.py [PROJECT_ROOT]   # lints PROJECT_ROOT/papers
 """
 
 from __future__ import annotations
@@ -28,7 +40,7 @@ from audit_paper_corpus import (
     read_text,
 )
 from paper_db_manifest import load_paper_db_manifest
-from build_keymap import validate_cite_key_first
+from build_keymap import validate_cite_key_first, derive_cite_key
 from _textutil import find_em_dashes
 
 CONTENT_MD_FILES = ("notes.md", "description.md", "abstract.md", "citations.md")
@@ -81,6 +93,22 @@ def lint_paper(audit: PaperAudit, papers_root: Path) -> list[Violation]:
         violations.append(Violation("CITATIONS_MISSING", audit.name))
     if not audit.has_pdf and not audit.has_pngs:
         violations.append(Violation("SOURCE_MISSING", audit.name))
+
+    # F4: a paper folder name must equal its bibtex cite_key. Directory identity
+    # and cite key were deliberately decoupled under B5; that decision is
+    # overturned (2026-06-30) -- dir == cite_key is now a required invariant.
+    meta_path = paper_dir / "metadata.json"
+    if meta_path.exists():
+        try:
+            metadata = json.loads(meta_path.read_text(encoding="utf-8"))
+        except (ValueError, json.JSONDecodeError):
+            metadata = None
+        if metadata is not None:
+            cite_key = derive_cite_key(metadata, audit.name)
+            if cite_key != audit.name:
+                violations.append(
+                    Violation("DIR_KEY_MISMATCH", audit.name, f"cite_key={cite_key}")
+                )
 
     keys = notes_frontmatter_keys(notes_path)
     key_set = set(keys)
