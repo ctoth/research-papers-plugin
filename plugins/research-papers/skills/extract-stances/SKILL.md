@@ -3,7 +3,6 @@ name: extract-stances
 description: Extract inter-claim stances and author them through pks source propose-stance.
 argument-hint: "<papers/Author_Year_Title> [--cluster paper1,paper2,...] or --all"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Extract Stances: $ARGUMENTS

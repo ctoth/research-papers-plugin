@@ -3,7 +3,6 @@ name: author-context
 description: Create a propstore context for one paper with CEL assumptions, parameters, and perspective. Every claim extracted from the paper will reference this context. Required before extract-claims if the paper does not already have one.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Author Context: $ARGUMENTS

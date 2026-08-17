@@ -3,7 +3,6 @@ name: extract-claims
 description: Extract propositional claims from a paper directory into the propstore source branch using pks source propose-claim.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Extract Claims: $ARGUMENTS

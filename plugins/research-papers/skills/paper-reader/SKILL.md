@@ -1,9 +1,9 @@
 ---
 name: paper-reader
-description: Read scientific papers and extract implementation-focused notes. Converts PDFs to page images, then reads them. Papers <=300pp are read directly by the assigned worker; papers >300pp use a chapter-aligned chunk protocol (preferred) or 50-page chunks (fallback) and synthesize a master notes.md that links to per-chapter files. Creates structured notes in papers/ directory.
+description: >-
+  Read scientific papers and extract implementation-focused notes. Converts PDFs to page images, then reads them. Papers at most 300pp are read directly by the assigned worker; papers greater than 300pp use a chapter-aligned chunk protocol (preferred) or 50-page chunks (fallback) and synthesize a master notes.md that links to per-chapter files. Creates structured notes in papers/ directory.
 argument-hint: "[path/to/paper.pdf]"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires shell access; subagents are optional but improve large-paper throughput."
 ---
 
 # Paper Reader: $ARGUMENTS

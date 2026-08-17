@@ -3,7 +3,6 @@ name: author-rules
 description: Author the DeLP rule artifacts (strict, defeasible, proper_defeater, blocking_defeater) encoding a paper's stated argument structure. Runs after register-predicates.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Author Rules: $ARGUMENTS

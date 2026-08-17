@@ -3,7 +3,6 @@ name: paper-process
 description: Retrieve a paper, read it, and run the full per-paper propstore ingestion flow through nested skills. Give it a URL, DOI, or title.
 argument-hint: "<url-or-doi-or-title>"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Paper Process: $ARGUMENTS

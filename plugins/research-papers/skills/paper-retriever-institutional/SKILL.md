@@ -3,7 +3,6 @@ name: paper-retriever-institutional
 description: Paywalled-access backend for paper-retriever. Retrieves a paywalled paper's PDF through an institutional / library subscription (a library proxy such as EZproxy or OpenAthens, or an institutional login), given an identifier (DOI/URL) and the target paper directory name. Invoked by paper-retriever when open-access channels fail. Enable this skill only if the install has institutional access configured.
 argument-hint: "<doi-or-identifier> <dirname>"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires browser automation and configured institutional/library access."
 ---
 
 # Paper Retriever — institutional access: $ARGUMENTS

@@ -3,7 +3,6 @@ name: author-lifting-rules
 description: Author DeLP/McCarthy context lifting rules between existing context YAMLs so cross-context claim reasoning can proceed. Collection-level, runs after all papers are ingested. Targets the CONTEXT_PHI_NODE records that accumulate when multiple per-paper contexts share concepts with no authored bridges.
 argument-hint: "[knowledge-root]"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Author Lifting Rules

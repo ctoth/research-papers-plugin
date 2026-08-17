@@ -3,7 +3,6 @@ name: source-promote
 description: Promote a fully prepared propstore source branch for one paper directory into master.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Source Promote: $ARGUMENTS

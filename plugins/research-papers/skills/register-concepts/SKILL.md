@@ -3,7 +3,6 @@ name: register-concepts
 description: Register concepts from a paper into its propstore source branch using pks source propose-concept.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Register Concepts: $ARGUMENTS

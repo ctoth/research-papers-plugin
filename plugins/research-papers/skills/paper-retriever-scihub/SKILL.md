@@ -3,7 +3,6 @@ name: paper-retriever-scihub
 description: Paywalled-access backend for paper-retriever. Retrieves a paywalled paper's PDF via sci-hub browser automation, given an identifier (DOI/URL) and the target paper directory name. Invoked by paper-retriever when open-access channels fail; enabled by default. Disable this skill to remove sci-hub from the retrieval waterfall.
 argument-hint: "<doi-or-identifier> <dirname>"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires browser automation."
 ---
 
 # Paper Retriever — sci-hub access: $ARGUMENTS

@@ -1,0 +1,20 @@
+{
+  "name": "research-papers-marketplace",
+  "interface": {
+    "displayName": "Research Papers"
+  },
+  "plugins": [
+    {
+      "name": "research-papers",
+      "source": {
+        "source": "local",
+        "path": "./plugins/research-papers"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

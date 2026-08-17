@@ -4,7 +4,6 @@ description: Systematically adjudicate disagreements across a paper collection. 
 argument-hint: "[topic-scope or --all]"
 context: fork
 agent: general-purpose
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Adjudicate: $ARGUMENTS

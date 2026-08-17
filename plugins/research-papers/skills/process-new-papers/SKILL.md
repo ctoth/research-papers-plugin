@@ -3,7 +3,6 @@ name: process-new-papers
 description: Process all unprocessed PDF files in the papers/ root directory. If subagents are available, parallelize across papers immediately after listing them; otherwise process sequentially. Any PDF in papers/ root is unprocessed by convention (processed papers live in subdirectories). Invokes paper-reader on each PDF.
 argument-hint: ""
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Process New Papers

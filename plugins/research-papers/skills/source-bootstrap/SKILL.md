@@ -3,7 +3,6 @@ name: source-bootstrap
 description: Initialize a propstore source branch for an extracted paper directory and write notes plus metadata into that source branch.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Source Bootstrap: $ARGUMENTS

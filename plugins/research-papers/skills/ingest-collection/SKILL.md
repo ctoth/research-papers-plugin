@@ -3,7 +3,6 @@ name: ingest-collection
 description: Rebuild a knowledge store from a paper collection by running paper-process per paper, then doing one final build and optional stance backfill.
 argument-hint: "<papers-directory> [--knowledge-dir <path>]"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Ingest Collection: $ARGUMENTS

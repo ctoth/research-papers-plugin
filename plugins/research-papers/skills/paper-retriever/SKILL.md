@@ -3,7 +3,6 @@ name: paper-retriever
 description: Retrieve a scientific paper PDF given an arxiv URL, DOI, or paper title. Downloads to papers/ directory. Handles open-access retrieval (arxiv direct, Chrome print-to-pdf for publisher-direct HTML, Unpaywall, title-based open-repository search); for paywalled papers it hands off to whichever paper-retriever-* access skill is enabled (sci-hub by default, or institutional).
 argument-hint: "<arxiv-url-or-doi> [optional-output-name]"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires shell access; browser automation is optional for paywalled papers."
 ---
 
 # Paper Retriever: $ARGUMENTS
@@ -110,11 +109,15 @@ Print the canonical URL to PDF:
 
 ```bash
 mkdir -p "./papers/<dirname>"
-"$CHROME" --headless --disable-gpu --no-sandbox \
+"$CHROME" --headless --disable-gpu \
   --print-to-pdf="./papers/<dirname>/paper.pdf" \
   --print-to-pdf-no-header \
   "<canonical URL>"
 ```
+
+Chrome must retain its normal sandbox. If the platform cannot run sandboxed headless Chrome,
+stop and request explicit approval for a suitably isolated alternative; do not silently disable
+the sandbox. State what isolation will contain the browser before proceeding.
 
 Verify the output is a valid PDF (`file ./papers/<dirname>/paper.pdf` reports "PDF document", size > 100KB) before treating this as success. Then materialize `metadata.json`:
 

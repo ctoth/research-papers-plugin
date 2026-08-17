@@ -3,7 +3,6 @@ name: verify-citations
 description: Grade a drafted literature review against the cited papers' notes. For each cited @key, read that paper's notes.md/abstract.md and grade whether the citing sentence is faithful. Fans out one subagent per cited paper.
 argument-hint: "<draft.md> [--papers-dir papers/]"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Verify Citations: $ARGUMENTS

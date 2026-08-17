@@ -3,7 +3,6 @@ name: paper-retriever-bookshare
 description: Credentialed-source backend for retrieving books from Bookshare (bookshare.org) into the papers/ collection. Given a book title or ISBN and a target directory name, it searches Bookshare and downloads the EPUB via the published `bookshare` CLI. Download-only (produces book.epub). Enable only if you have a Bookshare account; requires credentials in a gitignored .secrets/bookshare.json.
 argument-hint: "<book-title-or-isbn> [dirname]"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI. Requires shell access, uv, and a Bookshare account."
 ---
 
 # Paper Retriever — Bookshare access: $ARGUMENTS

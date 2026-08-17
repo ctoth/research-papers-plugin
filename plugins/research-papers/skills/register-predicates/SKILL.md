@@ -3,7 +3,6 @@ name: register-predicates
 description: Author the DeLP/Datalog predicate declaration artifacts a paper's rules will use. Required before author-rules if the paper's rules reference predicates not yet declared.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Register Predicates: $ARGUMENTS

@@ -3,7 +3,6 @@ name: enrich-claims
 description: Enrich existing source-branch claims by updating them through pks source propose-claim.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Enrich Claims: $ARGUMENTS

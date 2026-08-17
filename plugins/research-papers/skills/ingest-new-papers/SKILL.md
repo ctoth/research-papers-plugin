@@ -3,7 +3,6 @@ name: ingest-new-papers
 description: Process all unprocessed PDFs in papers/ through the full paper-process workflow.
 argument-hint: ""
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Ingest New Papers

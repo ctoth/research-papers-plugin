@@ -3,7 +3,6 @@ name: reconcile-vocabulary
 description: Reconcile source-branch concept vocabularies across a paper collection and report collision groups.
 argument-hint: "<papers-directory> [--fix] [--vocabulary <path>]"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Reconcile Vocabulary: $ARGUMENTS

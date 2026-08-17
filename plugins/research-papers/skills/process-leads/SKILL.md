@@ -8,7 +8,6 @@ description: >-
   concurrently via subagents (default: sequential).
 argument-hint: "[--all | N] [--parallel M]"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI. Subagents are optional but recommended for throughput."
 ---
 
 # Process Leads: $ARGUMENTS

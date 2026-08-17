@@ -3,7 +3,6 @@ name: extract-justifications
 description: Extract intra-paper justification structure and author it through pks source propose-justification.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
-compatibility: "Claude Code, Codex CLI, and Gemini CLI."
 ---
 
 # Extract Justifications: $ARGUMENTS

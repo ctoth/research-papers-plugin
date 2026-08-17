@@ -1,0 +1,30 @@
+{
+  "name": "research-papers",
+  "version": "4.8.1",
+  "description": "Annotated research paper collection management — retrieve, read, extract, cross-reference scientific papers.",
+  "author": {
+    "name": "Q"
+  },
+  "repository": "https://github.com/ctoth/research-papers-plugin",
+  "keywords": [
+    "research-papers",
+    "agent-skills",
+    "codex",
+    "claude-code"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Research Papers",
+    "shortDescription": "Retrieve and process scientific papers",
+    "longDescription": "Annotated research paper collection management — retrieve, read, extract, cross-reference scientific papers.",
+    "developerName": "Q",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use Research Papers for this task."
+    ]
+  }
+}

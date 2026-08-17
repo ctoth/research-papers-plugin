@@ -95,6 +95,16 @@ The claims, justifications, stances, concepts, contexts, predicates, and rule pi
 
 Some skills need helper scripts under `scripts/` relative to the installed skill directory. Those helper paths are generated cross-platform launchers that delegate to the canonical implementations in `plugins/research-papers/scripts/`; run `plugins/research-papers/tools/sync_skill_launchers.py` after changing the launcher manifest or a canonical helper script's PEP 723 metadata.
 
+## Development
+
+The repository root is a non-package uv project. Its locked development dependencies include pytest and PyYAML, so no ad hoc `--with` dependencies are needed. Run the canonical test gate from the repository root:
+
+```bash
+uv run pytest -q plugins/research-papers/tests
+```
+
+Use `uv sync --dev` when you want to provision the development environment without running the tests.
+
 ## Installation
 
 ### Claude Code marketplace
@@ -104,11 +114,20 @@ Use the repo itself as a Claude Code marketplace source. The marketplace manifes
 ```bash
 git clone https://github.com/ctoth/research-papers-plugin
 cd research-papers-plugin
-claude plugin marketplace add ./. --scope user
+claude plugin marketplace add . --scope user
 claude plugin install research-papers@research-papers-marketplace --scope user
 ```
 
 If your clone already exists somewhere else, replace `.` with that repo path.
+
+### Native Codex plugin marketplace
+
+```bash
+codex plugin marketplace add ctoth/research-papers-plugin
+codex plugin add research-papers@research-papers-marketplace
+```
+
+Marketplace registration and plugin installation are separate operations. Use the script-based path below when direct skill links for Codex or Gemini are also required.
 
 ### Script-based installer for Codex CLI, Claude Code, and Gemini CLI
 
