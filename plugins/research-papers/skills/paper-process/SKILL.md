@@ -23,6 +23,18 @@ Run, in order, skipping every propstore step:
 2. `/research-papers:paper-reader <path-from-step-1>` — extract the paper artifacts.
 3. `/research-papers:tag-papers <paper-directory>` — tag and update `tags.yaml` counts.
 4. `/research-papers:reconcile <paper-directory>` — cross-reference into the collection.
+5. `/research-papers:lint-paper <paper-directory>` — run the mechanical checks,
+   including the numeric-provenance gate.
+
+**`--light` has no claim-layer numeric backstop.** In the full flow, `extract-claims`
+re-verifies every numeric claim against the page images before authoring it. `--light`
+skips that step, so the notes layer is the final word on every number in the paper —
+and notes-layer numbers are exactly what lit reviews then cite. Step 5 is therefore
+**mandatory in `--light` mode**, not optional cleanup.
+
+Treat `PAGE_OUT_OF_RANGE` or `NUMERIC_NOT_IN_NOTES` as a blocker: those codes mean a
+number may have entered the collection without ever being read off the paper. Re-run
+`paper-reader` on that directory rather than shipping the notes.
 
 Then stop. In `--light` mode you **skip** Steps 4 onward of the full flow — i.e.
 **skip** `source-bootstrap`, `author-context`, `register-concepts`,

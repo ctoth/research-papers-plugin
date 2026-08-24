@@ -22,6 +22,11 @@ This skill is a checklist, not an outcome sketch.
 - Do not add retrieval heuristics, ranking schemes, batching logic, or alternate workflows beyond what this skill specifies.
 - If you can invoke the named nested skill, do that. If you cannot, use the fallback helper below and follow its stdout literally.
 - If you are blocked on a specific step, stop there and report the exact blocker instead of inventing a workaround.
+- **Collect each lead's numeric verification report.** `paper-reader` ends with a
+  `Numeric verification: ...` line and a numeric-gate result. A lead that returns
+  without those lines has not run the numeric checks. Surface every non-zero
+  `unverified` count and every gate finding in your wave summary — at lead volume,
+  silently aggregating them is how a fabricated number enters the collection unnoticed.
 
 ## Script Paths
 

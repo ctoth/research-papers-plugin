@@ -44,6 +44,12 @@ This skill is a checklist, not an outcome sketch.
 - If you are blocked on a specific step, stop there and report the exact blocker instead of inventing a workaround.
 - Do not do extra local investigation before delegation. After listing PDFs, the next action is to start `paper-reader` for each PDF, using subagents if available.
 - Treat the parallelization instruction in Step 2 as mandatory when subagents are available, not optional guidance.
+- **Collect each worker's numeric verification report.** `paper-reader` ends with a
+  `Numeric verification: N checked, M corrected, K not reported, J unverified` line and
+  a numeric-gate result. A worker that returns without those lines has not run the
+  numeric checks — re-dispatch it rather than accepting the paper. Surface every
+  non-zero `unverified` count and every gate finding in your final summary; do not
+  aggregate them away.
 
 ## Convention
 

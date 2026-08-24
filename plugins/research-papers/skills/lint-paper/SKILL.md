@@ -1,13 +1,13 @@
 ---
 name: lint-paper
-description: Check paper directories for completeness, format compliance, and index consistency. Run on a single paper or --all for the entire collection.
+description: Check paper directories for completeness, format compliance, numeric provenance, and index consistency. Run on a single paper or --all for the entire collection.
 argument-hint: "<papers/Author_Year_Title> or --all"
 disable-model-invocation: false
 ---
 
 # Lint Paper: $ARGUMENTS
 
-Audit paper directories for completeness and format compliance. No AI needed — just file checks and grep.
+Audit paper directories for completeness, format compliance, and numeric provenance. No AI needed — just file checks and grep.
 
 ## Step 0: Determine Mode
 
@@ -109,6 +109,41 @@ For each paper directory, run all checks and collect results.
     ```
     Zero → report as `NO_PAGE_CITATIONS` (re-read paper with updated paper-reader to add page provenance)
 
+### Numeric Provenance Checks
+
+11. **Numeric provenance**: Does every reported number trace to a page?
+
+    ```bash
+    PYTHON=$(command -v python3 || command -v python)
+    "$PYTHON" scripts/check_numeric_provenance.py check "$paper_dir"
+    ```
+
+    This is a mechanical grep-class check — it reads only markdown, never the PDF or
+    page images, and never calls an LLM. It exists because fabricated statistics are
+    the highest-cost defect in the collection: a wrong effect size or p-value inverts a
+    paper's conclusion and nothing downstream re-derives it from the source.
+
+    Report each emitted code:
+
+    | Code | Meaning | Fix |
+    |------|---------|-----|
+    | `NUMERIC_NO_PAGE` | data-bearing number with no page citation | re-read the paper and add provenance |
+    | `PARAM_TABLE_NO_PAGE_COL` | quantitative table missing the Page column | re-read and add the column |
+    | `PARAM_ROW_NO_PAGE` | quantitative row with an empty Page cell | source the row or mark it `not reported` |
+    | `PAGE_OUT_OF_RANGE` | cites a page the source does not have | **suspected fabrication** — re-verify the number itself, not just the citation |
+    | `TEMPLATE_PLACEHOLDER` | unfilled token such as a literal `*(p.N)*` | re-run paper-reader |
+    | `NUMERIC_NOT_IN_NOTES` | number in `description.md`/`abstract.md` absent from `notes.md` | **suspected fabrication** — confirm on a page image or delete |
+
+    `PAGE_OUT_OF_RANGE` and `NUMERIC_NOT_IN_NOTES` are the two fabrication signals.
+    Surface them separately from the formatting codes — they mean a number may have
+    entered the collection without ever being read off the paper.
+
+    For `--all` mode, run once across the collection:
+
+    ```bash
+    "$PYTHON" scripts/check_numeric_provenance.py check --all --papers-dir papers/
+    ```
+
 ## Step 2: Report
 
 ### Single Paper Mode
@@ -162,6 +197,15 @@ Issues found:
 
   ORPHAN_PDF (unprocessed PDFs in papers/ root):
     - somefile.pdf
+
+  SUSPECTED FABRICATION (numbers with no traceable source):
+    PAGE_OUT_OF_RANGE:
+      - Paper12/notes.md:88 - cites p.47 but the source has 12 page(s)
+    NUMERIC_NOT_IN_NOTES:
+      - Paper13/description.md:9 - numbers 0.42 appear nowhere in notes.md
+
+  NUMERIC_NO_PAGE / PARAM_ROW_NO_PAGE (numbers lacking page provenance):
+    - Paper14, Paper15
 ```
 
 Then a summary line:
@@ -174,3 +218,4 @@ Summary: M complete, N issues across K papers
 - Modify any files (this is read-only audit)
 - Read PDF content or page images
 - Use AI/LLM features (this is pure file/grep checks)
+- Silence a numeric-provenance finding by removing the number's citation requirement — the fix is always to re-source the number from the paper

@@ -28,7 +28,11 @@ This skill is a checklist, not an outcome sketch.
 The target output in this repo is a **dense paper surrogate**, not a sharpened executive summary.
 
 - Favor **high recall over compression**.
-- Preserve the paper's formal content, definitions, equations, thresholds, algorithm steps, caveats, and section-level structure.
+- Preserve the paper's formal content, statistics, definitions, equations, thresholds, algorithm steps, caveats, and section-level structure.
+- **Every number is a transcription, never a recollection or an estimate.** Numeric
+  fidelity is governed by [Numeric Fidelity (MANDATORY)](#numeric-fidelity-mandatory).
+  Read that section before writing any artifact that contains a digit. It applies to
+  every file this skill produces and to every subagent this skill dispatches.
 - Do **not** collapse notes into only the "main idea" or a few elegant abstractions.
 - Do **not** optimize for brevity. Optimize for faithful extraction with useful organization.
 - The standard is: a later reader should rarely need to reopen the PDF except to inspect a figure in full detail.
@@ -261,6 +265,22 @@ For papers with 300 pages or fewer, the assigned worker must do this reading its
 
 **Incremental write discipline.** Take thorough notes as you go AND write them out periodically. The dominant silent-failure mode is buffering everything in context and trying to issue a single final Write at the end — if context fills before that Write fires, no output reaches disk. After every ~15-25 pages of reading, append your accumulated extraction to `notes.md` (or a working scratch file you will promote to `notes.md` at the end). If your context starts feeling tight, write what you have *now* before reading more pages.
 
+**Numeric fidelity check 1 — transcription (MANDATORY).** Incremental writing creates
+the conditions for numeric drift: by the time you flush at page 25, the page-4 image
+that carried the effect size is far behind you. So numbers are written **only while
+their page is in view**, together with their page citation, in the same edit.
+
+At each incremental flush, before you write:
+
+- Every number in the batch you are about to write came from a page you read in this
+  batch, and carries its `*(p.N)*` citation.
+- Any number you are tempted to write from memory is instead marked `not reported`,
+  or you re-open `pngs/page-{(N-1):03d}.png` and read it again. Re-opening one page
+  image is cheap. A wrong hazard ratio is not.
+
+Never flush a batch containing a bare number with no page citation, and never plan to
+"add the citations at the end" — see [Numeric Fidelity (MANDATORY)](#numeric-fidelity-mandatory).
+
 Continue to Step 3.
 
 ---
@@ -320,6 +340,41 @@ Use the strongest available full-size model for this job. Do not use any mini/sm
 
 Read EVERY page image in your range. Be exhaustive — extract every numbered definition, theorem, proposition, lemma, corollary, equation, algorithm, parameter, worked example, figure description, criticism of prior work, and design rationale. Cite the **printed book page number** visible at the top/bottom of each page image, not the PDF index.
 
+## CRITICAL: Numeric fidelity
+
+**A fabricated number is the worst failure you can produce.** Wrong effect sizes and
+wrong p-values have been ingested before and inverted a work's actual conclusions.
+Incomplete extraction is recoverable; a confident wrong number is not, because nothing
+downstream re-derives it from the source.
+
+**Every number you write is a transcription of a number you are looking at right now.**
+Not a recollection, not an inference, not a plausible value, not a rounded restatement.
+This covers effect sizes, p-values, confidence intervals, sample sizes, thresholds,
+constants inside equations, percentages, counts, and dosages.
+
+Rules, no exceptions:
+
+- Write each number **while its page image is open**, with its printed page number, in
+  the same edit. Never defer citations to "the end" — by then you are citing your own prose.
+- If the work does not state a value, write `not reported`. Never invent one to fill a
+  table cell. A row reading `not reported` is correct; a plausible invented value is corruption.
+- Never copy a number from memory after its page has left your context. Re-open the page
+  image instead — that is cheap, and being wrong is not.
+- Never adjust a number to agree with the surrounding narrative or another table. If the
+  work is internally inconsistent, transcribe both figures and flag the discrepancy.
+- Never round, unit-convert, or rescale silently. Transcribe as printed; note any
+  conversion next to the original.
+- If you computed a value rather than read it, label it `derived: <formula>`.
+
+**Before you finish, run a numeric verification pass over your own output.** For every
+number in your chunk file, re-open the cited page image and compare digit by digit —
+including the digits of the page citation itself. Fix mismatches; mark anything you
+cannot confirm as `unverified` and say so in your final report. Report the count of
+numbers verified and the count you could not confirm.
+
+If you cannot verify a number, say so. Do not guess. A chunk delivered with ten
+`not reported` cells is a good outcome. Ten confident invented numbers is not.
+
 ## CRITICAL: Incremental write discipline
 
 After reading every ~10-15 pages, append your accumulated extraction to your output file via Write. Do not try to defer writing until "the end" — context exhaustion before a single final Write is the dominant silent-failure mode. If your context starts feeling tight, stop reading more pages and write what you have right now, then continue.
@@ -334,7 +389,7 @@ Standard sections (omit any that are truly absent for your chunk):
 - Equations (one LaTeX block per equation, variables defined after)
 - Geometric structures / data structures
 - Algorithms (numbered steps)
-- Parameters / quantities (table with Page column)
+- Parameters / quantities (table with a **required Page column**; `not reported` where the work is silent — never a guessed value)
 - Worked examples
 - Figures of interest (with page references)
 - Criticisms of prior work
@@ -392,7 +447,29 @@ For chapter-aligned mode, write `notes.md` with:
 
 For fixed-page fallback mode, read all `chunks/chunk-*.md` files and synthesize into `notes.md` in the standard Step-3 format, deduplicating and organising rather than compressing. The chunks become reference material; the master notes is what readers consult first.
 
-If you can dispatch a synthesis subagent, do so using the strongest available full-size model. Otherwise do it yourself.
+**Numeric fidelity during synthesis (MANDATORY).** Synthesis is a second transcription
+hop, and transcription hops are where digits drift. The chapter files are **not** an
+authoritative source for numbers — they are one worker's transcription, and that worker
+may have erred.
+
+- Every number promoted into the master `notes.md` (master parameter table, key
+  equation highlights, headline results) is re-verified against **the page image it
+  cites**, not against the chapter file it came from. Open
+  `pngs/page-{(N-1):03d}.png` and compare digit by digit.
+- Carry the page citation with the number. A number that arrives from a chapter file
+  without a page citation does not go into the master notes — go back to the chapter's
+  page range and source it, or omit it.
+- Never reconcile two chapters' conflicting figures by picking one or averaging. Open
+  both cited pages. If the book really is inconsistent, record both with their pages
+  and note the conflict in Limitations.
+- Never compute a cross-chapter total, mean, or rollup and present it as the book's own
+  figure. Label any such value `derived: <formula>`.
+
+If you can dispatch a synthesis subagent, do so using the strongest available full-size
+model, and **include the four rules above verbatim in its prompt** along with the path
+to `pngs/` — a synthesis worker that only receives the chapter files has no way to
+verify anything and will silently launder transcription errors into the master notes.
+Otherwise do it yourself.
 
 Continue to Step 3 for the standard fields. For chapter-aligned mode, Step 3's notes-format becomes the *master* notes; per-chapter content lives in `chapters/`.
 
@@ -401,6 +478,13 @@ Continue to Step 3 for the standard fields. For chapter-aligned mode, Step 3's n
 ## Step 3: Write Notes
 
 **Be exhaustive.** Extract every equation, every parameter, every algorithm, every stated limitation, every criticism of prior work, and every explicit design choice the authors justify. The goal is that someone implementing this paper never needs to open the PDF. More detail is better than elegant compression.
+
+**Be exact.** Exhaustiveness never licenses invention. Every digit below is transcribed
+from an open page image and carries its page citation, and any value the paper does not
+state is written `not reported` — see [Numeric Fidelity (MANDATORY)](#numeric-fidelity-mandatory).
+The sections most prone to fabrication are `Study Design`, `Parameters`,
+`Effect Sizes / Key Quantitative Results`, and `Results Summary`, because their formats
+invite a complete-looking row where the paper gives none.
 
 Write to `./papers/Author_Year_ShortTitle/notes.md`:
 
@@ -456,12 +540,16 @@ Where: [variable definitions with units]
 
 *Capture every measurable quantity: physical constants, algorithm thresholds, dosages, sample sizes, hazard ratios, odds ratios, confidence intervals, p-value thresholds, effect sizes — whatever the paper's domain uses.*
 
+*Every row's Page cell is required and every value is transcribed from that page. Where the paper is silent, write `not reported` — never a guessed or back-computed value.*
+
 ## Effect Sizes / Key Quantitative Results
 
 | Outcome | Measure | Value | CI | p | Population/Context | Page |
 |---------|---------|-------|----|---|--------------------|------|
 
 *One row per reported effect. Use for any empirical paper — clinical trials, A/B tests, benchmarks, ablation studies. Measure column: HR, OR, RR, RD, ATE, Cohen's d, accuracy, F1, BLEU, etc. Include both primary and subgroup results.*
+
+*This table is the highest-risk surface in the whole artifact — a wrong `Value` or `p` inverts the paper's conclusion. Transcribe `Value`, `CI`, and `p` exactly as printed, including the paper's own inequality form (`p < 0.001` stays `p < 0.001`; never convert it to `p = 0.001`). Where a cell is not reported, write `not reported`. A row is only complete when its Page cell names the page you read it from.*
 
 ## Methods & Implementation Details
 - Study protocol / experimental setup *(p.N)*
@@ -546,6 +634,19 @@ Rules:
 - `doi` should be the DOI string without `https://doi.org/` when possible.
 - If the paper is on arXiv, fill `arxiv_id`.
 
+**Numeric fidelity for identity fields (MANDATORY).** `year`, `doi`, and `arxiv_id` are
+numeric identity, and a wrong one silently points the whole collection at the wrong work.
+
+- Read `year` off the title page or the published-citation line in `pngs/page-000.png`.
+  Never infer it from the directory name — the directory encodes the preprint/first-seen
+  year and often differs from the published year.
+- Transcribe `doi` and `arxiv_id` character by character from the page. Do not
+  reconstruct a DOI from a pattern you have seen before; DOIs are opaque strings and a
+  plausible-looking one resolves to someone else's paper.
+- `abstract` must be the paper's own abstract text, transcribed — not a paraphrase and
+  not regenerated from your notes. If you cannot read it cleanly, use `null`.
+- Any field you cannot source from the paper is `null`. Never a plausible substitute.
+
 After writing `metadata.json`, refresh the collection's `papers/keymap.tsv`
 (`cite_key<TAB>dir`) so downstream tools resolve `@key` -> directory reliably:
 
@@ -556,23 +657,161 @@ PYTHON=$(command -v python3 || command -v python)
 
 ---
 
+## Step 3.6: Numeric Verification Pass (MANDATORY)
+
+**This step is not optional and cannot be satisfied by re-reading your own notes.**
+It is numeric fidelity check 2, and it exists because check 1 fails silently: a number
+transcribed slightly wrong looks exactly like a number transcribed correctly.
+
+Enumerate every number in `notes.md` (and every `chapters/*.md` or `chunks/*.md` file
+you wrote). For each one:
+
+1. Resolve its page citation to a page image: `pngs/page-{(N-1):03d}.png`.
+2. **Open that image.** Do not rely on memory of having read it.
+3. Compare digit by digit — the value, the sign, the decimal placement, the units, the
+   inequality direction (`<` vs `=`), the CI bounds, and the page number itself.
+4. Fix any mismatch. If the number is not on the cited page, either find and cite the
+   correct page or delete the number — never leave it with a guessed citation.
+5. If the paper does not state it after all, replace it with `not reported`.
+
+Work page by page rather than number by number where you can: open a page once and
+verify every number citing it. That keeps this pass to roughly one pass over the
+cited pages.
+
+**Report the result explicitly** at the end of the run:
+
+```
+Numeric verification: N numbers checked, M corrected, K marked not reported, J unverified
+```
+
+A non-zero `unverified` count is a legitimate outcome and must be surfaced to the
+caller. Silently leaving an unverified number in the notes is not.
+
+---
+
+## Step 3.7: Mechanical Numeric Gate (MANDATORY)
+
+Numeric fidelity check 3. Unlike checks 1 and 2, this one does not depend on your own
+judgment about your own work.
+
+```bash
+PYTHON=$(command -v python3 || command -v python)
+"$PYTHON" scripts/check_numeric_provenance.py check "$paper_dir"
+```
+
+The gate reports:
+
+| Code | Meaning |
+|------|---------|
+| `NUMERIC_NO_PAGE` | a data-bearing number with no page citation on its line |
+| `PARAM_TABLE_NO_PAGE_COL` | a quantitative table missing the mandated Page column |
+| `PARAM_ROW_NO_PAGE` | a quantitative row with an empty Page cell |
+| `PAGE_OUT_OF_RANGE` | a citation to a page the source does not have |
+| `TEMPLATE_PLACEHOLDER` | an unfilled template token such as a literal `*(p.N)*` |
+| `NUMERIC_NOT_IN_NOTES` | a number in `description.md`/`abstract.md` that appears nowhere in `notes.md` |
+
+**Fix every finding by going back to the page image, not by deleting the citation
+requirement.** `PAGE_OUT_OF_RANGE` in particular is a strong fabrication signal: a
+citation to p.47 of a 12-page paper means the number and its provenance were both
+invented, so re-verify that number from scratch rather than just correcting the page.
+
+The gate exits non-zero while findings remain. Do not proceed to Step 4 with a
+non-zero exit unless you have explicitly reported the remaining findings to the caller
+and explained why each is a false positive.
+
+---
+
 ## Extraction Guidelines
+
+### Numeric Fidelity (MANDATORY)
+
+**A fabricated number is the worst failure this skill can produce.** Papers have been
+ingested with invented effect sizes and invented p-values that inverted the paper's
+actual conclusion. Incomplete notes are recoverable — a reader reopens the PDF. A
+confident wrong number is not: it propagates into claims, lit reviews, and the
+collection index, and nothing downstream re-derives it from the source.
+
+**The rule: every number you write is a transcription of a number you are looking at
+right now.** Not a recollection, not an inference, not a plausible value, not a
+rounded restatement, not a number reconstructed from another number.
+
+This applies to **every digit that asserts something about the paper's content**:
+effect sizes, p-values, confidence intervals, sample sizes, dosages, thresholds,
+accuracies, equation constants, percentages, counts, durations, and years of data
+collection. It applies in `notes.md`, `chapters/*.md`, `chunks/*.md`, `abstract.md`,
+`description.md`, `metadata.json`, and in the `index.md` entry.
+
+#### The three checks
+
+Every number passes three independent checks before the paper is done. They are
+independent on purpose: check 1 can fail silently, check 2 catches drift, check 3
+cannot be talked out of.
+
+1. **Transcription check (at write time).** The page image is open in front of you
+   when you type the number. If you are writing a number without the page in view,
+   stop and reopen it. Write the page citation in the same edit as the number —
+   never "add citations later," because later you will be citing your own prose.
+2. **Verification pass (Step 3.6).** A dedicated second pass that re-opens each
+   cited page image and compares it against what you wrote, digit by digit.
+3. **Mechanical gate (Step 3.7).** `check_numeric_provenance.py`, which fails the
+   paper if any number lacks page provenance or appears only in a summary.
+
+#### Sourcing a number
+
+When a finding cites page `N`, the page image is:
+
+- `pngs/page-{(N-1):03d}.png` — page 1 -> `pngs/page-000.png`, page 12 -> `pngs/page-011.png`
+
+If the printed page number differs from the PDF index (front matter, roman numerals,
+Part dividers), cite the **printed page number shown on the page** and note the offset
+once at the top of the notes. Never cite a page you did not open.
+
+#### When the paper does not report a value
+
+Write `not reported`. Do not write a plausible value, do not compute one from other
+values, and do not leave a template placeholder in place. Every mandated table cell
+accepts `not reported` — an empty-looking table is a correct table when the paper is
+silent. Deriving a number the authors did not publish (converting a CI to an SE,
+back-computing an N from percentages) is allowed **only** if you label it
+`derived: <formula>` in the Notes column so a later reader knows it is not the
+paper's own figure.
+
+#### Forbidden
+
+- Writing a number from memory after the page image has left your context.
+- Copying a number from another paper's notes, from the abstract into the results
+  tables, or from a figure caption into a results claim, without re-opening the page.
+- Filling a mandatory table cell with a value the paper does not state.
+- Adjusting a number so it agrees with the paper's narrative, another table, or your
+  own earlier sentence. Report the discrepancy instead — inconsistencies inside a
+  paper are a finding, and belong in Limitations.
+- Rounding, unit-converting, or rescaling silently. Transcribe as printed; put any
+  conversion in the Notes column alongside the original.
+- Emitting `*(p.N)*` literally. That is an unfilled placeholder, not a citation.
+
+#### If you cannot verify
+
+Stop and report it. A paper delivered with `not reported` in ten cells is a good
+outcome. A paper delivered with ten confident invented numbers is a corrupted
+collection entry that nobody downstream can detect.
 
 ### Parameter Table Format (MANDATORY)
 
-| Name | Symbol | Units | Default | Range | Notes |
-|------|--------|-------|---------|-------|-------|
-| Fundamental frequency | F0 | Hz | 120 | 60-500 | Male speaker baseline |
-| Intervention dose | — | mg/day | 100 | 75-325 | Example dose range |
-| Effect estimate | HR | — | 0.89 | 0.77-1.03 | Primary outcome estimate |
-| Learning rate | α | — | 0.001 | 1e-5–0.1 | Adam optimizer |
+| Name | Symbol | Units | Default | Range | Page | Notes |
+|------|--------|-------|---------|-------|------|-------|
+| Fundamental frequency | F0 | Hz | 120 | 60-500 | 4 | Male speaker baseline |
+| Intervention dose | — | mg/day | 100 | 75-325 | 6 | Example dose range |
+| Effect estimate | HR | — | 0.89 | 0.77-1.03 | 7 | Primary outcome estimate |
+| Learning rate | α | — | 0.001 | 1e-5–0.1 | 11 | Adam optimizer |
+| Attrition rate | — | % | not reported | not reported | 9 | Dropouts described in prose only |
 
 **Rules:**
 - **One row per parameter.** Each row is one measurable quantity — physical constants, algorithm thresholds, dosages, effect sizes, confidence bounds.
 - **Name column required.** Full descriptive name.
 - **Units column required.** SI, standard domain units, or `-` for dimensionless ratios/rates.
-- **Default/Range**: At least one must be populated. `X-Y` for ranges. For effect sizes, the point estimate goes in Default, the CI goes in Range.
-- **Notes**: Source table/figure, conditions, caveats, subgroup.
+- **Page column required.** The printed page the value was transcribed from. A row with no page cannot be verified and will fail the Step 3.7 gate. Never guess it to fill the cell.
+- **Default/Range**: Populate from the paper, or write `not reported` in both. **A populated cell is not a goal — an accurate cell is.** Never invent a value to avoid an empty-looking row; see [Numeric Fidelity (MANDATORY)](#numeric-fidelity-mandatory). `X-Y` for ranges. For effect sizes, the point estimate goes in Default, the CI goes in Range.
+- **Notes**: Source table/figure, conditions, caveats, subgroup. Any value you computed rather than read goes here as `derived: <formula>`.
 
 **If a parameter varies by context**, create **one table per context** (e.g., "Modal Voice Parameters", "Breathy Voice Parameters", "Age ≥75 Subgroup", "Intention-to-Treat Analysis").
 
@@ -623,6 +862,23 @@ tags: [tag1, tag2, tag3]
 
 Single paragraph, no blank lines between sentences. Tags: 2-5, lowercase, hyphens for multi-word, prefer existing tags from `papers/index.md`.
 
+**Numeric fidelity (MANDATORY).** This is the artifact where fabricated numbers have
+actually shipped, because a headline figure makes sentence 2 feel concrete. The
+compression pressure here is exactly what invents numbers.
+
+- **Every number in `description.md` must already appear in `notes.md`, verified in
+  Step 3.6.** A summary is not a place where new numbers come into existence. If a
+  figure is not in your notes, it does not belong here.
+- Copy it from `notes.md`; do not restate it from memory of the paper, and do not
+  round it to read better.
+- If a sentence would be stronger with a number you do not have, write the sentence
+  without the number. Prose is free; a wrong figure is not.
+- This text is copied verbatim into `papers/index.md` in Step 8, so an error here
+  propagates to the collection index where nothing re-derives it.
+
+Step 3.7's `NUMERIC_NOT_IN_NOTES` code exists specifically to catch violations of the
+first rule. Re-run the gate after writing this file.
+
 ---
 
 ## Step 5: Write Abstract
@@ -643,7 +899,19 @@ Write `./papers/Author_Year_ShortTitle/abstract.md`:
 [2-3 sentences: What problem? Key finding? Why relevant?]
 ```
 
-For chunked papers, if you can dispatch a subagent for this extraction, do so using `pngs/page-000.png` and the strongest available full-size model. Do not use a fast/mini/small model here. Otherwise, read `pngs/page-000.png` yourself and write `abstract.md`.
+**Numeric fidelity (MANDATORY).** Abstracts are number-dense (`N =`, `%`, `p =`, CIs)
+and this section is a *transcription*, which makes it a high-risk surface.
+
+- **Original Text (Verbatim)** means character-for-character from `pngs/page-000.png`,
+  including every digit. Do not normalize, round, re-order, or "clean up" numbers, and
+  do not reconstruct the abstract from your notes — read the page image and copy it.
+  If part of the abstract is illegible, mark it `[illegible]` rather than filling the gap.
+- **Our Interpretation** may only use numbers that already appear in `notes.md`,
+  verified in Step 3.6. Step 3.7 flags violations as `NUMERIC_NOT_IN_NOTES`.
+- The verbatim text is copied into `metadata.json`'s `abstract` field, so an error here
+  propagates into the collection metadata.
+
+For chunked papers, if you can dispatch a subagent for this extraction, do so using `pngs/page-000.png` and the strongest available full-size model. Do not use a fast/mini/small model here. **Include the three rules above verbatim in the subagent's prompt** — it does not see this skill, and a transcription worker without the fidelity rule will paraphrase the abstract and normalize its numbers. Otherwise, read `pngs/page-000.png` yourself and write `abstract.md`.
 
 ---
 
@@ -666,6 +934,27 @@ Write `./papers/Author_Year_ShortTitle/citations.md`:
 For chunked papers, if you can dispatch a subagent for this extraction, do so using the last 5-10 page images and the strongest available full-size model. Do not use a fast/mini/small model here. Otherwise, read those pages yourself and write `citations.md`.
 
 **Steps 5 and 6 can run in parallel** since they write to different files.
+
+---
+
+## Step 6.5: Re-run the Mechanical Numeric Gate (MANDATORY)
+
+Step 3.7 ran before `description.md` and `abstract.md` existed. Re-run it now that the
+full artifact set is on disk — this pass is what actually exercises
+`NUMERIC_NOT_IN_NOTES` across the summary layer:
+
+```bash
+PYTHON=$(command -v python3 || command -v python)
+"$PYTHON" scripts/check_numeric_provenance.py check "$paper_dir"
+```
+
+Resolve every finding before continuing. A `NUMERIC_NOT_IN_NOTES` hit means a number
+entered the collection at the summary layer without ever being transcribed from a page
+image — treat it as a fabrication until you prove otherwise by finding it on a page,
+and delete it if you cannot.
+
+Do not proceed to Step 7 with unresolved findings unless you report each one to the
+caller with the reason you believe it is a false positive.
 
 ---
 
@@ -705,6 +994,10 @@ The header is a **markdown link**, not plain text and not a `[[wikilink]]`. GitH
 
 **This step is NOT optional.** Without it, future sessions won't know this paper exists.
 
+**Copy the `description.md` body verbatim.** Do not re-summarize it here and do not add
+a number that is not already in it — the index is read far more often than the notes,
+and a figure introduced at this step has bypassed every numeric check in this skill.
+
 ---
 
 ## Step 8.5: Record the processed-ledger entry
@@ -733,6 +1026,24 @@ fi
 ---
 
 ## Quality Checklist
+
+**Numeric fidelity — check these first. A paper that fails any of them is not done,
+regardless of how complete the rest of the extraction is.**
+
+- [ ] Every number in every artifact was transcribed from an open page image, not from memory (check 1)
+- [ ] Step 3.6 verification pass run: every number re-checked against its cited page image, digit by digit
+- [ ] Step 3.6 counts reported to the caller (checked / corrected / not reported / unverified)
+- [ ] Values the paper does not state are written `not reported` — no invented or back-computed fills
+- [ ] Derived values labelled `derived: <formula>`, never presented as the paper's own figures
+- [ ] Inequality forms preserved exactly (`p < 0.001` never rewritten as `p = 0.001`)
+- [ ] Every number in `description.md` and in the abstract's *Our Interpretation* also appears in `notes.md`
+- [ ] `abstract.md` *Original Text (Verbatim)* transcribed character-for-character from `page-000.png`
+- [ ] `metadata.json` `year` / `doi` / `arxiv_id` read off the title page, not inferred from the directory name
+- [ ] For chunked papers: chunk-worker prompt carried the numeric fidelity block, and each worker reported its verification counts
+- [ ] For chunked papers: master-notes numbers re-verified against page images, not copied from chapter files
+- [ ] Step 3.7 and Step 6.5 mechanical gate exit zero, or every remaining finding reported to the caller with a stated reason
+
+**Extraction completeness**
 
 - [ ] All equations with variable definitions and page citations
 - [ ] All parameters in standard table format with Page column
@@ -765,7 +1076,13 @@ When done:
 Done - created papers/[dirname]/
   - index.md updated
   - Reconciliation: [summary]
+  - Numeric verification: N checked, M corrected, K not reported, J unverified
+  - Numeric gate: [clean | N findings reported below]
 ```
+
+The numeric lines are **required**, including when `J` is zero. A run that omits them
+has not demonstrated that Steps 3.6, 3.7, and 6.5 happened, and the caller cannot tell
+a verified paper from an unverified one after the fact.
 
 Then provide a brief **usefulness assessment** in the conversation (not a file):
 
@@ -781,6 +1098,12 @@ Then provide a brief **usefulness assessment** in the conversation (not a file):
 ---
 
 Do NOT:
+- **Write any number you did not read off a page image in this run** — this is the single most damaging thing this skill can do
+- **Invent a value to fill a mandatory table cell** — write `not reported`
+- **Write a number without its page citation**, or plan to add citations afterwards
+- **Adjust a number to agree with the paper's narrative or another table** — report the discrepancy instead
+- **Introduce a number in `description.md` or `abstract.md` that is not already in `notes.md`**
+- **Skip Step 3.6, 3.7, or 6.5**, or report a paper as done without the numeric counts
 - Delete page images or chunk reports
 - Output findings to conversation instead of files
 - Skip index.md update (Step 8) or reconcile (Step 7)
