@@ -34,7 +34,25 @@ Read:
 - `<paper_dir>/notes.md` as the primary source.
 - Page images in `<paper_dir>/pngs/` for every exact numeric value, confidence interval, p-value, sample size, page citation, or claim whose wording matters.
 
-spot-check every extracted high-value claim against the relevant page image before proposing it.
+**Numeric verification is mandatory, not a spot-check.** `notes.md` is a transcription
+and transcriptions drift; papers have been ingested with invented effect sizes and
+p-values that inverted their conclusions. Claims are where those errors become durable
+structured assertions, so this is the last place a wrong number can be caught.
+
+Before proposing any claim carrying a `--value`, `--uncertainty`, or a numeric
+`--quote-fragment`:
+
+1. Open the page image for the claim's cited page — `pngs/page-{(N-1):03d}.png`.
+2. Compare the value, its units, its inequality direction, and its CI bounds against
+   the page, digit by digit.
+3. Propose the claim only if it matches. If `notes.md` and the page image disagree,
+   **the page image wins** — author the claim from the page and report the notes
+   discrepancy to the caller so `notes.md` can be corrected.
+4. If the number is not on the cited page, do not author the claim. Report it as a
+   suspected fabrication in the source notes rather than propagating it.
+
+Never author a numeric claim you could not verify against a page image, and never
+substitute a plausible value for one you could not read.
 
 When a claim cites page `N`, the corresponding page image is:
 

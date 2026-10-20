@@ -28,7 +28,16 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_keymap import load_keymap  # noqa: E402
 
-VERDICTS = ("SUPPORTED", "PARTIAL", "UNSUPPORTED", "MISATTRIBUTED")
+# NUMERIC_MISMATCH covers a citing sentence whose prose is faithful but whose
+# number disagrees with the source page image. It is graded separately because a
+# wrong figure reads as precise and survives prose-level review.
+VERDICTS = (
+    "SUPPORTED",
+    "PARTIAL",
+    "UNSUPPORTED",
+    "MISATTRIBUTED",
+    "NUMERIC_MISMATCH",
+)
 CITE_RE = re.compile(r"@([A-Za-z][\w:-]*)")
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 

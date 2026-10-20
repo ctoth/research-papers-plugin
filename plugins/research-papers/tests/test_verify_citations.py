@@ -56,14 +56,32 @@ def test_render_report_rejects_unknown_verdict(vc):
         vc.render_report([vc.GradeReport(key="x", verdict="BOGUS")])
 
 
-def test_verdicts_are_the_four_expected(vc):
-    assert set(vc.VERDICTS) == {"SUPPORTED", "PARTIAL", "UNSUPPORTED", "MISATTRIBUTED"}
+def test_verdicts_are_the_five_expected(vc):
+    assert set(vc.VERDICTS) == {
+        "SUPPORTED",
+        "PARTIAL",
+        "UNSUPPORTED",
+        "MISATTRIBUTED",
+        "NUMERIC_MISMATCH",
+    }
+
+
+def test_numeric_mismatch_is_a_renderable_verdict(vc):
+    """A wrong figure must be reportable as its own defect class."""
+    report = vc.GradeReport(key="doe2024", verdict="NUMERIC_MISMATCH")
+    assert "NUMERIC_MISMATCH" in vc.render_report([report])
 
 
 # Contract: the grading rubric lives in a skill, fanned out one subagent per paper.
 def test_grading_skill_documents_rubric():
     skill = PLUGIN_ROOT / "skills" / "verify-citations" / "SKILL.md"
     text = skill.read_text(encoding="utf-8")
-    for verdict in ("SUPPORTED", "PARTIAL", "UNSUPPORTED", "MISATTRIBUTED"):
+    for verdict in (
+        "SUPPORTED",
+        "PARTIAL",
+        "UNSUPPORTED",
+        "MISATTRIBUTED",
+        "NUMERIC_MISMATCH",
+    ):
         assert verdict in text
     assert "subagent" in text.lower()
