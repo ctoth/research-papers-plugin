@@ -131,7 +131,7 @@ Follow the nested skill literally. Do not invent predicates outside its workflow
 
 ## Step 10: Author Rules
 
-With predicates declared, this step encodes the paper's stated argument structure as DeLP strict, defeasible, proper-defeater, and blocking-defeater rule artifacts via `pks rule add`. These rules are what makes the DeLP layer non-empty for this paper; the later justification and stance passes describe the paper's argumentation in prose-aligned form, but only the rules authored here participate in propstore's defeasible reasoning.
+This step first checks whether the installed CLI has a rule-authoring owner. The current CLI exposes read commands only, so the nested skill stops and reports the missing capability without writing artifacts. Stop the full flow at that blocker. Predicate-level DeLP rules are one reasoning path; canonical claim justifications also supply strict or defeasible inference licences to the ASPIC bridge, and stances express support or attack relations. Do not describe the later passes as prose-only or claim that only DeLP rules participate in defeasible reasoning.
 
 Invoke:
 

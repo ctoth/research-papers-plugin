@@ -1,172 +1,80 @@
 ---
 name: author-rules
-description: Author the DeLP rule artifacts (strict, defeasible, proper_defeater, blocking_defeater) encoding a paper's stated argument structure. Runs after register-predicates.
+description: Check the installed DeLP rule-authoring capability and encode a paper's stated predicate-level reasoning only through an available owner.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
 ---
 
 # Author Rules: $ARGUMENTS
 
-Encode a paper's stated argument structure as DeLP rules. Each rule has a head atom, a body of atoms, and a kind (strict, defeasible, proper_defeater, blocking_defeater).
+Keep empirical evidence, inference licences, and contextual applicability distinct.
+A study's existence or setting is not evidence for its empirical result.
 
-Use `pks rule add` (propstore >= 0.2.0). The CLI parses a shallow atom DSL, validates the schema, and commits on master. Use `pks rule superiority add` for explicit rule-priority pairs. Do NOT hand-author YAML or run `git commit` yourself.
+## Step 0: Check the installed capability
 
-## Theoretical Background
-
-Garcia & Simari 2004 DeLP:
-- **Strict** rule (`L0 <- L1, ..., Ln`): indefeasible. Empty body = a fact.
-- **Defeasible** rule (`L0 -< L1, ..., Ln`): tentative; can be defeated.
-- **Proper defeater** (`--kind proper_defeater`): the head literal directly contradicts the conclusion of the rule it attacks. The attacked rule has head `L`; the defeater's head is `~L`. Use this when the paper argues *against* the standard conclusion with a counter-conclusion of its own (the common case).
-- **Blocking defeater** (`--kind blocking_defeater`): the body provides counter-evidence that undermines a *premise* of the attacked argument. The head doesn't necessarily contradict the attacked conclusion directly — it just blocks the attacked argument from going through. Use when the paper undercuts a premise rather than asserting the opposite conclusion.
-- **Strong negation** (`~L`) is permitted on literal heads and bodies.
-- Language is safe: every variable in the head must appear in the body.
-
-**Choosing proper vs blocking:** if the paper says "the standard conclusion C is wrong, the truth is ~C" -> `proper_defeater` with head `~C`. If the paper says "the argument for C relies on premise P, and P doesn't hold here" -> `blocking_defeater` whose body asserts `~P` (or evidence against P).
-
-## CLI atom DSL
-
-`pks rule add` accepts atom strings with this shape:
-
-```
-[~]predicate(term1, term2, ...)
-```
-
-- A leading `~` marks strong negation on the literal.
-- Terms whose first character is uppercase are treated as variables (`X`, `Dose`); everything else is a constant.
-- Quoted strings (`"low"`) and numeric literals coerce to typed constants.
-- Zero-arity atoms are just `predicate` (no parens) or `predicate()`.
-
-**CRITICAL flag form — use `--head=<atom>` and `--body=<atom>`, NOT `--head <atom>`:**
-
-The separate-argument form (`--head '~safe(X)'`) is broken on Windows regardless of quoting style — `pks` receives the `~` as the start of a path token and expands it to the user home directory, producing `C:\Users\...safe(X)`. Single-quoting in bash does not prevent this; PowerShell does not prevent this; backslash-escaping does not prevent this. The expansion is inside the pks launcher, past the shell.
-
-The equals-form (`--head=~safe(X)`, `--body=~p(X)`) bypasses the expansion entirely and is portable. Use it for every `--head` and `--body` value, with or without a leading `~`.
-
-**Additional shell-quoting note for Git Bash / MSYS on Windows:** parentheses in the atom payload (`pred(X)`) trigger bash's subshell grouping, producing `syntax error near unexpected token '('`. Wrap the whole flag token in double quotes: `"--head=~pred(X)"`, `"--body=pred(X,Y)"`. The `~` is still not expanded (it's not a standalone token after `=`), and the parens are protected:
+Run the harmless read-only capability check before preparing mutations:
 
 ```bash
-pks rule add \
-  --file author_2024 \
-  --paper Author_2024_ExamplePaper \
-  --id r_not_recommended \
-  --kind proper_defeater \
-  --head=~intervention_recommended_for_use_case(X) \
-  --body=~intervention_has_net_benefit(X) \
-  --body=study_like_setting(X)
+pks rule --help
 ```
 
-Do NOT fall back to positive-encoding predicates (e.g. `intervention_not_recommended/1` instead of `~intervention_recommended/1`) just to avoid `~`. That loses strong negation semantics. Use the equals form and keep the negation.
+The current rule CLI exposes only `list` and `show`. Rule and superiority
+mutation have no CLI owner. If the installed help exposes only those read
+commands, stop here and report: **Rule authoring is unavailable in this installed
+CLI; no rule or superiority artifact was authored.** Include the help output
+and the blocked paper. Do not run a nonexistent mutation command, hand-author
+YAML, invoke a private SDK mutation, or commit artifacts as a workaround.
 
-## Step 0: Validate
+Do not claim a version number guarantees authoring. If a future installed
+version exposes a supported mutation owner, read that owner's help and contract
+before using it. The remainder describes semantic requirements, not executable
+commands or a claim that this installation supports writing rules.
 
-```bash
-paper_dir="$ARGUMENTS"
-ls "$paper_dir"/notes.md 2>/dev/null || echo "MISSING: notes.md"
-ls knowledge/.git 2>/dev/null || echo "MISSING: knowledge/.git"
-ls knowledge/predicates/*.yaml 2>/dev/null || echo "MISSING: predicate artifacts — run register-predicates first"
-```
+## Evidence and representation
 
-If predicate artifacts are missing, stop and run `register-predicates` first. Rule heads and bodies must reference declared predicates.
+For an inference among already-authored claims, use `extract-justifications`:
+its premise references name the actual evidence claims. Canonical justification
+licences contribute strict or defeasible rules to the ASPIC bridge. Their
+conclusions must not also become unconditional reported premises.
 
-## Step 1: Identify The Paper's Stated Reasoning Steps
+Use predicate-level DeLP only when the paper states a predicate-level rule and
+its evidence atoms have an explicit, existing grounding producer. Identify that
+producer before authoring. If the claim-to-ground-fact connection is unavailable,
+report that missing capability. Do not manufacture strict empirical facts.
 
-Read `notes.md` and the already-authored source-branch claims for this paper. Find the paper's core argumentative moves:
+- A setting or applicability predicate describes where a rule applies.
+- An empirical conclusion must depend on its actual evidence claims.
+- Withdrawing an evidence claim must remove support provided by that claim.
+  An unchanged answer alone does not establish robustness: another independent
+  argument may still support it.
+- Do not duplicate a claim inference as a setting-seeded program that remains
+  true when its evidence is withdrawn.
+- Do not fabricate clinical evidence, numerical confidence, or recommendations.
 
-- "Because X, we conclude Y" → defeasible rule, body has X premises, head has Y.
-- "Our result contradicts the expectation that Z" → `proper_defeater` with head `~Z`.
-- "The argument for Z assumes premise P, which doesn't hold here" → `blocking_defeater` whose body asserts `~P`.
-- "By definition, if X then Y" → strict rule.
-- "Effect A offsets benefit B, so no net gain" → defeasible rule with negated head.
+## Predicate-level semantics
 
-## Step 2: Add Rules Via CLI
+A strict rule is indefeasible; an empty body represents a fact only when that
+fact has an explicit evidential producer. A defeasible rule is tentative.
+Strong negation is part of the logical representation, not a quoting workaround.
+Every variable in a rule head must appear in its body. Referenced predicates
+must already be declared with matching arity and types.
 
-Use the authoring group stem `<author>_<year>` (e.g. `author_2024`) as optional source metadata with `--file`. Each `pks rule add` call writes one canonical rule artifact named for the rule id under the `knowledge/rules/` directory with `source.paper = <paper-directory-name>` from `--paper`.
+A paper's objection to a reported measurement differs from an objection to
+transporting that measurement into a new context. Preserve the target the paper
+actually challenges. If the available representation loses that target, report
+the limitation rather than silently broadening the attack.
 
-Conventions:
+Explicit superiority pairs require two existing non-strict rules and an acyclic
+priority relation. The current read-only CLI cannot author these pairs; the
+same capability stop applies to superiority authoring.
 
-- Rule IDs: `r_<what_it_concludes>` or `r_<paper_slug>_<what>`. Stable across re-runs.
-- Variables: uppercase single letters (`X`, `Y`) per DeLP convention. All head variables must appear in the body.
-- Use a leading `~` for strong negation. Proper defeaters use this pattern when the paper is arguing against a standard conclusion (head `~L` directly contradicts the attacked rule's head `L`). Blocking defeaters typically negate a premise of the attacked argument in the body instead. **Always use the `--head=<atom>` / `--body=<atom>` equals-form** (see CLI atom DSL above for why).
-- A setting or applicability predicate describes where a rule applies; it is not evidence for an empirical result. Do not derive an outcome from the existence of a study or setting alone.
-- For an inference among already-authored claims, use `extract-justifications`: its premise references name the actual evidence claims. Do not duplicate it as a setting-seeded DeLP program that remains true when those claims are withdrawn.
-- Use DeLP only when the paper states a predicate-level rule and its evidence atoms have an explicit, existing grounding producer. Identify that producer before adding the rule. If the claim-to-ground-fact connection is unavailable, report that missing capability; do not manufacture strict empirical facts or claim that a successful build proves evidence dependency.
+## Verification and output
 
-```bash
-cd knowledge  # or pass -C to each pks call
+Report the selected reasoning backend and real grounding inputs before claiming
+a rule contributes to a query. A claim-graph result is not evidence that the
+DeLP program executed. A successful build alone does not prove evidence
+dependency.
 
-# Predicate-level inference only when both body atoms already have
-# evidence-backed grounding producers. Neither body atom is a study-exists fact.
-pks rule add \
-  --file author_2024 \
-  --paper Author_2024_ExamplePaper \
-  --id r_target_outcome_improvement \
-  --kind defeasible \
-  --head=intervention_reduces_target_outcome(X) \
-  --body=observed_target_outcome_difference(X) \
-  --body=measurement_method_applicable(X)
-
-# Defeasible rule with negated head: no net benefit conclusion
-pks rule add \
-  --file author_2024 \
-  --paper Author_2024_ExamplePaper \
-  --id r_no_net_benefit \
-  --kind defeasible \
-  --head=~intervention_has_net_benefit(X) \
-  --body=intervention_increases_adverse_outcome(X) \
-  --body=intervention_reduces_target_outcome(X)
-
-# Proper defeater: paper argues against standard indication with a counter-conclusion
-pks rule add \
-  --file author_2024 \
-  --paper Author_2024_ExamplePaper \
-  --id r_not_recommended \
-  --kind proper_defeater \
-  --head=~intervention_recommended_for_use_case(X) \
-  --body=~intervention_has_net_benefit(X) \
-  --body=study_like_setting(X)
-```
-
-Repeat for every reasoning move you identified. Duplicate rule ids are rejected across canonical rule artifacts.
-
-## Step 3: Verify
-
-```bash
-pks build
-```
-
-A build checks the authored program; it does not prove that the argument depends
-on the evidence named in the paper. Report the actual build diagnostics. Common
-build failures at this stage:
-
-- Head variable not in body → safety violation. Fix the rule's body to include the missing variable.
-- Predicate not declared → re-run `register-predicates` for the missing one.
-- Arity mismatch → rule uses wrong number of terms. Check the declared predicate's `arity` and `arg_types`.
-
-Report the selected reasoning backend and the real grounding inputs before
-claiming a rule contributes to a query. A claim-graph result is not evidence that
-the DeLP program executed. Withdrawing an evidence claim must remove the support
-provided by that claim; an unchanged answer alone does not establish robustness.
-
-## Output
-
-```
-Rules authored as one artifact per rule id
-  Rules: N total (one emit_success per add)
-```
-
-## When To Rerun
-
-Rerun if you missed a reasoning move and want to add more rules. Additional `pks rule add` calls with the same `--file` authoring group metadata keep the paper grouping readable. Canonical storage is one rule artifact per rule id, not a per-paper rules bucket.
-
-## Superiority pairs
-
-Rule-superiority artifacts express `(superior_rule_id, inferior_rule_id)` pairs for explicit rule priority. Add these artifacts through the CLI after both referenced rules exist:
-
-```bash
-pks rule superiority add \
-  --file author_2024 \
-  --superior r_not_recommended \
-  --inferior r_standard_recommendation
-```
-
-Both rule ids must exist as canonical rule artifacts, neither may be a strict rule, and the resulting priority relation must remain acyclic. The CLI validates those constraints and commits the update.
+When authoring is blocked, report the missing mutation owner and that no
+artifacts were written. Do not emit a fabricated success count or continue the
+full paper workflow past this blocked step.

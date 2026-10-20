@@ -8,8 +8,9 @@ are paused during the organization transfer.
 ## State
 Isolated branch `fix/evidence-inference-authoring-local`, based on ac52829.
 The original checkout has unrelated dirty work and is untouched.
-Five authoring skills are corrected locally. The affected contract file passed
-21 tests after the final context-owner correction. No release bump or remote mutation.
+Five authoring skills and the paper-process orchestrator are corrected locally.
+The full plugin suite passed 170 tests and 41 subtests, with one skip.
+No release bump or remote mutation.
 
 ## Decisions and why
 - `author-rules` is the instruction owner. Its setting-only empirical example
@@ -60,3 +61,24 @@ inferences; do not replace observations for recency alone or manufacture
 cross-context conflicts. Report current context-CLI and explicit-target limits
 instead of documenting removed commands or accepted-but-lossy success.
 Validation: affected workflow contract file, 21 tests passed offline.
+
+## Independent review corrections and full validation
+- The first correction retained unsupported rule mutation commands. Verified
+  propstore/cli/rule/__init__.py and display.py and executed read-only rule help:
+  only list/show are registered. Replaced the obsolete CLI workflow with a
+  capability check and explicit stop, including superiority authoring. Removed
+  fake version guarantees, command examples and fabricated success output.
+- Corrected paper-process's claim that only DeLP rules participate in defeasible
+  reasoning: canonical justifications also supply inference licences to ASPIC.
+  The orchestrator stops when the nested authoring skill reports its blocker.
+- Two regressions were added to the existing workflow-contract test owner.
+- Full plugin suite: **170 passed, 1 skipped, 41 subtests passed**, exit 0, 2.12s.
+  Log: logs/test-runs/full-plugin-revised-20261019-181751.log.
+- The only warning is a denied write to the pre-existing pytest cache, not
+  a failed test. Disposable outputs were isolated under ../test-output.
+
+Command, from this worktree with UV_OFFLINE=1, UV_NO_SYNC=1,
+PYTHONDONTWRITEBYTECODE=1 and UV_CACHE_DIR under ../test-output:
+```powershell
+uv run --offline --no-sync --project C:/Users/Q/code/propstore python C:/Users/Q/code/propstore/scripts/run_logged_pytest.py --label full-plugin-revised -- plugins/research-papers/tests --basetemp=C:/Users/Q/Documents/Codex/2026-10-19/task-18/test-output/plugin-revised -n 0 -q
+```

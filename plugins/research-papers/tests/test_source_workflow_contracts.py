@@ -186,6 +186,22 @@ class TestSourceWorkflowContracts(unittest.TestCase):
         self.assertIn("actual evidence claims", skill)
         self.assertIn("claim-graph result is not evidence", skill)
 
+    def test_rule_authoring_checks_the_actual_cli_and_stops_without_mutation(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "author-rules" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("pks rule --help", skill)
+        self.assertIn("Rule authoring is unavailable", skill)
+        self.assertIn("same capability stop applies to superiority authoring", skill)
+        self.assertNotIn("pks rule add", skill)
+        self.assertNotIn("pks rule superiority add", skill)
+        self.assertIn("Do not emit a fabricated success count", skill)
+
+    def test_paper_process_preserves_canonical_justification_reasoning_and_rule_blocker(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "paper-process" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("pks rule add", skill)
+        self.assertNotIn("only the rules authored here participate", skill)
+        self.assertIn("canonical claim justifications also supply", skill)
+        self.assertIn("Stop the full flow at that blocker", skill)
+
     def test_stances_preserve_reports_and_do_not_invent_transport_targets(self) -> None:
         skill = (PLUGIN_ROOT / "skills" / "extract-stances" / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("not the historical measurement", skill)
