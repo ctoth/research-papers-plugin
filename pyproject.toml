@@ -1,0 +1,16 @@
+[project]
+name = "research-papers-plugin"
+version = "0.0.0"
+description = "Development environment for the research-papers plugin repository"
+requires-python = ">=3.10"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pyyaml>=6.0",
+    "pymupdf>=1.24,<2",
+]
+
+[tool.uv]
+package = false

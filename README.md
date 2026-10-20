@@ -97,13 +97,13 @@ Some skills need helper scripts under `scripts/` relative to the installed skill
 
 ## Development
 
-The repository root is a non-package uv project. Its locked development dependencies include pytest and PyYAML, so no ad hoc `--with` dependencies are needed. Run the canonical test gate from the repository root:
+The repository root is a non-package uv project. Its locked development dependencies include pytest, PyYAML and PyMuPDF, so no ad hoc `--with` dependencies are needed. Run the canonical test gate from the repository root:
 
 ```bash
-uv run pytest -q plugins/research-papers/tests
+uv run --locked pytest -q plugins/research-papers/tests
 ```
 
-Use `uv sync --dev` when you want to provision the development environment without running the tests.
+Use `uv sync --locked --dev` when you want to provision the development environment without running the tests. GitHub Actions runs the full suite on pull requests and pushes to `master`, using uv 0.13.3 and Python 3.13. CI also imports PyMuPDF explicitly so the PDF page-count test executes.
 
 ## Installation
 
