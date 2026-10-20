@@ -95,3 +95,4 @@ Fresh full run in this publication worktree: 170 passed, 1 skipped,
 41 subtests passed in 3.11s, exit 0.
 Log: logs/test-runs/publication-plugin-20261019-190635.log.
 No version bump, tag, merge or ready-for-review transition is authorized.
+Draft PR: https://github.com/ctoth/research-papers-plugin/pull/49.
