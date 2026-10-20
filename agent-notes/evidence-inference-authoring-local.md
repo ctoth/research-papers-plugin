@@ -2,11 +2,12 @@
 
 ## Goal
 Correct the plugin instructions that produced unsupported aspirin rule dependencies.
-Q authorized the narrow working demo and cause-level plugin fixes; remote writes
-are paused during the organization transfer.
+Q authorized the narrow working demo, cause-level plugin fixes and a draft PR
+in the existing ctoth/research-papers-plugin repository.
 
 ## State
-Isolated branch `fix/evidence-inference-authoring-local`, based on ac52829.
+Focused publication branch `fix/evidence-inference-authoring-public`, based on
+remote master 00ca9ce21d3330bef4b88d3f18803621a0b7725d.
 The original checkout has unrelated dirty work and is untouched.
 Five authoring skills and the paper-process orchestrator are corrected locally.
 The full plugin suite passed 170 tests and 41 subtests, with one skip.
@@ -36,7 +37,7 @@ LiftingSystem gate evaluator. No runtime, release, or schema changes here.
 Plugin prompts cannot repair missing Propstore reader APIs or canonical fields.
 
 ## Next step
-Commit the local correction and await migration/publication authorization.
+Keep the publication PR as a draft and await review. No release is requested.
 
 ## Responsibility established
 - Plugin author-rules teaches the exact setting-only empirical rule found in the
@@ -82,3 +83,15 @@ PYTHONDONTWRITEBYTECODE=1 and UV_CACHE_DIR under ../test-output:
 ```powershell
 uv run --offline --no-sync --project C:/Users/Q/code/propstore python C:/Users/Q/code/propstore/scripts/run_logged_pytest.py --label full-plugin-revised -- plugins/research-papers/tests --basetemp=C:/Users/Q/Documents/Codex/2026-10-19/task-18/test-output/plugin-revised -n 0 -q
 ```
+
+## Focused publication branch
+The original local branch is preserved. Its base ac52829 contained an unrelated
+root-note move; the publication worktree cherry-picks only a9ab901 and bf5c90e
+onto verified remote master. A Git directory-rename suggestion moved the new
+task note to the repository root; the conflict was resolved by keeping this
+one task note under agent-notes as required. No unrelated notes were imported.
+The plugin tree matches the independently reviewed local plugin tree exactly.
+Fresh full run in this publication worktree: 170 passed, 1 skipped,
+41 subtests passed in 3.11s, exit 0.
+Log: logs/test-runs/publication-plugin-20261019-190635.log.
+No version bump, tag, merge or ready-for-review transition is authorized.
