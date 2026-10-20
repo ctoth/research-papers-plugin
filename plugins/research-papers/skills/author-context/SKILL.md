@@ -1,191 +1,69 @@
 ---
 name: author-context
-description: Create a propstore context for one paper with CEL assumptions, parameters, and perspective. Every claim extracted from the paper will reference this context. Required before extract-claims if the paper does not already have one.
+description: Identify a paper analysis context and author it only through an available Propstore context-owner workflow.
 argument-hint: "<papers/Author_Year_Title>"
 disable-model-invocation: false
 ---
 
 # Author Context: $ARGUMENTS
 
-Create the per-paper context that carries the paper's structural assumptions (population, intervention, follow-up, design). Every claim this paper extracts will reference the context by name. Promote fails on contextless claims, so this must happen before extract-claims.
+A context is a first-class `ist(c, p)` qualifier: it records the scope in which
+an assertion holds. Identify the population, design, intervention, comparator,
+follow-up, and analysis perspective relevant to that assertion. A paper reporting
+different populations or analyses may need distinct contexts; do not force them
+all into one trial-wide claim about applicability.
 
 Ontology-policy reference:
+`plugins/research-papers/docs/ontology-authoring-policy.md`.
 
-- `plugins/research-papers/docs/ontology-authoring-policy.md`
-
-## What A Context Is
-
-A context is a first-class `ist(c, p)` qualifier (McCarthy, lifted-axioms style). It says "these propositions hold within these structural assumptions." Claim-level `conditions[]` handle finer axes like endpoint or ITT-vs-per-protocol; context handles the trial's BIG structural commitments — who was studied, with what intervention, for how long, under which design.
-
-Assumptions are CEL expressions. Parameters are named scalar bindings. Perspective names whose view this context represents (e.g., `authors_primary_analysis` vs. `per_protocol_analysis`).
-
-## Step 0: Validate Inputs
+## Step 0: Validate inputs and the actual authoring surface
 
 ```bash
 paper_dir="$ARGUMENTS"
 ls "$paper_dir"/notes.md 2>/dev/null || echo "MISSING: notes.md"
 ls "$paper_dir"/metadata.json 2>/dev/null || echo "MISSING: metadata.json"
 ls knowledge/.git 2>/dev/null || echo "MISSING: knowledge/.git"
+pks context --help
 ```
 
-If any are missing, stop and report.
+Stop on missing inputs. The current charter-based CLI exposes only context
+`list` and `show`; it has no `context add`, update, remove, or lifting-rule
+authoring workflow. When that is the installed surface, STOP and report:
+`Context authoring is unavailable in this pks CLI; no context was written.`
+Do not hand-author canonical YAML, call a removed command, or substitute an
+agent-written SDK script. The typed Context family is not this skill's missing
+CLI workflow. This blocker also blocks dependent extraction in `paper-process`.
 
-## Step 1: Derive The Context Name
+If the installed version exposes an owner-backed authoring command, continue
+using its documented syntax rather than assuming historical flags or paths.
 
-Convention: `ctx_<author>_<year>_<trial-slug>`. Use lowercase snake_case.
+## Step 1: Identify the analysis scope
 
-- `ctx_author_2024_trial_acronym`
-- `ctx_author_2024_model_comparison`
-- `ctx_author_2024_extended_followup`
+Read the notes and original page images for the scope being attributed to the
+paper. Use a stable descriptive name such as `ctx_author_year_analysis`.
+Separate source-reported design facts from reviewer modelling assumptions.
+The latter require explicit reviewer attribution; they are not extracted facts.
 
-If the paper has no canonical trial acronym, use a short descriptive slug.
+Keep endpoint, arm, subgroup and analysis selectors at claim level when they
+vary within a context. Put a fact in the context only if it applies to every
+assertion being assigned there. A recorded population does not imply that a
+result transports to other populations.
 
-## Step 2: Extract Structural Assumptions
+## Step 2: Author through the available owner
 
-Read `notes.md`. Identify the paper's trial design facts that apply to EVERY claim the paper makes:
+CEL assumptions must use concepts and forms already available to that owner.
+Do not promise to register an undefined name later, reinterpret structural
+concepts as booleans, flatten an unknown dotted expression to make it parse,
+or substitute a score/ratio form for an incompatible unbounded quantity.
+Report a missing concept, form, or authoring capability at its actual owner.
 
-- **Population** — cohort definition: age range, region, risk factors, inclusion/exclusion.
-- **Intervention** — specific drug, dose, form, frequency.
-- **Comparator** — placebo, no treatment, other active agent.
-- **Study type** — primary prevention vs secondary, RCT vs observational, blinded vs open-label, parallel vs crossover.
-- **Follow-up** — median, maximum, scheduled length.
-- **Sample size** — enrolled, analyzed, per-arm.
-- **Adjudication** — blinded outcome committee, endpoint definitions source.
+Use the installed owner-backed command to write the attributed description,
+assumptions, parameters, and perspective. Never edit identity hashes manually.
 
-From these, derive:
-- **CEL assumptions**: boolean or equality CEL expressions over registered concepts (e.g., `primary_prevention == true`, `blinded_outcome_adjudication == true`, `open_label == true`). Any concept name on the LHS must be a registered concept in master OR will be registered during the paper's register-concepts step.
-- **Parameters**: KEY=VALUE scalar bindings that are constant across all paper claims (e.g., `study_name=trial_acronym`, `sample_size=14464`, `followup_median_yr=5.02`, `age_range_min_yr=60`).
-- **Perspective**: the analysis viewpoint name — usually `authors_primary_analysis` for the paper's headline results. Use a different perspective name (e.g., `per_protocol_analysis`, `subgroup_analysis_<name>`) if you're authoring a separate context for an alternative analysis.
+## Step 3: Verify and report
 
-Apply this decision rule before writing any assumption:
-
-- If the fact holds for essentially every claim in the paper, it belongs in context.
-- If the fact varies across claims within the paper, it belongs in claim-level `conditions[]`, not in context.
-
-Typical context material:
-
-- trial-wide intervention identity, dose, formulation, and schedule
-- comparator identity
-- trial design and adjudication regime
-- cohort-wide eligibility facts
-- follow-up regime
-
-Typical condition material that should stay out of context:
-
-- endpoint selectors
-- subgroup selectors
-- ITT vs per-protocol selectors
-- arm-specific reported slices
-
-## Step 3: Author The Context
-
-```bash
-pks context add \
-  --name <ctx_name> \
-  --description "<one-sentence description of the trial: design, cohort, intervention, comparator, duration>" \
-  --assumption "<CEL assumption 1>" \
-  --assumption "<CEL assumption 2>" \
-  [--assumption "<...>" ...] \
-  --parameter "trial_name=<acronym>" \
-  --parameter "sample_size=<int>" \
-  --parameter "followup_median_yr=<float>" \
-  [--parameter "<KEY=VALUE>" ...] \
-  --perspective authors_primary_analysis
-```
-
-Notes:
-- `--description` is required; make it a single informative sentence.
-- Each `--assumption` is one CEL expression. Repeat the flag for multiple.
-- Each `--parameter` is one `KEY=VALUE` string. Repeat the flag for multiple.
-- **Propstore >= 0.2.2 validates every assumption's CEL against the master concept registry at `pks context add` time.** The add is rejected if any LHS name is undefined, dotted, or references a structural-form concept. Errors name the exact assumption index and the offending expression. See "If the add is rejected" below for recovery.
-
-## Step 3.5: If the add is rejected
-
-`pks context add` will refuse the add and print the line it tripped on. Three failure modes; each has a specific recovery.
-
-### Undefined concept
-
-```
-Error: context '<ctx_name>': assumption[N] = '<expr>': Undefined concept: '<concept_name>'
-```
-
-The LHS name is not in the master concept registry. Before retrying, register it. Pick a form that matches how the assumption uses the name:
-
-- `== true` / `== false` on the RHS → `--form boolean`
-- `== '<string>'` on the RHS → `--form category --values "<a,b,c>"` (leave extensible, i.e. omit `--closed`, unless your domain demands closure)
-- integer `>= N` / `<= N` → `--form count`
-- non-integer numeric, or a dimensional quantity → pick the most specific form available. `pks form list` is authoritative; common picks:
-  - dimensional quantity → matching named form (`mass`, `time`, `pressure`, `length`, `acceleration`, etc.)
-  - bounded score-like quantity (kappa, IoU, F1, accuracy) → `score`
-  - proportion or rate-of-occurrence → `ratio`
-  - unbounded dimensionless quantity (effect size, log-odds, z-score) → `dimensionless` if `pks form list` includes it; otherwise fall back to `score` or `ratio` whichever fits the bounds.
-  - probabilities or p-values in [0,1] → `probability` if available; otherwise `ratio`.
-  - correlations in [-1,1] → `correlation` if available; otherwise `ratio` with a note about sign.
-
-  Do not invent a form name. If `pks form list` doesn't include the form you want, pick the closest available one and proceed.
-
-```bash
-pks concept add \
-  --domain <your_domain> \
-  --name <concept_name> \
-  --form <boolean|category|count|...> \
-  [--values "<v1,v2,...>"]    # category only
-  --definition "<one-sentence definition in domain terms>"
-```
-
-`pks concept add` auto-commits. Retry the context add afterward.
-
-### CEL parse error on dotted notation
-
-```
-Error: context '<ctx_name>': assumption[N] = '<prefix>.<field> == <value>': Parse error: Unexpected character at position M: '.<field> == <value>'
-```
-
-Propstore's CEL grammar does not accept dotted paths on concept references — LHS names must be flat registered concepts. Pick a flat name (drop the prefix, or replace `.` with `_` to preserve grouping intent), register it, and rewrite the assumption:
-
-```
-# Before (rejected)
-- <prefix>.<field> == <value>
-
-# After (flat name registered, assumption rewritten)
-- <field> == <value>          # or <prefix>_<field> == <value> if disambiguation matters
-```
-
-If you're authoring a group of related markers, use a consistent flat-naming convention and register all of them before retrying — don't interleave partial fixes.
-
-### Structural concept in CEL
-
-```
-Error: context '<ctx_name>': assumption[N] = '<expr>': Structural concept '<concept_name>' cannot appear in CEL expressions
-```
-
-The concept exists but is declared `physical_dimension_form: structural`. CEL forbids structural concepts on its boundaries — structural is for decorative/referential roles, not truth-valued ones. Two recoveries, in order of preference:
-
-1. **Use a different concept.** Often a boolean or category sibling says the same thing. Run `pks concept list` and `pks concept show <nearby_name>` to look for one. Rewrite the assumption against that sibling.
-2. **If the structural classification is wrong, stop and report the missing propstore command.** Do not hand-edit concept YAML or hash fields. The fix must go through a `pks concept update`-style surface; if that surface is unavailable, report the blocker.
-
-## Step 4: Verify
-
-```bash
-pks context list | grep <ctx_name>
-pks context show <ctx_name>
-```
-
-Confirm the file exists and the assumptions/parameters/perspective look right.
-
-## Output
-
-```
-Context authored: <ctx_name>
-  Description: <...>
-  Assumptions: N
-  Parameters: M
-  Perspective: <name>
-  File: knowledge/contexts/<ctx_name>.yaml
-```
-
-## When To Rerun
-
-Rerun this skill if the paper's structural assumptions change. Use `pks context remove` plus `pks context add` for wholesale replacement. If a targeted update is needed and no `pks context update` surface exists, report the missing propstore command and stop; do not hand-edit context YAML.
-
-To revise the lifting-rule block of an existing context, use the `pks context lifting` subcommands (`add`, `update`, `remove`) — no hand-editing required.
+Read the resulting context through `pks context show <name>`. Report the actual
+stored scope, its attribution, and the claims assigned to it. A successful write
+does not establish cross-context applicability; that requires independently
+justified lifting. If authoring was unavailable, report the blocker rather than
+printing a successful context/file result.

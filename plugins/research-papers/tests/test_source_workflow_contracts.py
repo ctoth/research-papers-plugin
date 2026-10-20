@@ -179,6 +179,33 @@ class TestSourceWorkflowContracts(unittest.TestCase):
         self.assertIn("Do not hand-edit propstore YAML", skill)
         self.assertNotIn("rewrite all claims.yaml files", skill)
 
+    def test_author_rules_does_not_teach_empirical_results_from_study_existence(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "author-rules" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("--id r_study_setting_fact", skill)
+        self.assertNotIn("--body=study_like_setting(X)\n\n# Defeasible rule", skill)
+        self.assertIn("actual evidence claims", skill)
+        self.assertIn("claim-graph result is not evidence", skill)
+
+    def test_stances_preserve_reports_and_do_not_invent_transport_targets(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "extract-stances" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("not the historical measurement", skill)
+        self.assertIn("report the missing target", skill)
+        self.assertIn("alone does not invalidate", skill)
+
+    def test_lifting_does_not_teach_conditions_as_rewrites_or_conflict_counts_as_goals(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "author-lifting-rules" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("its count is not a goal.", skill)
+        self.assertIn("Conditions are gates", skill)
+        self.assertIn("does not expose context or lifting-rule mutation", skill)
+        self.assertNotIn("you must author conditions that make the claim-level conditions align", skill)
+
+    def test_context_authoring_reports_the_actual_cli_owner_gap(self) -> None:
+        skill = (PLUGIN_ROOT / "skills" / "author-context" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("pks context --help", skill)
+        self.assertIn("Context authoring is unavailable", skill)
+        self.assertNotIn("pks context add \\", skill)
+        self.assertIn("Do not promise to register an undefined name later", skill)
+
     def test_reconcile_stays_notes_layer_only(self) -> None:
         skill = (PLUGIN_ROOT / "skills" / "reconcile" / "SKILL.md").read_text(
             encoding="utf-8"

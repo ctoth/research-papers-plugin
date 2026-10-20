@@ -65,19 +65,12 @@ pks source propose-justification "$source_name" \
   --quote-fragment "Brief supporting quote"
 ```
 
-Attack-target structure, when the paper explicitly gives rebuttal/undercut/undermine reasoning:
-
-```bash
-pks source propose-justification "$source_name" \
-  --id just2 \
-  --conclusion claim18 \
-  --premises claim16,claim17 \
-  --rule-kind comparison_based_inference \
-  --attack-target-claim claim12 \
-  --attack-target-justification-id just1 \
-  --attack-target-premise-index 0 \
-  --page 21
-```
+Explicit argument targets are a current Propstore limitation: source authoring
+accepts attack-target coordinates, but canonical promotion does not preserve
+them. When a paper identifies a specific inference or premise being challenged,
+record the exact target and source evidence in the report as blocked on that
+capability. Do not author an untargeted substitute or claim that a successful
+promotion preserved the specific attack.
 
 Rules:
 
@@ -85,10 +78,16 @@ Rules:
 - `--premises` is a comma-separated list of local claim ids from this source.
 - Do not include the conclusion in its own premise list.
 - Use one inferential step per justification; chains get multiple justifications.
+- A reported result and an inference drawn from it are separate claims. Do not
+  grant an inferred conclusion independent `reported_claim` support merely to
+  make it queryable: its authored premises must control that inference's support.
+- An applicability or study-existence fact cannot replace the empirical premises
+  of a result. Do not invent missing links; report them as unavailable.
 - Reusing a justification id updates that source-local justification.
 - `pks source propose-justification` resolves local claim ids and rejects unresolved references before writing.
 - Use `--rule-strength strict` only for definitional or mathematical entailment. Use `defeasible` for empirical or methodological support.
-- Attack-target fields are optional. Use them only when the paper identifies the target claim, target justification, or target premise being attacked.
+- Do not use the accepted-but-lossy attack-target fields until the canonical
+  owner preserves and resolves them end to end (Propstore issue #55).
 
 ## Step 3: Report
 

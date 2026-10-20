@@ -87,27 +87,23 @@ Conventions:
 - Rule IDs: `r_<what_it_concludes>` or `r_<paper_slug>_<what>`. Stable across re-runs.
 - Variables: uppercase single letters (`X`, `Y`) per DeLP convention. All head variables must appear in the body.
 - Use a leading `~` for strong negation. Proper defeaters use this pattern when the paper is arguing against a standard conclusion (head `~L` directly contradicts the attacked rule's head `L`). Blocking defeaters typically negate a premise of the attacked argument in the body instead. **Always use the `--head=<atom>` / `--body=<atom>` equals-form** (see CLI atom DSL above for why).
-- If defeasible rules use a paper applicability predicate such as `study_like_setting(X)` or `<paper>_like_case(X)`, first author a strict fact with a concrete paper-level constant. Otherwise the rule language validates but has no ground instances.
+- A setting or applicability predicate describes where a rule applies; it is not evidence for an empirical result. Do not derive an outcome from the existence of a study or setting alone.
+- For an inference among already-authored claims, use `extract-justifications`: its premise references name the actual evidence claims. Do not duplicate it as a setting-seeded DeLP program that remains true when those claims are withdrawn.
+- Use DeLP only when the paper states a predicate-level rule and its evidence atoms have an explicit, existing grounding producer. Identify that producer before adding the rule. If the claim-to-ground-fact connection is unavailable, report that missing capability; do not manufacture strict empirical facts or claim that a successful build proves evidence dependency.
 
 ```bash
 cd knowledge  # or pass -C to each pks call
 
-# Strict fact: seed the paper's applicability setting so later rules ground.
-pks rule add \
-  --file author_2024 \
-  --paper Author_2024_ExamplePaper \
-  --id r_study_setting_fact \
-  --kind strict \
-  --head=study_like_setting(author_2024_setting)
-
-# Defeasible rule: intervention improves target outcome in a comparable setting
+# Predicate-level inference only when both body atoms already have
+# evidence-backed grounding producers. Neither body atom is a study-exists fact.
 pks rule add \
   --file author_2024 \
   --paper Author_2024_ExamplePaper \
   --id r_target_outcome_improvement \
   --kind defeasible \
   --head=intervention_reduces_target_outcome(X) \
-  --body=study_like_setting(X)
+  --body=observed_target_outcome_difference(X) \
+  --body=measurement_method_applicable(X)
 
 # Defeasible rule with negated head: no net benefit conclusion
 pks rule add \
@@ -138,13 +134,18 @@ Repeat for every reasoning move you identified. Duplicate rule ids are rejected 
 pks build
 ```
 
-Expect `Build rebuilt:` or `Build unchanged:` with zero warnings. Common build failures at this stage:
+A build checks the authored program; it does not prove that the argument depends
+on the evidence named in the paper. Report the actual build diagnostics. Common
+build failures at this stage:
 
 - Head variable not in body → safety violation. Fix the rule's body to include the missing variable.
 - Predicate not declared → re-run `register-predicates` for the missing one.
 - Arity mismatch → rule uses wrong number of terms. Check the declared predicate's `arity` and `arg_types`.
 
-Note: DeLP rules and predicates are not materialized as sidecar tables — they are consumed by the argumentation engine at query time (`pks world`, grounding). A successful build validates syntax; runtime argumentation is where they become visible.
+Report the selected reasoning backend and the real grounding inputs before
+claiming a rule contributes to a query. A claim-graph result is not evidence that
+the DeLP program executed. Withdrawing an evidence claim must remove the support
+provided by that claim; an unchanged answer alone does not establish robustness.
 
 ## Output
 
