@@ -16,7 +16,7 @@ Extract argumentative relationships between already-authored claims and write th
 - `rebuts` — direct conflict with the target conclusion.
 - `undermines` — attacks a premise or evidence quality.
 - `undercuts` — attacks the inference or methodology.
-- `supersedes` — replaces the target because it is newer, larger, longer, or corrects an error.
+- `supersedes` - an explicitly justified replacement or correction of the same target assertion.
 
 ## Step 0: Determine Mode
 
@@ -61,8 +61,20 @@ Before writing only `supports` links, actively look for disagreement:
 - Use `rebuts` when two claims answer the same substantive question with incompatible conclusions.
 - Use `undermines` when the source attacks another claim's evidence quality, selection criteria, endpoint, adherence, follow-up, or ascertainment.
 - Use `undercuts` when the source attacks the inference from the target's evidence to its conclusion.
-- Use `supersedes` when the source is a later/larger/corrective synthesis that should replace an older value or conclusion.
+- Use `supersedes` only with evidence of replacement or correction of the same assertion. Being newer, larger, or longer alone does not invalidate an earlier reported result.
 - Do not force adversarial stances where the papers merely differ in context. If no adversarial stance is grounded, report the checked targets and the reason they are context differences rather than conflicts.
+
+Keep a reported measurement separate from an inference that transports it to a
+different population, endpoint, or setting. An applicability objection attacks
+that transport inference, not the historical measurement. If the transport
+inference has not been authored, report the missing target rather than redirecting
+the attack to the measurement. Label reviewer-authored modelling assumptions as
+such; do not attribute them to a paper.
+
+For an undercut, identify the exact inference licence being challenged. The
+current stance proposal command cannot preserve a specific justification target
+through canonical promotion. Report that limitation when specificity is needed;
+do not claim that an untargeted successful promotion preserves it.
 
 Use one command per stance:
 
